@@ -12,6 +12,9 @@ function ExamHistoryView({
   onRetakeFlagged,
   onRetakeIncorrect,
   onDeleteRecord,
+  currentUser,
+  onOpenAuth,
+  onLogout,
 }) {
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -59,6 +62,9 @@ function ExamHistoryView({
         currentView="history"
         onNavigate={onNavigate}
         candidateName={candidateName}
+        currentUser={currentUser}
+        onOpenAuth={onOpenAuth}
+        onLogout={onLogout}
         pageTitle="Exam History"
       />
 

@@ -1,10 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { initDB, getPool } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'ccna_exam_jwt_secret_key_2026_secure';
 
 app.use(cors());
 app.use(express.json());
@@ -13,6 +17,408 @@ app.use(express.json());
 app.use('/exhibits', express.static(path.join(__dirname, '../public/exhibits')));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, '../build')));
+
+// --------------------------------------------------------------------------
+// AUTHENTICATION & EMAIL VERIFICATION API
+// --------------------------------------------------------------------------
+
+// Helper to generate 6-digit OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// 1. User Registration (Signup)
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Name, email, and password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    }
+
+    const pool = getPool();
+
+    // Check if user already exists
+    const [existing] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+    if (existing.length > 0) {
+      if (existing[0].is_verified) {
+        return res.status(409).json({ error: 'An account with this email already exists. Please log in.' });
+      }
+      // If user exists but not verified, generate new OTP and update
+      const otp = generateOTP();
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(password, salt);
+
+      await pool.query(
+        `UPDATE users SET name = ?, password_hash = ?, verification_code = ?, verification_expires_at = ? WHERE email = ?`,
+        [cleanName, hash, otp, expiresAt, cleanEmail]
+      );
+
+      console.log(`\n======================================================`);
+      console.log(`✉️ [EMAIL VERIFICATION CODE] Sent to: ${cleanEmail}`);
+      console.log(`🔑 Verification OTP Code: ${otp}`);
+      console.log(`⏳ Valid for: 15 minutes`);
+      console.log(`======================================================\n`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Verification code sent to your email.',
+        email: cleanEmail,
+        isVerified: false,
+        devOtp: otp, // helpful in dev preview
+      });
+    }
+
+    // New user
+    const userId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const otp = generateOTP();
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
+    await pool.query(
+      `INSERT INTO users (id, name, email, password_hash, is_verified, verification_code, verification_expires_at)
+       VALUES (?, ?, ?, ?, 0, ?, ?)`,
+      [userId, cleanName, cleanEmail, hash, otp, expiresAt]
+    );
+
+    console.log(`\n======================================================`);
+    console.log(`✉️ [EMAIL VERIFICATION CODE] Sent to: ${cleanEmail}`);
+    console.log(`🔑 Verification OTP Code: ${otp}`);
+    console.log(`⏳ Valid for: 15 minutes`);
+    console.log(`======================================================\n`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created! Verification code sent to your email.',
+      email: cleanEmail,
+      isVerified: false,
+      devOtp: otp,
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed.', details: error.message });
+  }
+});
+
+// 2. Email Verification with 6-digit OTP
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and 6-digit verification code are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found with this email.' });
+    }
+
+    const user = rows[0];
+
+    if (user.is_verified) {
+      const token = jwt.sign(
+        { id: user.id, name: user.name, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      return res.json({
+        success: true,
+        message: 'Account is already verified.',
+        token,
+        user: { id: user.id, name: user.name, email: user.email, isVerified: true },
+      });
+    }
+
+    if (user.verification_code !== cleanCode) {
+      return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+    }
+
+    if (user.verification_expires_at && Date.now() > Number(user.verification_expires_at)) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    // Mark as verified
+    await pool.query(
+      `UPDATE users SET is_verified = 1, verification_code = NULL, verification_expires_at = NULL WHERE id = ?`,
+      [user.id]
+    );
+
+    const token = jwt.sign(
+      { id: user.id, name: user.name, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Email successfully verified! You are now logged in.',
+      token,
+      user: { id: user.id, name: user.name, email: user.email, isVerified: true },
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({ error: 'Verification failed.', details: error.message });
+  }
+});
+
+// 3. Resend Email Verification Code
+app.post('/api/auth/resend-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No account found with this email.' });
+    }
+
+    const user = rows[0];
+    if (user.is_verified) {
+      return res.json({ success: true, message: 'Account is already verified.' });
+    }
+
+    const otp = generateOTP();
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+
+    await pool.query(
+      `UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?`,
+      [otp, expiresAt, user.id]
+    );
+
+    console.log(`\n======================================================`);
+    console.log(`✉️ [RESENT VERIFICATION CODE] Sent to: ${cleanEmail}`);
+    console.log(`🔑 Verification OTP Code: ${otp}`);
+    console.log(`⏳ Valid for: 15 minutes`);
+    console.log(`======================================================\n`);
+
+    res.json({
+      success: true,
+      message: 'New verification code sent to your email.',
+      devOtp: otp,
+    });
+  } catch (error) {
+    console.error('Resend code error:', error);
+    res.status(500).json({ error: 'Failed to resend code.', details: error.message });
+  }
+});
+
+// 4. User Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // If not verified, trigger OTP and prompt verification
+    if (!user.is_verified) {
+      const otp = generateOTP();
+      const expiresAt = Date.now() + 15 * 60 * 1000;
+      await pool.query(
+        `UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?`,
+        [otp, expiresAt, user.id]
+      );
+
+      console.log(`\n======================================================`);
+      console.log(`✉️ [UNVERIFIED LOGIN - OTP] Sent to: ${cleanEmail}`);
+      console.log(`🔑 Verification OTP Code: ${otp}`);
+      console.log(`======================================================\n`);
+
+      return res.status(403).json({
+        error: 'Email is not verified yet. We have sent a verification code to your email.',
+        needsVerification: true,
+        email: cleanEmail,
+        devOtp: otp,
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, name: user.name, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Login successful!',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isVerified: Boolean(user.is_verified),
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed.', details: error.message });
+  }
+});
+
+// 5. Get Current Logged-in User Profile
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No authorization token provided.' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired session token.' });
+    }
+
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT id, name, email, is_verified, created_at FROM users WHERE id = ?', [decoded.id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User profile not found.' });
+    }
+
+    const user = rows[0];
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isVerified: Boolean(user.is_verified),
+        createdAt: user.created_at,
+      },
+    });
+  } catch (error) {
+    console.error('Auth me error:', error);
+    res.status(500).json({ error: 'Failed to retrieve profile.', details: error.message });
+  }
+});
+
+// 6. Forgot Password (Request OTP)
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+    const cleanEmail = email.trim().toLowerCase();
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No account found with this email.' });
+    }
+
+    const user = rows[0];
+    const otp = generateOTP();
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+
+    await pool.query(
+      `UPDATE users SET reset_token = ?, reset_expires_at = ? WHERE id = ?`,
+      [otp, expiresAt, user.id]
+    );
+
+    console.log(`\n======================================================`);
+    console.log(`🔑 [PASSWORD RESET CODE] Sent to: ${cleanEmail}`);
+    console.log(`🔢 Reset OTP Code: ${otp}`);
+    console.log(`⏳ Valid for: 15 minutes`);
+    console.log(`======================================================\n`);
+
+    res.json({
+      success: true,
+      message: 'Password reset code sent to your email.',
+      email: cleanEmail,
+      devOtp: otp,
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process request.', details: error.message });
+  }
+});
+
+// 7. Reset Password with OTP
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, reset code, and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [cleanEmail]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No account found with this email.' });
+    }
+
+    const user = rows[0];
+
+    if (user.reset_token !== cleanCode) {
+      return res.status(400).json({ error: 'Invalid reset code.' });
+    }
+
+    if (user.reset_expires_at && Date.now() > Number(user.reset_expires_at)) {
+      return res.status(400).json({ error: 'Reset code has expired. Please request a new one.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+
+    await pool.query(
+      `UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires_at = NULL, is_verified = 1 WHERE id = ?`,
+      [hash, user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Password successfully reset! You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password.', details: error.message });
+  }
+});
 
 // 1. Health check
 app.get('/api/health', (req, res) => {

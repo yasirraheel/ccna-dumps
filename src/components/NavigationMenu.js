@@ -4,24 +4,32 @@ function NavigationMenu({
   currentView,
   onNavigate,
   candidateName,
+  currentUser,
+  onOpenAuth,
+  onLogout,
   pageTitle = "Cisco 200-301 CCNA",
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setIsOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
     };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, []);
+
+  const displayName = currentUser?.name || candidateName || "Candidate";
 
   const getInitials = (name) => {
     if (!name || !name.trim()) return "MS";
@@ -100,13 +108,75 @@ function NavigationMenu({
         )}
       </div>
 
-      <div className="nav-header-right">
-        <div
-          className="nav-user-avatar"
-          title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
-        >
-          <span>{getInitials(candidateName)}</span>
-        </div>
+      <div className="nav-header-right" ref={userMenuRef}>
+        {currentUser ? (
+          <div className="user-profile-wrapper">
+            <button
+              type="button"
+              className="user-profile-btn"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            >
+              <div
+                className="nav-user-avatar"
+                title={`Logged in as: ${displayName} (${currentUser.email})`}
+              >
+                <span>{getInitials(displayName)}</span>
+              </div>
+              <div className="user-profile-meta">
+                <span className="user-profile-name">{displayName}</span>
+                <span className="user-badge-verified">Verified ✓</span>
+              </div>
+              <span className="user-dropdown-caret">▾</span>
+            </button>
+
+            {isUserMenuOpen && (
+              <div className="nav-user-dropdown-menu">
+                <div className="user-dropdown-info">
+                  <strong>{displayName}</strong>
+                  <span className="user-dropdown-email">{currentUser.email}</span>
+                </div>
+                <div className="user-dropdown-divider"></div>
+                <button
+                  type="button"
+                  className="user-dropdown-item"
+                  onClick={() => {
+                    onNavigate("history");
+                    setIsUserMenuOpen(false);
+                  }}
+                >
+                  📊 My Exam Records
+                </button>
+                <button
+                  type="button"
+                  className="user-dropdown-item user-dropdown-logout"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    if (onLogout) onLogout();
+                  }}
+                >
+                  🚪 Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="nav-auth-buttons">
+            <button
+              type="button"
+              className="btn-nav-login"
+              onClick={() => onOpenAuth && onOpenAuth("login")}
+            >
+              🔑 Log In
+            </button>
+            <button
+              type="button"
+              className="btn-nav-signup"
+              onClick={() => onOpenAuth && onOpenAuth("signup")}
+            >
+              📝 Sign Up
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

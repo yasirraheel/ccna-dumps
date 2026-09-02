@@ -20,6 +20,9 @@ function ExamDashboard({
   onRetakeAll,
   onRetakeFlagged,
   onRetakeIncorrect,
+  currentUser,
+  onOpenAuth,
+  onLogout,
 }) {
   const [selectedBank, setSelectedBank] = useState("bank_a");
   const [examMode, setExamMode] = useState("study");
@@ -132,6 +135,9 @@ function ExamDashboard({
         currentView="dashboard"
         onNavigate={onNavigate}
         candidateName={candidateName}
+        currentUser={currentUser}
+        onOpenAuth={onOpenAuth}
+        onLogout={onLogout}
         pageTitle="Cisco 200-301 CCNA"
       />
 

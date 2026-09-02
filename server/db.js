@@ -25,7 +25,24 @@ async function initDB() {
       queueLimit: 0,
     });
 
-    // 1. Drop and recreate questions table to ensure exact schema & fresh sequence
+    // 1. Users table (Registration, Login, Email Verification)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        email VARCHAR(191) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        is_verified BOOLEAN DEFAULT 0,
+        verification_code VARCHAR(10),
+        verification_expires_at BIGINT,
+        reset_token VARCHAR(100),
+        reset_expires_at BIGINT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 2. Drop and recreate questions table to ensure exact schema & fresh sequence
     await pool.query(`DROP TABLE IF EXISTS questions;`);
 
     await pool.query(`

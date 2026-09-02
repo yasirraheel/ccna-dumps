@@ -8,6 +8,9 @@ function ResumeExamsView({
   onDeleteSession,
   onNavigate,
   candidateName,
+  currentUser,
+  onOpenAuth,
+  onLogout,
 }) {
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -53,6 +56,9 @@ function ResumeExamsView({
         currentView="resume-exams"
         onNavigate={onNavigate}
         candidateName={candidateName}
+        currentUser={currentUser}
+        onOpenAuth={onOpenAuth}
+        onLogout={onLogout}
         pageTitle="Resume Exam"
       />
 

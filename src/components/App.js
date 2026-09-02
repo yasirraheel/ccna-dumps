@@ -6,6 +6,7 @@ import Loader from "./Loader";
 import Error from "./Error";
 import ResumeExamsView from "./ResumeExamsView";
 import ExamHistoryView from "./ExamHistoryView";
+import AuthModal from "./AuthModal";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 
 const API_BASE_URL = "http://localhost:5000/api";
@@ -417,12 +418,73 @@ export default function App() {
   ] = useReducer(reducer, initialState);
 
   const [currentView, setCurrentView] = useState("dashboard"); // 'dashboard', 'resume-exams', 'history'
-  const [candidateName, setCandidateName] = useState(
-    () => localStorage.getItem("ccna_candidate_name") || "Asif"
-  );
+  
+  // User Authentication State
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem("ccna_auth_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [authModal, setAuthModal] = useState({
+    isOpen: false,
+    mode: "login", // 'login' | 'signup' | 'verify'
+  });
+
+  const [candidateName, setCandidateName] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem("ccna_auth_user");
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        if (u?.name) return u.name;
+      }
+    } catch {}
+    return localStorage.getItem("ccna_candidate_name") || "Candidate";
+  });
+
   const [flaggedQuestions, setFlaggedQuestions] = useState([]);
   const [saveStatus, setSaveStatus] = useState("");
   const hasSavedRef = useRef(false);
+
+  // Validate session on launch
+  useEffect(() => {
+    const token = localStorage.getItem("ccna_auth_token");
+    if (token) {
+      fetch(`${API_BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            setCurrentUser(data.user);
+            setCandidateName(data.user.name);
+            localStorage.setItem("ccna_auth_user", JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleOpenAuth = (mode = "login") => {
+    setAuthModal({ isOpen: true, mode });
+  };
+
+  const handleAuthSuccess = (user, token) => {
+    setCurrentUser(user);
+    if (user?.name) {
+      setCandidateName(user.name);
+      localStorage.setItem("ccna_candidate_name", user.name);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("ccna_auth_token");
+    localStorage.removeItem("ccna_auth_user");
+    setCurrentUser(null);
+  };
 
   // Multi-session state
   const [savedSessions, setSavedSessions] = useState(() => {
@@ -874,6 +936,9 @@ export default function App() {
             onRetakeAll={handleRetakeAllQuestions}
             onRetakeFlagged={handleRetakeFlaggedOnly}
             onRetakeIncorrect={handleRetakeIncorrectOnly}
+            currentUser={currentUser}
+            onOpenAuth={handleOpenAuth}
+            onLogout={handleLogout}
           />
         )}
 
@@ -884,6 +949,9 @@ export default function App() {
             onDeleteSession={handleDeleteSession}
             onNavigate={setCurrentView}
             candidateName={candidateName}
+            currentUser={currentUser}
+            onOpenAuth={handleOpenAuth}
+            onLogout={handleLogout}
           />
         )}
 
@@ -898,6 +966,9 @@ export default function App() {
             onRetakeFlagged={handleRetakeFlaggedOnly}
             onRetakeIncorrect={handleRetakeIncorrectOnly}
             onDeleteRecord={handleDeleteHistoryRecord}
+            currentUser={currentUser}
+            onOpenAuth={handleOpenAuth}
+            onLogout={handleLogout}
           />
         )}
 
@@ -953,6 +1024,16 @@ export default function App() {
             onRetakeIncorrect={() => handleRetakeIncorrectOnly(null)}
           />
         )}
+
+        {/* 4. AUTHENTICATION & EMAIL VERIFICATION MODAL */}
+        <AuthModal
+          isOpen={authModal.isOpen}
+          initialMode={authModal.mode}
+          onClose={() => setAuthModal({ isOpen: false, mode: "login" })}
+          currentUser={currentUser}
+          onAuthSuccess={handleAuthSuccess}
+          onLogout={handleLogout}
+        />
       </div>
     </div>
   );
