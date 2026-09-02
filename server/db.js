@@ -105,6 +105,9 @@ async function initDB() {
     try {
       await pool.query(`ALTER TABLE exam_attempts ADD COLUMN user_email VARCHAR(191) AFTER user_id;`);
     } catch {}
+    try {
+      await pool.query(`ALTER TABLE exam_attempts ADD COLUMN exam_date BIGINT NOT NULL DEFAULT 0 AFTER time_spent_seconds;`);
+    } catch {}
 
     // 4. Active / In-Progress Saved Sessions table (tied to user_id/email)
     await pool.query(`

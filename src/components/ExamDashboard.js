@@ -1,7 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ExamSettingsModal from "./ExamSettingsModal";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
+import { randomizeQuestionOptions } from "./randomizeOptions";
+
+const DEFAULT_STUDY_SETTINGS = {
+  randomizeQuestions: false,
+  randomizeAnswers: false,
+  showScoreLive: true,
+  showRequiredAnswersCount: true,
+  includeShowAnswerBtn: true,
+  showAnswersInline: true,
+  timerMode: "not_timed",
+};
+
+const getSettingsKey = (user) =>
+  user?.id ? `ccna_study_settings_${user.id}` : "ccna_study_settings_guest";
 
 function ExamDashboard({
   totalQuestionsCount,
@@ -37,15 +51,44 @@ function ExamDashboard({
     onConfirm: () => {},
   });
 
-  const [settings, setSettings] = useState({
-    randomizeQuestions: false,
-    randomizeAnswers: false,
-    showScoreLive: true,
-    showRequiredAnswersCount: true,
-    includeShowAnswerBtn: true,
-    showAnswersInline: true,
-    timerMode: "not_timed",
+  // Persistent settings state across all exam banks & user sessions
+  const [settings, setSettings] = useState(() => {
+    try {
+      const key = getSettingsKey(currentUser);
+      const stored = localStorage.getItem(key) || localStorage.getItem("ccna_study_settings_guest");
+      return stored ? { ...DEFAULT_STUDY_SETTINGS, ...JSON.parse(stored) } : DEFAULT_STUDY_SETTINGS;
+    } catch {
+      return DEFAULT_STUDY_SETTINGS;
+    }
   });
+
+  // Sync settings when user logs in or changes
+  useEffect(() => {
+    try {
+      const key = getSettingsKey(currentUser);
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setSettings({ ...DEFAULT_STUDY_SETTINGS, ...JSON.parse(stored) });
+      }
+    } catch (e) {
+      console.warn("Load user settings error:", e);
+    }
+  }, [currentUser?.id]);
+
+  // Persist settings whenever modified
+  const handleUpdateSettings = (updater) => {
+    setSettings((prev) => {
+      const updated = typeof updater === "function" ? updater(prev) : updater;
+      try {
+        const key = getSettingsKey(currentUser);
+        localStorage.setItem(key, JSON.stringify(updated));
+        localStorage.setItem("ccna_study_settings_guest", JSON.stringify(updated));
+      } catch (e) {
+        console.warn("Save user settings error:", e);
+      }
+      return updated;
+    });
+  };
 
   const getBankFilteredQuestions = () => {
     let filtered = [...allQuestions];
@@ -85,10 +128,6 @@ function ExamDashboard({
         break;
     }
 
-    if (settings.randomizeQuestions) {
-      filtered = [...filtered].sort(() => Math.random() - 0.5);
-    }
-
     return { filtered, bankTitle };
   };
 
@@ -110,11 +149,18 @@ function ExamDashboard({
     let { filtered, bankTitle } = getBankFilteredQuestions();
 
     if (isSimulation) {
-      // Simulation: enforce settings and random 70-80 questions from the bank
+      // Simulation: enforce random 70-80 questions
       const simCount = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
       const shuffled = [...filtered].sort(() => Math.random() - 0.5);
       filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
       bankTitle = `${bankTitle} — Simulation (${filtered.length} Qs)`;
+    } else if (effectiveSettings.randomizeQuestions) {
+      filtered = [...filtered].sort(() => Math.random() - 0.5);
+    }
+
+    // When randomizeAnswers is enabled, randomize the display order of MCQ options
+    if (effectiveSettings.randomizeAnswers) {
+      filtered = filtered.map(randomizeQuestionOptions);
     }
 
     onStartExam({
@@ -701,7 +747,7 @@ function ExamDashboard({
       {isSettingsOpen && (
         <ExamSettingsModal
           settings={settings}
-          setSettings={setSettings}
+          setSettings={handleUpdateSettings}
           onClose={() => setIsSettingsOpen(false)}
         />
       )}

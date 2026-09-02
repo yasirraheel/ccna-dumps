@@ -10,6 +10,7 @@ import AuthModal from "./AuthModal";
 import AuthView from "./AuthView";
 import MobileBottomBar from "./MobileBottomBar";
 import { ccnaQuestions } from "../data/ccnaQuestions";
+import { randomizeQuestionOptions } from "./randomizeOptions";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
@@ -151,7 +152,7 @@ function reducer(state, action) {
 
       let timerSeconds = null;
       if (settings?.timerMode === "ccna_120") timerSeconds = 120 * 60;
-      else if (settings?.timerMode === "90_mins") timerSeconds = 90 * 60;
+      else if (settings?.timerMode === "90_mins" || settings?.timerMode === "timed_90") timerSeconds = 90 * 60;
       else if (settings?.timerMode === "60_mins") timerSeconds = 60 * 60;
       else if (settings?.timerMode === "30s_per_q")
         timerSeconds = questions.length * 30;
@@ -879,10 +880,17 @@ export default function App() {
 
   const handleRetakeAllQuestions = (examRecord) => {
     if (!requireAuth()) return;
-    const qList = examRecord?.questions?.length ? examRecord.questions : questions;
+    let qList = examRecord?.questions?.length ? [...examRecord.questions] : [...questions];
     const bank = examRecord?.bankName || selectedBankName;
     const mode = examRecord?.examMode || examMode;
     const stngs = examRecord?.settings || settings;
+
+    if (stngs?.randomizeQuestions) {
+      qList = [...qList].sort(() => Math.random() - 0.5);
+    }
+    if (stngs?.randomizeAnswers) {
+      qList = qList.map(randomizeQuestionOptions);
+    }
 
     setFlaggedQuestions([]);
     dispatch({
@@ -898,9 +906,9 @@ export default function App() {
 
   const handleRetakeFlaggedOnly = (examRecord) => {
     if (!requireAuth()) return;
-    const qList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const baseList = examRecord?.questions?.length ? examRecord.questions : questions;
     const flags = examRecord?.flaggedQuestions || flaggedQuestions || [];
-    const flaggedList = qList.filter((_, idx) => flags.includes(idx));
+    let flaggedList = baseList.filter((_, idx) => flags.includes(idx));
 
     if (flaggedList.length === 0) {
       alert("No questions were marked for review in this exam session.");
@@ -910,6 +918,13 @@ export default function App() {
     const bank = examRecord?.bankName || selectedBankName;
     const mode = examRecord?.examMode || examMode;
     const stngs = examRecord?.settings || settings;
+
+    if (stngs?.randomizeQuestions) {
+      flaggedList = [...flaggedList].sort(() => Math.random() - 0.5);
+    }
+    if (stngs?.randomizeAnswers) {
+      flaggedList = flaggedList.map(randomizeQuestionOptions);
+    }
 
     setFlaggedQuestions([]);
     dispatch({
@@ -925,10 +940,10 @@ export default function App() {
 
   const handleRetakeIncorrectOnly = (examRecord) => {
     if (!requireAuth()) return;
-    const qList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const baseList = examRecord?.questions?.length ? examRecord.questions : questions;
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
-    const incorrectIdxs = getIncorrectQuestionIndices(qList, ansList);
-    const incorrectList = qList.filter((_, idx) => incorrectIdxs.includes(idx));
+    const incorrectIdxs = getIncorrectQuestionIndices(baseList, ansList);
+    let incorrectList = baseList.filter((_, idx) => incorrectIdxs.includes(idx));
 
     if (incorrectList.length === 0) {
       alert("Congratulations! All questions were answered correctly in this exam.");
@@ -938,6 +953,13 @@ export default function App() {
     const bank = examRecord?.bankName || selectedBankName;
     const mode = examRecord?.examMode || examMode;
     const stngs = examRecord?.settings || settings;
+
+    if (stngs?.randomizeQuestions) {
+      incorrectList = [...incorrectList].sort(() => Math.random() - 0.5);
+    }
+    if (stngs?.randomizeAnswers) {
+      incorrectList = incorrectList.map(randomizeQuestionOptions);
+    }
 
     setFlaggedQuestions([]);
     dispatch({
