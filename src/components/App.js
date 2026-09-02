@@ -7,6 +7,7 @@ import Error from "./Error";
 import ResumeExamsView from "./ResumeExamsView";
 import ExamHistoryView from "./ExamHistoryView";
 import AuthModal from "./AuthModal";
+import AuthView from "./AuthView";
 import MobileBottomBar from "./MobileBottomBar";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 
@@ -418,7 +419,7 @@ export default function App() {
     dispatch,
   ] = useReducer(reducer, initialState);
 
-  const [currentView, setCurrentView] = useState("dashboard"); // 'dashboard', 'resume-exams', 'history'
+  const [currentView, setCurrentView] = useState("dashboard"); // 'dashboard', 'resume-exams', 'history', 'auth-login', 'auth-signup', 'auth-verify', 'auth-forgot', 'auth-reset'
   
   // User Authentication State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -470,7 +471,8 @@ export default function App() {
   }, []);
 
   const handleOpenAuth = (mode = "login") => {
-    setAuthModal({ isOpen: true, mode });
+    // Navigate to full-page auth view instead of modal
+    setCurrentView(`auth-${mode}`);
   };
 
   const handleAuthSuccess = (user, token) => {
@@ -479,6 +481,8 @@ export default function App() {
       setCandidateName(user.name);
       localStorage.setItem("ccna_candidate_name", user.name);
     }
+    // After successful auth, return to dashboard
+    setCurrentView("dashboard");
   };
 
   const handleLogout = () => {
@@ -559,6 +563,15 @@ export default function App() {
       })
       .catch(() => {});
   }, [currentUser]);
+
+  // *** EXAM TIMER COUNTDOWN ***
+  useEffect(() => {
+    if (status !== "active" || secondsRemaining === null || secondsRemaining <= 0) return;
+    const interval = setInterval(() => {
+      dispatch({ type: "tick" });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [status, secondsRemaining]);
 
   // 2. Keep active exam session saved in savedSessions list on every change (tied to user)
   useEffect(() => {
@@ -766,10 +779,7 @@ export default function App() {
 
   const requireAuth = (callbackAction) => {
     if (!currentUser || !currentUser.isVerified) {
-      setAuthModal({
-        isOpen: true,
-        mode: currentUser ? "verify" : "login",
-      });
+      setCurrentView(currentUser ? "auth-verify" : "auth-login");
       return false;
     }
     if (callbackAction) callbackAction();
@@ -953,6 +963,17 @@ export default function App() {
         {status === "loading" && <Loader />}
         {status === "error" && <Error />}
 
+        {/* ===== FULL-PAGE AUTH VIEWS (login / signup / verify / forgot / reset) ===== */}
+        {status === "ready" && currentView.startsWith("auth-") && (
+          <AuthView
+            initialMode={currentView.replace("auth-", "")}
+            onAuthSuccess={handleAuthSuccess}
+            onClose={() => setCurrentView("dashboard")}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        )}
+
         {/* 1. DASHBOARD & NAVIGATION VIEWS (When not inside an active test) */}
         {status === "ready" && currentView === "dashboard" && (
           <ExamDashboard
@@ -1037,6 +1058,7 @@ export default function App() {
             maxPossiblePoints={maxPossiblePoints}
             candidateName={currentUser?.name || candidateName}
             currentUser={currentUser}
+            secondsRemaining={secondsRemaining}
           />
         )}
 
@@ -1072,8 +1094,8 @@ export default function App() {
           onLogout={handleLogout}
         />
 
-        {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam) */}
-        {status === "ready" && (
+        {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam and not in full-page auth) */}
+        {status === "ready" && !currentView.startsWith("auth-") && (
           <MobileBottomBar
             currentView={currentView}
             onNavigate={setCurrentView}

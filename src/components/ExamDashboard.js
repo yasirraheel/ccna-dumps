@@ -26,7 +26,6 @@ function ExamDashboard({
 }) {
   const [selectedBank, setSelectedBank] = useState("bank_a");
   const [examMode, setExamMode] = useState("study");
-  const [customCount, setCustomCount] = useState(50);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -79,13 +78,6 @@ function ExamDashboard({
         );
         bankTitle = "Drag & Drop Special Bank";
         break;
-      case "bank_custom":
-        filtered = allQuestions.slice(
-          0,
-          Math.min(customCount, allQuestions.length)
-        );
-        bankTitle = `Custom Set (${filtered.length} Questions)`;
-        break;
       case "bank_all":
       default:
         filtered = [...allQuestions];
@@ -100,12 +92,35 @@ function ExamDashboard({
     return { filtered, bankTitle };
   };
 
+  const isSimulation = examMode === "simulation";
+
+  const effectiveSettings = isSimulation
+    ? {
+        randomizeQuestions: true,
+        randomizeAnswers: true,
+        showScoreLive: true,
+        showRequiredAnswersCount: true,
+        includeShowAnswerBtn: false,
+        showAnswersInline: false,
+        timerMode: "timed_90",
+      }
+    : settings;
+
   const handleBeginExam = () => {
-    const { filtered, bankTitle } = getBankFilteredQuestions();
+    let { filtered, bankTitle } = getBankFilteredQuestions();
+
+    if (isSimulation) {
+      // Simulation: enforce settings and random 70-80 questions from the bank
+      const simCount = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
+      const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+      filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
+      bankTitle = `${bankTitle} — Simulation (${filtered.length} Qs)`;
+    }
+
     onStartExam({
       questions: filtered,
       examMode,
-      settings,
+      settings: effectiveSettings,
       bankName: bankTitle,
     });
   };
@@ -414,43 +429,6 @@ function ExamDashboard({
                     <span className="bank-meta">{totalQuestionsCount} Qs</span>
                   </label>
 
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_custom" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_custom"
-                      checked={selectedBank === "bank_custom"}
-                      onChange={() => setSelectedBank("bank_custom")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">Custom Count:</span>
-                    <input
-                      type="number"
-                      min="5"
-                      max={totalQuestionsCount}
-                      value={customCount}
-                      onChange={(e) =>
-                        setCustomCount(
-                          Math.max(
-                            1,
-                            Math.min(
-                              parseInt(e.target.value) || 10,
-                              totalQuestionsCount
-                            )
-                          )
-                        )
-                      }
-                      className="custom-count-input"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedBank("bank_custom");
-                      }}
-                    />
-                  </label>
                 </div>
 
                 <div className="exam-mode-section">
@@ -458,21 +436,23 @@ function ExamDashboard({
                   <div className="mode-toggle-group">
                     <button
                       type="button"
-                      className={`mode-toggle-btn ${
-                        examMode === "study" ? "active-study" : ""
-                      }`}
+                      className={`mode-toggle-btn ${examMode === "study" ? "active-study" : ""}`}
                       onClick={() => setExamMode("study")}
                     >
-                      📖 Study Mode
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                      </svg>
+                      Study Mode
                     </button>
                     <button
                       type="button"
-                      className={`mode-toggle-btn ${
-                        examMode === "simulation" ? "active-sim" : ""
-                      }`}
+                      className={`mode-toggle-btn ${examMode === "simulation" ? "active-sim" : ""}`}
                       onClick={() => setExamMode("simulation")}
                     >
-                      ⏱️ Simulation Mode
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      Simulation
                     </button>
                   </div>
                 </div>
@@ -482,14 +462,25 @@ function ExamDashboard({
               <div className="dashboard-right-panel">
                 <div className="panel-header">
                   <h3 className="panel-title">
-                    Current Exam Settings <span className="info-circle">ⓘ</span>
+                    Current Exam Settings <span className="info-circle" title="Summary of the active exam configuration">ⓘ</span>
                   </h3>
                   <button
                     type="button"
                     className="btn-modify-settings"
                     onClick={() => setIsSettingsOpen(true)}
+                    disabled={isSimulation}
+                    title={isSimulation ? "Settings are auto-enforced in Simulation Mode" : "Customize exam settings"}
                   >
-                    Modify Settings
+                    {isSimulation ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        Locked
+                      </>
+                    ) : (
+                      "Modify"
+                    )}
                   </button>
                 </div>
 
@@ -497,13 +488,13 @@ function ExamDashboard({
                   <div className="summary-row">
                     Exam is in{" "}
                     <strong>
-                      {examMode === "study" ? "Study mode" : "Simulation mode"}
+                      {isSimulation ? "Simulation mode" : "Study mode"}
                     </strong>
                   </div>
                   <div className="summary-row">
                     Questions are{" "}
                     <strong>
-                      {settings.randomizeQuestions
+                      {effectiveSettings.randomizeQuestions
                         ? "randomized"
                         : "in original order"}
                     </strong>
@@ -511,7 +502,7 @@ function ExamDashboard({
                   <div className="summary-row">
                     Answers are{" "}
                     <strong>
-                      {settings.randomizeAnswers
+                      {effectiveSettings.randomizeAnswers
                         ? "randomized"
                         : "in original order"}
                     </strong>
@@ -519,19 +510,21 @@ function ExamDashboard({
                   <div className="summary-row">
                     Show Answer button is{" "}
                     <strong>
-                      {settings.includeShowAnswerBtn ? "included" : "excluded"}
+                      {effectiveSettings.includeShowAnswerBtn ? "included" : "excluded"}
                     </strong>
                   </div>
                   <div className="summary-row">
                     Live Score during exam is{" "}
                     <strong>
-                      {settings.showScoreLive ? "visible" : "hidden"}
+                      {effectiveSettings.showScoreLive ? "visible" : "hidden"}
                     </strong>
                   </div>
                   <div className="summary-row highlight-count">
                     This exam has{" "}
                     <strong>
-                      {getBankFilteredQuestions().filtered.length} questions
+                      {isSimulation
+                        ? "70–80 random questions"
+                        : `${getBankFilteredQuestions().filtered.length} questions`}
                     </strong>
                   </div>
                 </div>

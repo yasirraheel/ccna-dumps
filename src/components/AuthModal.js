@@ -429,7 +429,6 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    autoFocus
                   />
                 </div>
               </div>
@@ -495,7 +494,6 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    autoFocus
                   />
                 </div>
               </div>
@@ -601,7 +599,6 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    autoFocus={idx === 0}
                   />
                 ))}
               </div>
@@ -671,7 +668,6 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    autoFocus
                   />
                 </div>
               </div>
@@ -722,7 +718,6 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    autoFocus={idx === 0}
                   />
                 ))}
               </div>

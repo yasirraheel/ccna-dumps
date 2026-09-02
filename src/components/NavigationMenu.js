@@ -65,45 +65,63 @@ function NavigationMenu({
           <div className="nav-dropdown-menu">
             <button
               type="button"
-              className={`nav-menu-item ${
-                currentView === "dashboard" ? "active" : ""
-              }`}
-              onClick={() => {
-                onNavigate("dashboard");
-                setIsOpen(false);
-              }}
+              className={`nav-menu-item ${currentView === "dashboard" ? "active" : ""}`}
+              onClick={() => { onNavigate("dashboard"); setIsOpen(false); }}
             >
-              <span className="nav-menu-icon">🏠</span>
+              <span className="nav-menu-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </span>
               <span>Home</span>
             </button>
 
             <button
               type="button"
-              className={`nav-menu-item ${
-                currentView === "resume-exams" ? "active" : ""
-              }`}
-              onClick={() => {
-                onNavigate("resume-exams");
-                setIsOpen(false);
-              }}
+              className={`nav-menu-item ${currentView === "resume-exams" ? "active" : ""}`}
+              onClick={() => { onNavigate("resume-exams"); setIsOpen(false); }}
             >
-              <span className="nav-menu-icon">📑</span>
+              <span className="nav-menu-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </span>
               <span>My Exams</span>
             </button>
 
             <button
               type="button"
-              className={`nav-menu-item ${
-                currentView === "history" ? "active" : ""
-              }`}
-              onClick={() => {
-                onNavigate("history");
-                setIsOpen(false);
-              }}
+              className={`nav-menu-item ${currentView === "history" ? "active" : ""}`}
+              onClick={() => { onNavigate("history"); setIsOpen(false); }}
             >
-              <span className="nav-menu-icon">🕒</span>
+              <span className="nav-menu-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
               <span>Exam History</span>
             </button>
+
+            {/* Auth links — only shown on mobile for non-logged-in users */}
+            {!currentUser && (
+              <>
+                <div className="nav-dropdown-divider"></div>
+                <button
+                  type="button"
+                  className="nav-menu-item nav-menu-auth-item"
+                  onClick={() => { onOpenAuth && onOpenAuth("login"); setIsOpen(false); }}
+                >
+                  <span className="nav-menu-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                  </span>
+                  <span>Sign In</span>
+                </button>
+                <button
+                  type="button"
+                  className="nav-menu-item nav-menu-auth-item nav-menu-signup-item"
+                  onClick={() => { onOpenAuth && onOpenAuth("signup"); setIsOpen(false); }}
+                >
+                  <span className="nav-menu-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                  </span>
+                  <span>Create Account</span>
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

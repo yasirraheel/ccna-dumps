@@ -80,6 +80,7 @@ function QuestionView({
   maxPossiblePoints,
   candidateName,
   currentUser,
+  secondsRemaining,
 }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -304,9 +305,19 @@ function QuestionView({
 
   const candidateInitials = getInitials(candidateName);
 
+  const formatTime = (secs) => {
+    if (secs === null || secs === undefined) return null;
+    const m = Math.floor(Math.abs(secs) / 60);
+    const s = Math.abs(secs) % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const timerDisplay = formatTime(secondsRemaining);
+  const timerIsLow = secondsRemaining !== null && secondsRemaining < 300;
+
   return (
     <div className="boson-exsim-view">
-      {/* TOP NAVIGATION BAR: Back to Exam, Notes Button, & User Avatar */}
+      {/* TOP NAVIGATION BAR: Back to Exam, Notes Button, Timer & User Avatar */}
       <div className="boson-top-bar">
         <div className="top-bar-left-actions">
           <button
@@ -330,11 +341,23 @@ function QuestionView({
           </button>
         </div>
 
-        <div
-          className="boson-user-avatar"
-          title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
-        >
-          <span>{candidateInitials}</span>
+        <div className="top-bar-right-group">
+          {/* TIMER PILL */}
+          {timerDisplay && (
+            <div className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""}`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>{timerDisplay}</span>
+            </div>
+          )}
+
+          <div
+            className="boson-user-avatar"
+            title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
+          >
+            <span>{candidateInitials}</span>
+          </div>
         </div>
       </div>
 
