@@ -934,7 +934,7 @@ app.post('/api/notes', async (req, res) => {
 });
 
 // SPA fallback for React App
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../build/index.html'));
 });
 
