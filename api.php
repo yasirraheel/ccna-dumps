@@ -195,12 +195,14 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
 
     $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->execute([$email]);
-    $storedHash = $user['password_hash'] ?? '';
+    $user = $stmt->fetch();
+
+    $storedHash = $user ? ($user['password_hash'] ?? '') : '';
     // Normalize bcrypt prefix if needed ($2b$ -> $2y$)
     if (strpos($storedHash, '$2b$') === 0) {
         $storedHash = '$2y$' . substr($storedHash, 4);
     }
-    $isValid = password_verify($password, $storedHash);
+    $isValid = $user && password_verify($password, $storedHash);
 
     if (!$user || !$isValid) {
         http_response_code(401);
