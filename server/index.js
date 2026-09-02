@@ -593,17 +593,22 @@ app.get('/api/history', async (req, res) => {
     const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
 
-    let query = 'SELECT * FROM exam_attempts';
+    // If no authenticated user is supplied, return empty history (guests have no history access)
+    if (!userId && !userEmail && !candidateName) {
+      return res.json({ history: [] });
+    }
+
+    let query = 'SELECT * FROM exam_attempts WHERE ';
     const params = [];
 
     if (userId) {
-      query += ' WHERE user_id = ?';
+      query += 'user_id = ?';
       params.push(userId);
     } else if (userEmail) {
-      query += ' WHERE user_email = ?';
+      query += 'user_email = ?';
       params.push(userEmail.trim().toLowerCase());
     } else if (candidateName) {
-      query += ' WHERE candidate_name = ?';
+      query += 'candidate_name = ?';
       params.push(candidateName);
     }
 
@@ -713,17 +718,22 @@ app.get('/api/sessions', async (req, res) => {
     const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
 
-    let query = 'SELECT * FROM saved_sessions';
+    // If no authenticated user is supplied, return empty sessions (guests have no session access)
+    if (!userId && !userEmail && !candidateName) {
+      return res.json({ sessions: [] });
+    }
+
+    let query = 'SELECT * FROM saved_sessions WHERE ';
     const params = [];
 
     if (userId) {
-      query += ' WHERE user_id = ?';
+      query += 'user_id = ?';
       params.push(userId);
     } else if (userEmail) {
-      query += ' WHERE user_email = ?';
+      query += 'user_email = ?';
       params.push(userEmail.trim().toLowerCase());
     } else if (candidateName) {
-      query += ' WHERE candidate_name = ?';
+      query += 'candidate_name = ?';
       params.push(candidateName);
     }
 

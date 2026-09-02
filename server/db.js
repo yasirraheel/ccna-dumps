@@ -177,6 +177,48 @@ async function initDB() {
     }
     console.log(`Successfully populated all ${ccnaQuestions.length} questions in MySQL database.`);
 
+    // Ensure default verified test candidate exists and map orphan records
+    try {
+      const bcrypt = require('bcryptjs');
+      const testEmail = 'candidate@ccna.com';
+      const testName = 'Yasir Raheel';
+      const testPassword = 'Password123!';
+      const passwordHash = await bcrypt.hash(testPassword, 10);
+
+      const [existingUsers] = await pool.query('SELECT * FROM users WHERE email = ?', [testEmail]);
+      let testUserId;
+      if (existingUsers.length > 0) {
+        testUserId = existingUsers[0].id;
+        await pool.query(
+          'UPDATE users SET name = ?, password_hash = ?, is_verified = 1 WHERE id = ?',
+          [testName, passwordHash, testUserId]
+        );
+      } else {
+        testUserId = `usr_${Date.now()}`;
+        await pool.query(
+          'INSERT INTO users (id, name, email, password_hash, is_verified, created_at) VALUES (?, ?, ?, ?, 1, NOW())',
+          [testUserId, testName, testEmail, passwordHash]
+        );
+        console.log(`✅ Default Verified Test Account Ready: ${testEmail} (Password: ${testPassword})`);
+      }
+
+      // Map any orphaned attempts/sessions to the test user
+      await pool.query(
+        'UPDATE exam_attempts SET user_id = ?, user_email = ?, candidate_name = ? WHERE user_id IS NULL OR user_id = ""',
+        [testUserId, testEmail, testName]
+      );
+      await pool.query(
+        'UPDATE saved_sessions SET user_id = ?, user_email = ?, candidate_name = ? WHERE user_id IS NULL OR user_id = ""',
+        [testUserId, testEmail, testName]
+      );
+      await pool.query(
+        'UPDATE candidate_notes SET user_id = ?, user_email = ?, candidate_name = ? WHERE user_id IS NULL OR user_id = ""',
+        [testUserId, testEmail, testName]
+      );
+    } catch (e) {
+      console.warn('Test user check/map:', e.message);
+    }
+
     return pool;
   } catch (error) {
     console.error('Error initializing MySQL database:', error.message);

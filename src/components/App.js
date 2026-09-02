@@ -958,14 +958,14 @@ export default function App() {
             totalQuestionsCount={allQuestions.length}
             allQuestions={allQuestions}
             onStartExam={handleStartExam}
-            candidateName={candidateName}
+            candidateName={currentUser?.name || candidateName}
             setCandidateName={setCandidateName}
-            savedSession={savedSessions.length > 0 ? savedSessions[0] : null}
-            savedSessions={savedSessions}
+            savedSession={currentUser && savedSessions.length > 0 ? savedSessions[0] : null}
+            savedSessions={currentUser ? savedSessions : []}
             onResumeExam={handleResumeSession}
             onDiscardSavedSession={() => handleDeleteSession(savedSessions[0]?.id)}
             onNavigate={setCurrentView}
-            pastExams={pastExams}
+            pastExams={currentUser ? pastExams : []}
             onReviewExam={handleReviewCompletedExam}
             onRetakeExam={handleRetakeAllQuestions}
             onRetakeAll={handleRetakeAllQuestions}
@@ -979,11 +979,11 @@ export default function App() {
 
         {status === "ready" && currentView === "resume-exams" && (
           <ResumeExamsView
-            savedSessions={savedSessions}
+            savedSessions={currentUser ? savedSessions : []}
             onResumeSession={handleResumeSession}
             onDeleteSession={handleDeleteSession}
             onNavigate={setCurrentView}
-            candidateName={candidateName}
+            candidateName={currentUser?.name || candidateName}
             currentUser={currentUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
@@ -992,7 +992,7 @@ export default function App() {
 
         {status === "ready" && currentView === "history" && (
           <ExamHistoryView
-            pastExams={pastExams}
+            pastExams={currentUser ? pastExams : []}
             onNavigate={setCurrentView}
             candidateName={candidateName}
             onClearHistory={handleClearHistory}

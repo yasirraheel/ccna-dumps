@@ -326,23 +326,31 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
   return (
     <div className="auth-modal-backdrop" onClick={onClose}>
       <div className="auth-modal-card" onClick={(e) => e.stopPropagation()}>
-        {/* Header with Cisco Branding & Close */}
+        {/* Professional Header with Cisco Vector Symbol & Close */}
         <div className="auth-modal-header">
           <div className="auth-modal-brand">
-            <span className="auth-brand-symbol">⫸</span>
+            <div className="auth-brand-badge-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="13 17 18 12 13 7" />
+                <polyline points="6 17 11 12 6 7" />
+              </svg>
+            </div>
             <div>
               <h3 className="auth-modal-title">
                 {mode === "login" && "Candidate Sign In"}
                 {mode === "signup" && "Create Candidate Account"}
-                {mode === "verify" && "Verify Your Email"}
-                {mode === "forgot" && "Recover Account Access"}
+                {mode === "verify" && "Verify Email Address"}
+                {mode === "forgot" && "Recover Account"}
                 {mode === "reset" && "Set New Password"}
               </h3>
               <span className="auth-modal-sub">Cisco 200-301 CCNA Simulator</span>
             </div>
           </div>
           <button type="button" className="auth-modal-close" onClick={onClose} title="Close">
-            ✕
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
@@ -358,7 +366,12 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                 setSuccessMsg("");
               }}
             >
-              🔑 Log In
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              Log In
             </button>
             <button
               type="button"
@@ -369,7 +382,13 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                 setSuccessMsg("");
               }}
             >
-              📝 Sign Up (New Candidate)
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+              Sign Up (New Candidate)
             </button>
           </div>
         )}
@@ -377,37 +396,21 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
         {/* Error and Success Alerts */}
         {errorMsg && (
           <div className="auth-alert auth-alert-error">
-            <span className="alert-icon">⚠️</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
           <div className="auth-alert auth-alert-success">
-            <span className="alert-icon">✓</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
             <span>{successMsg}</span>
-          </div>
-        )}
-
-        {/* Dev OTP Helper Banner */}
-        {devOtpHint && (mode === "verify" || mode === "reset") && (
-          <div className="auth-dev-otp-card">
-            <span className="otp-badge">✉️ Verification Code Dispatched</span>
-            <p>
-              Sent code to <strong>{pendingEmail}</strong>:
-            </p>
-            <div className="dev-code-display">
-              <span className="code-highlight">{devOtpHint}</span>
-              <button
-                type="button"
-                className="btn-auto-fill-otp"
-                onClick={() => {
-                  setOtpCode(devOtpHint.split(""));
-                }}
-              >
-                ⚡ Auto Fill Code
-              </button>
-            </div>
           </div>
         )}
 
@@ -418,15 +421,17 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
             <form onSubmit={handleLogin} className="auth-form">
               <div className="auth-field-group">
                 <label className="auth-label">Email Address</label>
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder="candidate@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className="auth-input-wrapper">
+                  <input
+                    type="email"
+                    className="auth-input"
+                    placeholder="candidate@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
               </div>
 
               <div className="auth-field-group">
@@ -444,14 +449,16 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     Forgot password?
                   </button>
                 </div>
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="auth-input-wrapper">
+                  <input
+                    type="password"
+                    className="auth-input"
+                    placeholder="Enter your password..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <button type="submit" className="btn-auth-primary" disabled={loading}>
@@ -480,57 +487,69 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
             <form onSubmit={handleRegister} className="auth-form">
               <div className="auth-field-group">
                 <label className="auth-label">Candidate Full Name</label>
-                <input
-                  type="text"
-                  className="auth-input"
-                  placeholder="e.g. John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className="auth-input-wrapper">
+                  <input
+                    type="text"
+                    className="auth-input"
+                    placeholder="e.g. John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
               </div>
 
               <div className="auth-field-group">
-                <label className="auth-label">Email Address (For Verification)</label>
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder="candidate@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <label className="auth-label">Email Address (For Verification Code)</label>
+                <div className="auth-input-wrapper">
+                  <input
+                    type="email"
+                    className="auth-input"
+                    placeholder="candidate@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="auth-grid-2col">
                 <div className="auth-field-group">
                   <label className="auth-label">Password (6+ chars)</label>
-                  <input
-                    type="password"
-                    className="auth-input"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="auth-input-wrapper">
+                    <input
+                      type="password"
+                      className="auth-input"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="auth-field-group">
                   <label className="auth-label">Confirm Password</label>
-                  <input
-                    type="password"
-                    className="auth-input"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
+                  <div className="auth-input-wrapper">
+                    <input
+                      type="password"
+                      className="auth-input"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="auth-security-notice">
-                <span>🔒 Secure registration: An email verification code will be generated to activate your exam account.</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <span>A 6-digit verification code will be sent to your email to verify and activate your account.</span>
               </div>
 
               <button type="submit" className="btn-auth-primary" disabled={loading}>
@@ -558,7 +577,12 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
           {mode === "verify" && (
             <div className="auth-verify-container">
               <div className="verify-icon-banner">
-                <span className="verify-big-icon">✉️</span>
+                <div className="verify-icon-circle">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </div>
                 <h4>Enter Verification Code</h4>
                 <p>
                   We have sent a 6-digit verification code to{" "}
@@ -603,7 +627,7 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                     onClick={handleResendCode}
                     disabled={loading}
                   >
-                    ↺ Resend Verification Code
+                    Resend Verification Code
                   </button>
                 )}
                 <button
@@ -625,7 +649,12 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
           {mode === "forgot" && (
             <form onSubmit={handleForgotPassword} className="auth-form">
               <div className="verify-icon-banner">
-                <span className="verify-big-icon">🔑</span>
+                <div className="verify-icon-circle">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
                 <h4>Reset Your Password</h4>
                 <p>
                   Enter the email address associated with your CCNA candidate account. We will send you a verification code to set a new password.
@@ -634,15 +663,17 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
 
               <div className="auth-field-group">
                 <label className="auth-label">Candidate Email Address</label>
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder="candidate@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className="auth-input-wrapper">
+                  <input
+                    type="email"
+                    className="auth-input"
+                    placeholder="candidate@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                </div>
               </div>
 
               <button type="submit" className="btn-auth-primary" disabled={loading}>
@@ -669,7 +700,11 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
           {mode === "reset" && (
             <form onSubmit={handleResetPassword} className="auth-form">
               <div className="verify-icon-banner">
-                <span className="verify-big-icon">🔒</span>
+                <div className="verify-icon-circle">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                </div>
                 <h4>Enter Reset Code & New Password</h4>
                 <p>
                   Enter the 6-digit reset code sent to <strong>{pendingEmail}</strong>.
@@ -694,26 +729,30 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
 
               <div className="auth-field-group">
                 <label className="auth-label">New Password (6+ characters)</label>
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="auth-input-wrapper">
+                  <input
+                    type="password"
+                    className="auth-input"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="auth-field-group">
                 <label className="auth-label">Confirm New Password</label>
-                <input
-                  type="password"
-                  className="auth-input"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
+                <div className="auth-input-wrapper">
+                  <input
+                    type="password"
+                    className="auth-input"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <button type="submit" className="btn-auth-primary" disabled={loading}>

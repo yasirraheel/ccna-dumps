@@ -144,7 +144,12 @@ function NavigationMenu({
                     setIsUserMenuOpen(false);
                   }}
                 >
-                  📊 My Exam Records
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
+                  My Exam Records
                 </button>
                 <button
                   type="button"
@@ -154,7 +159,12 @@ function NavigationMenu({
                     if (onLogout) onLogout();
                   }}
                 >
-                  🚪 Sign Out
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Sign Out
                 </button>
               </div>
             )}
@@ -166,14 +176,25 @@ function NavigationMenu({
               className="btn-nav-login"
               onClick={() => onOpenAuth && onOpenAuth("login")}
             >
-              🔑 Log In
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              Log In
             </button>
             <button
               type="button"
               className="btn-nav-signup"
               onClick={() => onOpenAuth && onOpenAuth("signup")}
             >
-              📝 Sign Up
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+              Sign Up
             </button>
           </div>
         )}

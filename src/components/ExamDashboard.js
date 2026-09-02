@@ -123,10 +123,10 @@ function ExamDashboard({
   };
 
   const activeSession =
-    savedSession || (savedSessions.length > 0 ? savedSessions[0] : null);
+    currentUser && (savedSession || (savedSessions.length > 0 ? savedSessions[0] : null));
 
   const lastCompletedExam =
-    pastExams.length > 0 ? pastExams[pastExams.length - 1] : null;
+    currentUser && pastExams.length > 0 ? pastExams[pastExams.length - 1] : null;
 
   return (
     <div className="boson-dashboard-wrapper">
@@ -145,7 +145,7 @@ function ExamDashboard({
         {/* ===================================================================
             SECTION 1: PICK UP WHERE YOU LEFT OFF (Screenshot 2 Matching)
             =================================================================== */}
-        {activeSession && activeSession.questions && (
+        {currentUser && activeSession && activeSession.questions && (
           <section className="dashboard-section pickup-block">
             <h2 className="section-green-heading">Pick up where you left off</h2>
 
@@ -261,21 +261,42 @@ function ExamDashboard({
             <h2 className="section-green-heading">Get started on a new exam</h2>
 
             {currentUser ? (
-              <div className="candidate-name-pill candidate-pill-authenticated" title={`Signed in as ${currentUser.email}`}>
-                <span className="candidate-pill-icon">👤 Candidate:</span>
-                <span className="candidate-pill-val">{currentUser.name}</span>
-                <span className="candidate-pill-badge">Verified ✓</span>
+              <div
+                className="candidate-auth-status-card candidate-card-verified"
+                title={`Signed in as ${currentUser.email}`}
+              >
+                <div className="candidate-auth-left">
+                  <span className="candidate-auth-label">Candidate</span>
+                  <span className="candidate-auth-name">{currentUser.name}</span>
+                </div>
+                <span className="candidate-verified-badge">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  Verified
+                </span>
               </div>
             ) : (
               <button
                 type="button"
-                className="candidate-name-pill candidate-pill-unauth-btn"
+                className="candidate-auth-status-card candidate-card-unauth"
                 onClick={() => onOpenAuth && onOpenAuth("login")}
-                title="Click to sign in"
+                title="Sign in or register to access exams"
               >
-                <span className="candidate-pill-icon">🔒 Candidate:</span>
-                <span className="candidate-pill-val unauth-text">Sign In Required</span>
-                <span className="candidate-pill-badge-action">Log In / Sign Up ➜</span>
+                <div className="candidate-auth-left">
+                  <div className="candidate-auth-label-row">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <span className="candidate-auth-label warning-label">Access Required</span>
+                  </div>
+                  <span className="candidate-unauth-prompt">Sign In / Register to Start</span>
+                </div>
+                <span className="candidate-signin-btn-pill">
+                  Sign In ➜
+                </span>
               </button>
             )}
           </div>
