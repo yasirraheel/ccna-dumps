@@ -195,9 +195,14 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
 
     $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->execute([$email]);
-    $user = $stmt->fetch();
+    $storedHash = $user['password_hash'] ?? '';
+    // Normalize bcrypt prefix if needed ($2b$ -> $2y$)
+    if (strpos($storedHash, '$2b$') === 0) {
+        $storedHash = '$2y$' . substr($storedHash, 4);
+    }
+    $isValid = password_verify($password, $storedHash);
 
-    if (!$user || !password_verify($password, $user['password_hash'])) {
+    if (!$user || !$isValid) {
         http_response_code(401);
         echo json_encode(["error" => "Invalid email or password."]);
         exit;
