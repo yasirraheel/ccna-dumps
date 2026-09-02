@@ -25,7 +25,7 @@ async function initDB() {
       queueLimit: 0,
     });
 
-    // Drop and recreate questions table to ensure exact schema
+    // 1. Drop and recreate questions table to ensure exact schema & fresh sequence
     await pool.query(`DROP TABLE IF EXISTS questions;`);
 
     await pool.query(`
@@ -44,17 +44,61 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // 2. Exam attempts / history table (Full exam history record)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS exam_attempts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id VARCHAR(100) PRIMARY KEY,
         candidate_name VARCHAR(150) NOT NULL,
+        bank_name VARCHAR(200) NOT NULL,
         score INT NOT NULL,
-        max_possible_points INT NOT NULL,
+        max_score INT NOT NULL,
         percentage DECIMAL(5, 2) NOT NULL,
         passed BOOLEAN NOT NULL,
         total_questions INT NOT NULL,
         time_spent_seconds INT DEFAULT 0,
-        attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        exam_date BIGINT NOT NULL,
+        questions JSON,
+        answers JSON,
+        flagged_questions JSON,
+        revealed_questions JSON,
+        settings JSON,
+        exam_mode VARCHAR(50) DEFAULT 'study',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 3. Active / In-Progress Saved Sessions table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS saved_sessions (
+        id VARCHAR(100) PRIMARY KEY,
+        candidate_name VARCHAR(150) NOT NULL,
+        bank_name VARCHAR(200) NOT NULL,
+        exam_mode VARCHAR(50) DEFAULT 'study',
+        q_index INT DEFAULT 0,
+        points INT DEFAULT 0,
+        seconds_remaining INT DEFAULT 7200,
+        time_spent_seconds INT DEFAULT 0,
+        questions JSON,
+        answers JSON,
+        flagged_questions JSON,
+        revealed_questions JSON,
+        question_notes JSON,
+        settings JSON,
+        updated_at BIGINT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 4. Candidate notes table (per question notes)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS candidate_notes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        candidate_name VARCHAR(150) NOT NULL,
+        question_id INT NOT NULL,
+        question_no VARCHAR(30),
+        note_text TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_cand_q (candidate_name, question_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
@@ -63,9 +107,10 @@ async function initDB() {
 
     for (const q of ccnaQuestions) {
       await pool.query(
-        `INSERT INTO questions (type, question_no, question, options, correct_option, drag_drop_data, points, cli_snippet, exhibit_image)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO questions (id, type, question_no, question, options, correct_option, drag_drop_data, points, cli_snippet, exhibit_image)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          q.id,
           q.type || (q.dragDropData ? 'drag_drop' : 'multiple_choice'),
           q.questionNo,
           q.question,
@@ -78,7 +123,7 @@ async function initDB() {
         ]
       );
     }
-    console.log(`Successfully populated ${ccnaQuestions.length} questions in MySQL database.`);
+    console.log(`Successfully populated all ${ccnaQuestions.length} questions in MySQL database.`);
 
     return pool;
   } catch (error) {

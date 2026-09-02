@@ -129,6 +129,21 @@ function QuestionView({
     } catch (e) {
       console.warn("Save note error:", e);
     }
+
+    // MySQL sync
+    if (question?.id) {
+      fetch("http://localhost:5000/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateName: candidateName || "Candidate",
+          questionId: question.id,
+          questionNo: question.questionNo || `Question #${question.id}`,
+          noteText: trimmed,
+        }),
+      }).catch(() => {});
+    }
+
     setIsNoteBoxOpen(false);
   };
 
@@ -146,6 +161,21 @@ function QuestionView({
       localStorage.setItem("ccna_question_comments", JSON.stringify(updated));
     } catch (e) {
       console.warn("Delete note error:", e);
+    }
+
+    // MySQL sync
+    const qId = Number(targetKey) || question?.id;
+    if (qId) {
+      fetch("http://localhost:5000/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateName: candidateName || "Candidate",
+          questionId: qId,
+          questionNo: question?.questionNo || `Question #${qId}`,
+          noteText: "",
+        }),
+      }).catch(() => {});
     }
   };
 

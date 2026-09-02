@@ -444,8 +444,9 @@ export default function App() {
     }
   });
 
-  // 1. Initial Load: Local Dataset guaranteed + Optional API refresh
+  // 1. Initial Load: Local Dataset guaranteed + MySQL API hydration
   useEffect(() => {
+    // 1.1 Load bundled questions immediately, then refresh from MySQL
     if (ccnaQuestions && ccnaQuestions.length > 0) {
       dispatch({ type: "dataReceived", payload: ccnaQuestions });
     }
@@ -459,8 +460,34 @@ export default function App() {
         }
       })
       .catch(() => {
-        // Local bundled questions are already active and functional
+        // Fallback to bundled dataset if MySQL server is not active
       });
+
+    // 1.2 Fetch full exam history from MySQL
+    fetch(`${API_BASE_URL}/history`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+          setPastExams(data.history);
+          try {
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(data.history));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    // 1.3 Fetch saved active sessions from MySQL
+    fetch(`${API_BASE_URL}/sessions`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.sessions && Array.isArray(data.sessions) && data.sessions.length > 0) {
+          setSavedSessions(data.sessions);
+          try {
+            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(data.sessions));
+          } catch {}
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // 2. Keep active exam session saved in savedSessions list on every change (except when in review mode)
@@ -507,6 +534,13 @@ export default function App() {
         }
         return updated;
       });
+
+      // MySQL backend sync for active session
+      fetch(`${API_BASE_URL}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentSessionObj),
+      }).catch(() => {});
     }
   }, [
     status,
@@ -600,19 +634,11 @@ export default function App() {
         });
       }
 
-      // MySQL backend sync
-      fetch(`${API_BASE_URL}/progress`, {
+      // MySQL backend sync: Save full attempt record
+      fetch(`${API_BASE_URL}/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          candidateName: candidateName || "Anonymous Candidate",
-          score: points,
-          maxPossiblePoints,
-          percentage,
-          passed,
-          totalQuestions: numQuestions,
-          timeSpentSeconds: timeSpent,
-        }),
+        body: JSON.stringify(completedRecord),
       })
         .then((res) => res.json())
         .then((data) => {
@@ -625,6 +651,13 @@ export default function App() {
         .catch(() => {
           setSaveStatus("Saved locally");
         });
+
+      // Also clean active session from MySQL if present
+      if (activeSessionId) {
+        fetch(`${API_BASE_URL}/sessions/${activeSessionId}`, {
+          method: "DELETE",
+        }).catch(() => {});
+      }
     }
   }, [
     status,
@@ -685,11 +718,16 @@ export default function App() {
       }
       return updated;
     });
+
+    if (sessionId) {
+      fetch(`${API_BASE_URL}/sessions/${sessionId}`, { method: "DELETE" }).catch(() => {});
+    }
   };
 
   const handleClearHistory = () => {
     setPastExams([]);
     localStorage.removeItem(HISTORY_STORAGE_KEY);
+    fetch(`${API_BASE_URL}/history`, { method: "DELETE" }).catch(() => {});
   };
 
   const handleDeleteHistoryRecord = (recordId) => {
@@ -702,6 +740,10 @@ export default function App() {
       }
       return updated;
     });
+
+    if (recordId) {
+      fetch(`${API_BASE_URL}/history/${recordId}`, { method: "DELETE" }).catch(() => {});
+    }
   };
 
   const handleReviewCompletedExam = (examRecord) => {
