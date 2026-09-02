@@ -55,6 +55,7 @@ try {
 // Request path parsing
 $requestUri = $_SERVER['REQUEST_URI'];
 $basePath = parse_url($requestUri, PHP_URL_PATH);
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $rawInput = file_get_contents('php://input');
 $body = json_decode($rawInput, true);
 if (!is_array($body)) {
