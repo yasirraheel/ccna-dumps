@@ -13,17 +13,28 @@ let pool;
 
 async function initDB() {
   try {
-    const initConnection = await mysql.createConnection(dbConfig);
-    await initConnection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-    await initConnection.end();
+    if (dbConfig.user !== 'root') {
+      // Connect directly to existing user database
+      pool = mysql.createPool({
+        ...dbConfig,
+        database: DB_NAME,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+    } else {
+      const initConnection = await mysql.createConnection(dbConfig);
+      await initConnection.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
+      await initConnection.end();
 
-    pool = mysql.createPool({
-      ...dbConfig,
-      database: DB_NAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
+      pool = mysql.createPool({
+        ...dbConfig,
+        database: DB_NAME,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+    }
 
     // 1. Users table (Registration, Login, Email Verification)
     await pool.query(`
@@ -42,11 +53,9 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 2. Drop and recreate questions table to ensure exact schema & fresh sequence
-    await pool.query(`DROP TABLE IF EXISTS questions;`);
-
+    // 2. Questions table
     await pool.query(`
-      CREATE TABLE questions (
+      CREATE TABLE IF NOT EXISTS questions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         type VARCHAR(30) DEFAULT 'multiple_choice',
         question_no VARCHAR(30) NOT NULL,
@@ -154,28 +163,33 @@ async function initDB() {
       await pool.query(`ALTER TABLE candidate_notes ADD COLUMN user_email VARCHAR(191) AFTER user_id;`);
     } catch {}
 
-    console.log('Seeding CCNA questions into MySQL...');
-    const { ccnaQuestions } = require('../src/data/ccnaQuestions');
+    const [qRows] = await pool.query('SELECT COUNT(*) as count FROM questions');
+    if (qRows[0].count === 0) {
+      console.log('Seeding CCNA questions into MySQL...');
+      const { ccnaQuestions } = require('../src/data/ccnaQuestions');
 
-    for (const q of ccnaQuestions) {
-      await pool.query(
-        `INSERT INTO questions (id, type, question_no, question, options, correct_option, drag_drop_data, points, cli_snippet, exhibit_image)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          q.id,
-          q.type || (q.dragDropData ? 'drag_drop' : 'multiple_choice'),
-          q.questionNo,
-          q.question,
-          q.options ? JSON.stringify(q.options) : null,
-          q.correctOption !== undefined && q.correctOption !== null ? JSON.stringify(q.correctOption) : null,
-          q.dragDropData ? JSON.stringify(q.dragDropData) : null,
-          q.points || 10,
-          q.cliSnippet || null,
-          q.exhibitImage || null,
-        ]
-      );
+      for (const q of ccnaQuestions) {
+        await pool.query(
+          `INSERT INTO questions (id, type, question_no, question, options, correct_option, drag_drop_data, points, cli_snippet, exhibit_image)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            q.id,
+            q.type || (q.dragDropData ? 'drag_drop' : 'multiple_choice'),
+            q.questionNo,
+            q.question,
+            q.options ? JSON.stringify(q.options) : null,
+            q.correctOption !== undefined && q.correctOption !== null ? JSON.stringify(q.correctOption) : null,
+            q.dragDropData ? JSON.stringify(q.dragDropData) : null,
+            q.points || 10,
+            q.cliSnippet || null,
+            q.exhibitImage || null,
+          ]
+        );
+      }
+      console.log(`Successfully populated all ${ccnaQuestions.length} questions in MySQL database.`);
+    } else {
+      console.log(`Questions table already populated (${qRows[0].count} questions found in MySQL).`);
     }
-    console.log(`Successfully populated all ${ccnaQuestions.length} questions in MySQL database.`);
 
     // Ensure default verified test candidate exists and map orphan records
     try {
