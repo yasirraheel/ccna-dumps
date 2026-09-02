@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { initDB, getPool } = require('./db');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('./mailer');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -62,6 +63,14 @@ app.post('/api/auth/register', async (req, res) => {
         [cleanName, hash, otp, expiresAt, cleanEmail]
       );
 
+      // Dispatch real email via Hostinger SMTP
+      try {
+        await sendVerificationEmail(cleanEmail, cleanName, otp);
+        console.log(`✉️ [HOSTINGER SMTP] Verification email dispatched to ${cleanEmail}`);
+      } catch (mailErr) {
+        console.warn(`⚠️ [HOSTINGER SMTP] Failed to send email to ${cleanEmail}:`, mailErr.message);
+      }
+
       console.log(`\n======================================================`);
       console.log(`✉️ [EMAIL VERIFICATION CODE] Sent to: ${cleanEmail}`);
       console.log(`🔑 Verification OTP Code: ${otp}`);
@@ -70,7 +79,7 @@ app.post('/api/auth/register', async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: 'Verification code sent to your email.',
+        message: `Verification code sent to ${cleanEmail}. Please check your inbox or spam folder.`,
         email: cleanEmail,
         isVerified: false,
         devOtp: otp, // helpful in dev preview
@@ -90,6 +99,14 @@ app.post('/api/auth/register', async (req, res) => {
       [userId, cleanName, cleanEmail, hash, otp, expiresAt]
     );
 
+    // Dispatch real email via Hostinger SMTP
+    try {
+      await sendVerificationEmail(cleanEmail, cleanName, otp);
+      console.log(`✉️ [HOSTINGER SMTP] Verification email dispatched to ${cleanEmail}`);
+    } catch (mailErr) {
+      console.warn(`⚠️ [HOSTINGER SMTP] Failed to send email to ${cleanEmail}:`, mailErr.message);
+    }
+
     console.log(`\n======================================================`);
     console.log(`✉️ [EMAIL VERIFICATION CODE] Sent to: ${cleanEmail}`);
     console.log(`🔑 Verification OTP Code: ${otp}`);
@@ -98,7 +115,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Account created! Verification code sent to your email.',
+      message: `Account created! Verification code sent to ${cleanEmail}.`,
       email: cleanEmail,
       isVerified: false,
       devOtp: otp,
@@ -205,6 +222,14 @@ app.post('/api/auth/resend-code', async (req, res) => {
       [otp, expiresAt, user.id]
     );
 
+    // Dispatch real email via Hostinger SMTP
+    try {
+      await sendVerificationEmail(cleanEmail, user.name, otp);
+      console.log(`✉️ [HOSTINGER SMTP] Resent verification email to ${cleanEmail}`);
+    } catch (mailErr) {
+      console.warn(`⚠️ [HOSTINGER SMTP] Failed to send email to ${cleanEmail}:`, mailErr.message);
+    }
+
     console.log(`\n======================================================`);
     console.log(`✉️ [RESENT VERIFICATION CODE] Sent to: ${cleanEmail}`);
     console.log(`🔑 Verification OTP Code: ${otp}`);
@@ -213,7 +238,7 @@ app.post('/api/auth/resend-code', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'New verification code sent to your email.',
+      message: `A fresh 6-digit verification code has been dispatched to ${cleanEmail}.`,
       devOtp: otp,
     });
   } catch (error) {
@@ -255,13 +280,21 @@ app.post('/api/auth/login', async (req, res) => {
         [otp, expiresAt, user.id]
       );
 
+      // Dispatch real email via Hostinger SMTP
+      try {
+        await sendVerificationEmail(cleanEmail, user.name, otp);
+        console.log(`✉️ [HOSTINGER SMTP] Dispatched verification email on login attempt to ${cleanEmail}`);
+      } catch (mailErr) {
+        console.warn(`⚠️ [HOSTINGER SMTP] Failed to send email to ${cleanEmail}:`, mailErr.message);
+      }
+
       console.log(`\n======================================================`);
       console.log(`✉️ [UNVERIFIED LOGIN - OTP] Sent to: ${cleanEmail}`);
       console.log(`🔑 Verification OTP Code: ${otp}`);
       console.log(`======================================================\n`);
 
       return res.status(403).json({
-        error: 'Email is not verified yet. We have sent a verification code to your email.',
+        error: `Email is not verified yet. We have sent a verification code to ${cleanEmail}.`,
         needsVerification: true,
         email: cleanEmail,
         devOtp: otp,
@@ -353,6 +386,14 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       [otp, expiresAt, user.id]
     );
 
+    // Dispatch real email via Hostinger SMTP
+    try {
+      await sendPasswordResetEmail(cleanEmail, user.name, otp);
+      console.log(`✉️ [HOSTINGER SMTP] Password reset email dispatched to ${cleanEmail}`);
+    } catch (mailErr) {
+      console.warn(`⚠️ [HOSTINGER SMTP] Failed to send email to ${cleanEmail}:`, mailErr.message);
+    }
+
     console.log(`\n======================================================`);
     console.log(`🔑 [PASSWORD RESET CODE] Sent to: ${cleanEmail}`);
     console.log(`🔢 Reset OTP Code: ${otp}`);
@@ -361,7 +402,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Password reset code sent to your email.',
+      message: `Password reset code sent to ${cleanEmail}.`,
       email: cleanEmail,
       devOtp: otp,
     });
