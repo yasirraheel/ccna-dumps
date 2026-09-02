@@ -139,10 +139,21 @@ function NavigationMenu({
                 title={`Logged in as: ${displayName} (${currentUser.email})`}
               >
                 <span>{getInitials(displayName)}</span>
+                <span className="avatar-verified-dot" title="Verified Candidate">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
               </div>
               <div className="user-profile-meta">
                 <span className="user-profile-name">{displayName}</span>
-                <span className="user-badge-verified">Verified ✓</span>
+                <div className="nav-verified-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <span>Verified</span>
+                </div>
               </div>
               <span className="user-dropdown-caret">▾</span>
             </button>
