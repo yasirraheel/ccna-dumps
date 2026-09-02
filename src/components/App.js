@@ -7,6 +7,7 @@ import Error from "./Error";
 import ResumeExamsView from "./ResumeExamsView";
 import ExamHistoryView from "./ExamHistoryView";
 import AuthModal from "./AuthModal";
+import MobileBottomBar from "./MobileBottomBar";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
@@ -1070,6 +1071,18 @@ export default function App() {
           onAuthSuccess={handleAuthSuccess}
           onLogout={handleLogout}
         />
+
+        {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam) */}
+        {status === "ready" && (
+          <MobileBottomBar
+            currentView={currentView}
+            onNavigate={setCurrentView}
+            savedCount={currentUser ? savedSessions.length : 0}
+            historyCount={currentUser ? pastExams.length : 0}
+            currentUser={currentUser}
+            onOpenAuth={handleOpenAuth}
+          />
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import DragDropQuestion from "./DragDropQuestion";
 import QuestionPaletteModal from "./QuestionPaletteModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import QuestionNotesModal from "./QuestionNotesModal";
+import MobileBottomBar from "./MobileBottomBar";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -856,6 +857,19 @@ function QuestionView({
           </div>
         </div>
       )}
+
+      {/* MOBILE BOTTOM NAVIGATION BAR FOR ACTIVE EXAMS */}
+      <MobileBottomBar
+        isExamActive={true}
+        onOpenNotes={() => setIsNoteBoxOpen(true)}
+        notesCount={Object.keys(questionComments).length}
+        onOpenReviewMatrix={() => setShowPaletteModal(true)}
+        onGradeExam={handleGradeClick}
+        isReviewMode={isReviewMode}
+        onExitReview={onExitReview}
+        onToggleFlag={() => onToggleFlag(seqNumber - 1)}
+        isCurrentFlagged={isFlagged}
+      />
     </div>
   );
 }
