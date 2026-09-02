@@ -506,7 +506,7 @@ export default function App() {
     }
   });
 
-  // 1. Initial Load: Local Dataset guaranteed + MySQL API hydration
+  // 1. Initial Load: Local Dataset guaranteed + MySQL API hydration (Filtered by logged-in user)
   useEffect(() => {
     // 1.1 Load bundled questions immediately, then refresh from MySQL
     if (ccnaQuestions && ccnaQuestions.length > 0) {
@@ -521,15 +521,22 @@ export default function App() {
           dispatch({ type: "dataReceived", payload: qList });
         }
       })
-      .catch(() => {
-        // Fallback to bundled dataset if MySQL server is not active
-      });
+      .catch(() => {});
+  }, []);
 
-    // 1.2 Fetch full exam history from MySQL
-    fetch(`${API_BASE_URL}/history`)
+  // 1.2 Hydrate History & Sessions whenever currentUser changes
+  useEffect(() => {
+    const userQuery = currentUser?.id
+      ? `?userId=${encodeURIComponent(currentUser.id)}`
+      : currentUser?.email
+      ? `?userEmail=${encodeURIComponent(currentUser.email)}`
+      : "";
+
+    // Fetch user specific history
+    fetch(`${API_BASE_URL}/history${userQuery}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+        if (data.history && Array.isArray(data.history)) {
           setPastExams(data.history);
           try {
             localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(data.history));
@@ -538,11 +545,11 @@ export default function App() {
       })
       .catch(() => {});
 
-    // 1.3 Fetch saved active sessions from MySQL
-    fetch(`${API_BASE_URL}/sessions`)
+    // Fetch user specific active sessions
+    fetch(`${API_BASE_URL}/sessions${userQuery}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.sessions && Array.isArray(data.sessions) && data.sessions.length > 0) {
+        if (data.sessions && Array.isArray(data.sessions)) {
           setSavedSessions(data.sessions);
           try {
             localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(data.sessions));
@@ -550,9 +557,9 @@ export default function App() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [currentUser]);
 
-  // 2. Keep active exam session saved in savedSessions list on every change (except when in review mode)
+  // 2. Keep active exam session saved in savedSessions list on every change (tied to user)
   useEffect(() => {
     if (
       status === "active" &&
@@ -562,6 +569,8 @@ export default function App() {
     ) {
       const currentSessionObj = {
         id: activeSessionId || `session_${Date.now()}`,
+        userId: currentUser?.id || null,
+        userEmail: currentUser?.email || null,
         status: "active",
         questions,
         index,
@@ -573,7 +582,7 @@ export default function App() {
         settings,
         selectedBankName,
         flaggedQuestions,
-        candidateName,
+        candidateName: currentUser?.name || candidateName,
         revealedQuestions: revealedQuestions || [],
         startedAt: Date.now(),
         savedAt: Date.now(),
@@ -597,7 +606,7 @@ export default function App() {
         return updated;
       });
 
-      // MySQL backend sync for active session
+      // MySQL backend sync for active session tied to user
       fetch(`${API_BASE_URL}/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -617,6 +626,7 @@ export default function App() {
     selectedBankName,
     flaggedQuestions,
     candidateName,
+    currentUser,
     activeSessionId,
     revealedQuestions,
     isReviewMode,
@@ -656,7 +666,9 @@ export default function App() {
 
       const completedRecord = {
         id: `exam_${Date.now()}`,
-        candidateName: candidateName || "Candidate",
+        userId: currentUser?.id || null,
+        userEmail: currentUser?.email || null,
+        candidateName: currentUser?.name || candidateName || "Candidate",
         bankName: selectedBankName,
         score: points,
         maxScore: maxPossiblePoints,
@@ -696,7 +708,7 @@ export default function App() {
         });
       }
 
-      // MySQL backend sync: Save full attempt record
+      // MySQL backend sync: Save full attempt record linked to user
       fetch(`${API_BASE_URL}/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -727,6 +739,7 @@ export default function App() {
     questions,
     secondsRemaining,
     candidateName,
+    currentUser,
     selectedBankName,
     activeSessionId,
     answers,
@@ -750,7 +763,25 @@ export default function App() {
     );
   };
 
+  const requireAuth = (callbackAction) => {
+    if (!currentUser || !currentUser.isVerified) {
+      setAuthModal({
+        isOpen: true,
+        mode: currentUser ? "verify" : "login",
+      });
+      return false;
+    }
+    if (callbackAction) callbackAction();
+    return true;
+  };
+
+  const handleStartExam = (config) => {
+    if (!requireAuth()) return;
+    dispatch({ type: "startExam", payload: config });
+  };
+
   const handleResumeSession = (session) => {
+    if (!requireAuth()) return;
     setFlaggedQuestions(session.flaggedQuestions || []);
     dispatch({
       type: "resumeExam",
@@ -809,6 +840,7 @@ export default function App() {
   };
 
   const handleReviewCompletedExam = (examRecord) => {
+    if (!requireAuth()) return;
     const qList = examRecord?.questions?.length ? examRecord.questions : questions;
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
     const flags = examRecord?.flaggedQuestions || flaggedQuestions;
@@ -835,6 +867,7 @@ export default function App() {
   };
 
   const handleRetakeAllQuestions = (examRecord) => {
+    if (!requireAuth()) return;
     const qList = examRecord?.questions?.length ? examRecord.questions : questions;
     const bank = examRecord?.bankName || selectedBankName;
     const mode = examRecord?.examMode || examMode;
@@ -853,6 +886,7 @@ export default function App() {
   };
 
   const handleRetakeFlaggedOnly = (examRecord) => {
+    if (!requireAuth()) return;
     const qList = examRecord?.questions?.length ? examRecord.questions : questions;
     const flags = examRecord?.flaggedQuestions || flaggedQuestions || [];
     const flaggedList = qList.filter((_, idx) => flags.includes(idx));
@@ -879,6 +913,7 @@ export default function App() {
   };
 
   const handleRetakeIncorrectOnly = (examRecord) => {
+    if (!requireAuth()) return;
     const qList = examRecord?.questions?.length ? examRecord.questions : questions;
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
     const incorrectIdxs = getIncorrectQuestionIndices(qList, ansList);
@@ -922,7 +957,7 @@ export default function App() {
           <ExamDashboard
             totalQuestionsCount={allQuestions.length}
             allQuestions={allQuestions}
-            onStartExam={(config) => dispatch({ type: "startExam", payload: config })}
+            onStartExam={handleStartExam}
             candidateName={candidateName}
             setCandidateName={setCandidateName}
             savedSession={savedSessions.length > 0 ? savedSessions[0] : null}
@@ -999,7 +1034,8 @@ export default function App() {
             }}
             points={points}
             maxPossiblePoints={maxPossiblePoints}
-            candidateName={candidateName}
+            candidateName={currentUser?.name || candidateName}
+            currentUser={currentUser}
           />
         )}
 

@@ -517,10 +517,13 @@ app.get('/api/questions', async (req, res) => {
 });
 
 // 3. Save / Complete Exam Attempt (Full History Record)
+// 3. Save / Complete Exam Attempt (Full History Record tied to authenticated user)
 app.post('/api/history', async (req, res) => {
   try {
     const {
       id,
+      userId,
+      userEmail,
       candidateName,
       bankName,
       score,
@@ -543,15 +546,18 @@ app.post('/api/history', async (req, res) => {
 
     await pool.query(
       `INSERT INTO exam_attempts 
-       (id, candidate_name, bank_name, score, max_score, percentage, passed, total_questions, time_spent_seconds, exam_date, questions, answers, flagged_questions, revealed_questions, settings, exam_mode)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, user_id, user_email, candidate_name, bank_name, score, max_score, percentage, passed, total_questions, time_spent_seconds, exam_date, questions, answers, flagged_questions, revealed_questions, settings, exam_mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
+       user_id=VALUES(user_id), user_email=VALUES(user_email),
        candidate_name=VALUES(candidate_name), bank_name=VALUES(bank_name), score=VALUES(score), max_score=VALUES(max_score),
        percentage=VALUES(percentage), passed=VALUES(passed), total_questions=VALUES(total_questions), time_spent_seconds=VALUES(time_spent_seconds),
        exam_date=VALUES(exam_date), questions=VALUES(questions), answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
        revealed_questions=VALUES(revealed_questions), settings=VALUES(settings), exam_mode=VALUES(exam_mode)`,
       [
         examId,
+        userId || null,
+        userEmail ? userEmail.trim().toLowerCase() : null,
         candidateName ? candidateName.trim() : 'Candidate',
         bankName || 'CCNA Exam',
         score || 0,
@@ -581,57 +587,29 @@ app.post('/api/history', async (req, res) => {
   }
 });
 
-// Legacy progress endpoint
-app.post('/api/progress', async (req, res) => {
-  try {
-    const {
-      candidateName,
-      score,
-      maxPossiblePoints,
-      percentage,
-      passed,
-      totalQuestions,
-      timeSpentSeconds,
-    } = req.body;
-
-    const examId = `exam_${Date.now()}`;
-    const pool = getPool();
-    await pool.query(
-      `INSERT INTO exam_attempts 
-       (id, candidate_name, bank_name, score, max_score, percentage, passed, total_questions, time_spent_seconds, exam_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        examId,
-        candidateName ? candidateName.trim() : 'Candidate',
-        'CCNA Exam',
-        score || 0,
-        maxPossiblePoints || 1000,
-        percentage || 0,
-        passed ? 1 : 0,
-        totalQuestions || 0,
-        timeSpentSeconds || 0,
-        Date.now(),
-      ]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Exam progress saved successfully to MySQL',
-      attemptId: examId,
-    });
-  } catch (error) {
-    console.error('Failed to save progress:', error);
-    res.status(500).json({ error: 'Failed to save progress to database', details: error.message });
-  }
-});
-
-// 4. Get all exam attempts / history from MySQL
+// 4. Get exam attempts / history from MySQL (Filtered by logged in userId / email)
 app.get('/api/history', async (req, res) => {
   try {
+    const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
-    const [rows] = await pool.query(
-      'SELECT * FROM exam_attempts ORDER BY exam_date DESC LIMIT 50'
-    );
+
+    let query = 'SELECT * FROM exam_attempts';
+    const params = [];
+
+    if (userId) {
+      query += ' WHERE user_id = ?';
+      params.push(userId);
+    } else if (userEmail) {
+      query += ' WHERE user_email = ?';
+      params.push(userEmail.trim().toLowerCase());
+    } else if (candidateName) {
+      query += ' WHERE candidate_name = ?';
+      params.push(candidateName);
+    }
+
+    query += ' ORDER BY exam_date DESC LIMIT 50';
+
+    const [rows] = await pool.query(query, params);
 
     const formatted = rows.map((r) => {
       let parsedQuestions = [];
@@ -668,6 +646,8 @@ app.get('/api/history', async (req, res) => {
 
       return {
         id: r.id,
+        userId: r.user_id,
+        userEmail: r.user_email,
         candidateName: r.candidate_name,
         bankName: r.bank_name,
         score: r.score,
@@ -706,23 +686,50 @@ app.delete('/api/history/:id', async (req, res) => {
   }
 });
 
-// 6. Clear all exam history
+// 6. Clear all exam history for a user
 app.delete('/api/history', async (req, res) => {
   try {
+    const { userId, userEmail } = req.query;
     const pool = getPool();
-    await pool.query('DELETE FROM exam_attempts');
-    res.json({ success: true, message: 'All exam records cleared from MySQL' });
+
+    if (userId) {
+      await pool.query('DELETE FROM exam_attempts WHERE user_id = ?', [userId]);
+    } else if (userEmail) {
+      await pool.query('DELETE FROM exam_attempts WHERE user_email = ?', [userEmail.trim().toLowerCase()]);
+    } else {
+      await pool.query('DELETE FROM exam_attempts');
+    }
+
+    res.json({ success: true, message: 'Exam records cleared from MySQL' });
   } catch (error) {
     console.error('Failed to clear history:', error);
     res.status(500).json({ error: 'Failed to clear history', details: error.message });
   }
 });
 
-// 7. Active Sessions CRUD (Sync in-progress sessions with MySQL)
+// 7. Active Sessions CRUD (Filtered by logged in userId / email)
 app.get('/api/sessions', async (req, res) => {
   try {
+    const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
-    const [rows] = await pool.query('SELECT * FROM saved_sessions ORDER BY updated_at DESC');
+
+    let query = 'SELECT * FROM saved_sessions';
+    const params = [];
+
+    if (userId) {
+      query += ' WHERE user_id = ?';
+      params.push(userId);
+    } else if (userEmail) {
+      query += ' WHERE user_email = ?';
+      params.push(userEmail.trim().toLowerCase());
+    } else if (candidateName) {
+      query += ' WHERE candidate_name = ?';
+      params.push(candidateName);
+    }
+
+    query += ' ORDER BY updated_at DESC';
+
+    const [rows] = await pool.query(query, params);
 
     const formatted = rows.map((r) => {
       let parsedQuestions = [];
@@ -765,6 +772,8 @@ app.get('/api/sessions', async (req, res) => {
 
       return {
         id: r.id,
+        userId: r.user_id,
+        userEmail: r.user_email,
         candidateName: r.candidate_name,
         bankName: r.bank_name,
         examMode: r.exam_mode,
@@ -800,9 +809,10 @@ app.post('/api/sessions', async (req, res) => {
     const pool = getPool();
     await pool.query(
       `INSERT INTO saved_sessions 
-       (id, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, question_notes, settings, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, question_notes, settings, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
+       user_id=VALUES(user_id), user_email=VALUES(user_email),
        candidate_name=VALUES(candidate_name), bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode), q_index=VALUES(q_index),
        points=VALUES(points), seconds_remaining=VALUES(seconds_remaining), time_spent_seconds=VALUES(time_spent_seconds),
        questions=VALUES(questions), answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
@@ -810,6 +820,8 @@ app.post('/api/sessions', async (req, res) => {
        updated_at=VALUES(updated_at)`,
       [
         s.id,
+        s.userId || null,
+        s.userEmail ? s.userEmail.trim().toLowerCase() : null,
         s.candidateName || 'Candidate',
         s.bankName || 'CCNA Exam',
         s.examMode || 'study',
@@ -850,11 +862,24 @@ app.delete('/api/sessions/:id', async (req, res) => {
 // 8. Candidate Notes API (Sync question notes with MySQL)
 app.get('/api/notes', async (req, res) => {
   try {
-    const { candidateName } = req.query;
+    const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
-    const [rows] = candidateName
-      ? await pool.query('SELECT * FROM candidate_notes WHERE candidate_name = ?', [candidateName])
-      : await pool.query('SELECT * FROM candidate_notes');
+
+    let query = 'SELECT * FROM candidate_notes';
+    const params = [];
+
+    if (userId) {
+      query += ' WHERE user_id = ?';
+      params.push(userId);
+    } else if (userEmail) {
+      query += ' WHERE user_email = ?';
+      params.push(userEmail.trim().toLowerCase());
+    } else if (candidateName) {
+      query += ' WHERE candidate_name = ?';
+      params.push(candidateName);
+    }
+
+    const [rows] = await pool.query(query, params);
 
     const notesObj = {};
     rows.forEach((r) => {
@@ -870,17 +895,24 @@ app.get('/api/notes', async (req, res) => {
 
 app.post('/api/notes', async (req, res) => {
   try {
-    const { candidateName, questionId, questionNo, noteText } = req.body;
+    const { userId, userEmail, candidateName, questionId, questionNo, noteText } = req.body;
     if (!questionId) {
       return res.status(400).json({ error: 'questionId is required' });
     }
 
     const pool = getPool();
     await pool.query(
-      `INSERT INTO candidate_notes (candidate_name, question_id, question_no, note_text)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE note_text=VALUES(note_text), question_no=VALUES(question_no)`,
-      [candidateName || 'Candidate', questionId, questionNo || `Question #${questionId}`, noteText || '']
+      `INSERT INTO candidate_notes (user_id, user_email, candidate_name, question_id, question_no, note_text)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE note_text=VALUES(note_text), question_no=VALUES(question_no), candidate_name=VALUES(candidate_name)`,
+      [
+        userId || null,
+        userEmail ? userEmail.trim().toLowerCase() : null,
+        candidateName || 'Candidate',
+        questionId,
+        questionNo || `Question #${questionId}`,
+        noteText || ''
+      ]
     );
 
     res.json({ success: true, message: 'Note saved to MySQL' });

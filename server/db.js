@@ -61,10 +61,12 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 2. Exam attempts / history table (Full exam history record)
+    // 3. Exam attempts / history table (Full exam history record tied to authenticated user)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS exam_attempts (
         id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100),
+        user_email VARCHAR(191),
         candidate_name VARCHAR(150) NOT NULL,
         bank_name VARCHAR(200) NOT NULL,
         score INT NOT NULL,
@@ -80,14 +82,26 @@ async function initDB() {
         revealed_questions JSON,
         settings JSON,
         exam_mode VARCHAR(50) DEFAULT 'study',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_user_email (user_email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 3. Active / In-Progress Saved Sessions table
+    // Ensure columns exist if table was already created
+    try {
+      await pool.query(`ALTER TABLE exam_attempts ADD COLUMN user_id VARCHAR(100) AFTER id;`);
+    } catch {}
+    try {
+      await pool.query(`ALTER TABLE exam_attempts ADD COLUMN user_email VARCHAR(191) AFTER user_id;`);
+    } catch {}
+
+    // 4. Active / In-Progress Saved Sessions table (tied to user_id/email)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS saved_sessions (
         id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100),
+        user_email VARCHAR(191),
         candidate_name VARCHAR(150) NOT NULL,
         bank_name VARCHAR(200) NOT NULL,
         exam_mode VARCHAR(50) DEFAULT 'study',
@@ -102,22 +116,43 @@ async function initDB() {
         question_notes JSON,
         settings JSON,
         updated_at BIGINT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_session_user_id (user_id),
+        INDEX idx_session_user_email (user_email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 4. Candidate notes table (per question notes)
+    // Ensure columns exist if table was already created
+    try {
+      await pool.query(`ALTER TABLE saved_sessions ADD COLUMN user_id VARCHAR(100) AFTER id;`);
+    } catch {}
+    try {
+      await pool.query(`ALTER TABLE saved_sessions ADD COLUMN user_email VARCHAR(191) AFTER user_id;`);
+    } catch {}
+
+    // 5. Candidate notes table (per question notes tied to user)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS candidate_notes (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100),
+        user_email VARCHAR(191),
         candidate_name VARCHAR(150) NOT NULL,
         question_id INT NOT NULL,
         question_no VARCHAR(30),
         note_text TEXT NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_cand_q (candidate_name, question_id)
+        UNIQUE KEY unique_user_q (user_id, question_id),
+        INDEX idx_notes_user_email (user_email)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    // Ensure columns exist if table was already created
+    try {
+      await pool.query(`ALTER TABLE candidate_notes ADD COLUMN user_id VARCHAR(100) AFTER id;`);
+    } catch {}
+    try {
+      await pool.query(`ALTER TABLE candidate_notes ADD COLUMN user_email VARCHAR(191) AFTER user_id;`);
+    } catch {}
 
     console.log('Seeding CCNA questions into MySQL...');
     const { ccnaQuestions } = require('../src/data/ccnaQuestions');

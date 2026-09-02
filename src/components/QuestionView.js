@@ -78,6 +78,7 @@ function QuestionView({
   points,
   maxPossiblePoints,
   candidateName,
+  currentUser,
 }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -130,13 +131,15 @@ function QuestionView({
       console.warn("Save note error:", e);
     }
 
-    // MySQL sync
+    // MySQL sync with userId / userEmail
     if (question?.id) {
       fetch("http://localhost:5000/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          candidateName: candidateName || "Candidate",
+          userId: currentUser?.id || null,
+          userEmail: currentUser?.email || null,
+          candidateName: currentUser?.name || candidateName || "Candidate",
           questionId: question.id,
           questionNo: question.questionNo || `Question #${question.id}`,
           noteText: trimmed,

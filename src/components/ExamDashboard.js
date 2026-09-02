@@ -260,16 +260,24 @@ function ExamDashboard({
           <div className="section-header-flex">
             <h2 className="section-green-heading">Get started on a new exam</h2>
 
-            <label className="candidate-name-pill">
-              <span className="candidate-pill-icon">👤 Candidate:</span>
-              <input
-                type="text"
-                className="candidate-pill-input"
-                placeholder="Your Name..."
-                value={candidateName}
-                onChange={(e) => setCandidateName(e.target.value)}
-              />
-            </label>
+            {currentUser ? (
+              <div className="candidate-name-pill candidate-pill-authenticated" title={`Signed in as ${currentUser.email}`}>
+                <span className="candidate-pill-icon">👤 Candidate:</span>
+                <span className="candidate-pill-val">{currentUser.name}</span>
+                <span className="candidate-pill-badge">Verified ✓</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="candidate-name-pill candidate-pill-unauth-btn"
+                onClick={() => onOpenAuth && onOpenAuth("login")}
+                title="Click to sign in"
+              >
+                <span className="candidate-pill-icon">🔒 Candidate:</span>
+                <span className="candidate-pill-val unauth-text">Sign In Required</span>
+                <span className="candidate-pill-badge-action">Log In / Sign Up ➜</span>
+              </button>
+            )}
           </div>
 
           <div className="new-exam-launcher-card">
