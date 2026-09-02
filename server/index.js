@@ -932,6 +932,11 @@ app.post('/api/notes', async (req, res) => {
   }
 });
 
+// SPA fallback for React App
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../build/index.html'));
+});
+
 // Start server after database initialization
 initDB()
   .then(() => {

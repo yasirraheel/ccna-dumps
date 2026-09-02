@@ -133,7 +133,8 @@ function QuestionView({
 
     // MySQL sync with userId / userEmail
     if (question?.id) {
-      fetch("http://localhost:5000/api/notes", {
+      const notesApi = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api/notes" : "/api/notes";
+      fetch(notesApi, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -169,11 +170,14 @@ function QuestionView({
     // MySQL sync
     const qId = Number(targetKey) || question?.id;
     if (qId) {
-      fetch("http://localhost:5000/api/notes", {
+      const notesApi = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api/notes" : "/api/notes";
+      fetch(notesApi, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          candidateName: candidateName || "Candidate",
+          userId: currentUser?.id || null,
+          userEmail: currentUser?.email || null,
+          candidateName: currentUser?.name || candidateName || "Candidate",
           questionId: qId,
           questionNo: question?.questionNo || `Question #${qId}`,
           noteText: "",
