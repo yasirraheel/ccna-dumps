@@ -375,10 +375,14 @@ function QuestionView({
             <span className="boson-q-count">
               Question {seqNumber} of {numQuestions}
             </span>
-            <span className="boson-dot-sep">•</span>
-            <span className="boson-live-score">
-              {livePercentage}% correct
-            </span>
+            {settings?.showScoreLive !== false && (
+              <>
+                <span className="boson-dot-sep">•</span>
+                <span className="boson-live-score">
+                  {livePercentage}% correct
+                </span>
+              </>
+            )}
             {question.questionNo && (
               <>
                 <span className="boson-dot-sep">•</span>
@@ -592,7 +596,7 @@ function QuestionView({
           {renderFormattedPrompt(question.question)}
         </div>
 
-        {isMulti && (
+        {isMulti && settings?.showRequiredAnswersCount !== false && (
           <div className="boson-multi-indicator">
             ✋ Please select exactly <strong>{correctOptions.length} answers</strong> ({selectedIndices.length} / {correctOptions.length} selected)
           </div>
@@ -677,10 +681,12 @@ function QuestionView({
                 if (isSelected) cardClass += " selected";
                 if (isRevealed || isReviewMode) {
                   cardClass += " locked";
-                  if (isCorrectChoice) {
-                    cardClass += " correct-answer";
-                  } else if (isSelected) {
-                    cardClass += " wrong-answer";
+                  if (settings?.showAnswersInline !== false || isReviewMode) {
+                    if (isCorrectChoice) {
+                      cardClass += " correct-answer";
+                    } else if (isSelected) {
+                      cardClass += " wrong-answer";
+                    }
                   }
                 }
 
@@ -718,7 +724,7 @@ function QuestionView({
         )}
 
         {/* SHOW ANSWER INLINE BANNER */}
-        {(isRevealed || isReviewMode) && !isDragDrop && (
+        {(isReviewMode || (isRevealed && settings?.showAnswersInline !== false)) && !isDragDrop && (
           <div className="boson-explanation-card">
             <div className="explanation-title">
               💡 <strong>Correct Answer & Explanation:</strong>
@@ -766,7 +772,7 @@ function QuestionView({
         </div>
 
         <div className="toolbar-right">
-          {!isDragDrop && !isReviewMode && (
+          {!isDragDrop && !isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
             <button
               type="button"
               className={`btn-boson-action ${isRevealed ? "disabled" : ""}`}

@@ -1,12 +1,25 @@
-import React from "react";
+import React, { useState } from "react";
 
 function ExamSettingsModal({ settings, setSettings, onClose }) {
+  const [draft, setDraft] = useState({ ...settings });
+
   const handleChange = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    const updated = { ...draft, [key]: value };
+    setDraft(updated);
+    if (setSettings) {
+      setSettings(updated);
+    }
+  };
+
+  const handleSaveAndClose = () => {
+    if (setSettings) {
+      setSettings(draft);
+    }
+    onClose();
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={handleSaveAndClose}>
       <div
         className="settings-modal-card"
         onClick={(e) => e.stopPropagation()}
@@ -16,7 +29,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
           <button
             type="button"
             className="settings-modal-close"
-            onClick={onClose}
+            onClick={handleSaveAndClose}
             title="Close"
           >
             ✕
@@ -30,13 +43,13 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <div className="settings-radio-group">
               <label
                 className={`settings-radio-card ${
-                  !settings.randomizeQuestions ? "active" : ""
+                  !draft.randomizeQuestions ? "active" : ""
                 }`}
               >
                 <input
                   type="radio"
                   name="qOrder"
-                  checked={!settings.randomizeQuestions}
+                  checked={!draft.randomizeQuestions}
                   onChange={() => handleChange("randomizeQuestions", false)}
                 />
                 <span className="radio-circle"></span>
@@ -45,13 +58,13 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
 
               <label
                 className={`settings-radio-card ${
-                  settings.randomizeQuestions ? "active" : ""
+                  draft.randomizeQuestions ? "active" : ""
                 }`}
               >
                 <input
                   type="radio"
                   name="qOrder"
-                  checked={settings.randomizeQuestions}
+                  checked={draft.randomizeQuestions}
                   onChange={() => handleChange("randomizeQuestions", true)}
                 />
                 <span className="radio-circle"></span>
@@ -66,7 +79,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <label className="settings-checkbox-item">
               <input
                 type="checkbox"
-                checked={settings.randomizeAnswers}
+                checked={Boolean(draft.randomizeAnswers)}
                 onChange={(e) =>
                   handleChange("randomizeAnswers", e.target.checked)
                 }
@@ -78,7 +91,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <label className="settings-checkbox-item">
               <input
                 type="checkbox"
-                checked={settings.showScoreLive}
+                checked={Boolean(draft.showScoreLive)}
                 onChange={(e) =>
                   handleChange("showScoreLive", e.target.checked)
                 }
@@ -92,7 +105,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <label className="settings-checkbox-item">
               <input
                 type="checkbox"
-                checked={settings.showRequiredAnswersCount}
+                checked={Boolean(draft.showRequiredAnswersCount)}
                 onChange={(e) =>
                   handleChange("showRequiredAnswersCount", e.target.checked)
                 }
@@ -106,7 +119,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <label className="settings-checkbox-item">
               <input
                 type="checkbox"
-                checked={settings.includeShowAnswerBtn}
+                checked={Boolean(draft.includeShowAnswerBtn)}
                 onChange={(e) =>
                   handleChange("includeShowAnswerBtn", e.target.checked)
                 }
@@ -120,7 +133,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <label className="settings-checkbox-item">
               <input
                 type="checkbox"
-                checked={settings.showAnswersInline}
+                checked={Boolean(draft.showAnswersInline)}
                 onChange={(e) =>
                   handleChange("showAnswersInline", e.target.checked)
                 }
@@ -136,7 +149,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
             <h4 className="settings-section-title">Timer Settings</h4>
             <select
               className="settings-select"
-              value={settings.timerMode}
+              value={draft.timerMode || "not_timed"}
               onChange={(e) => handleChange("timerMode", e.target.value)}
             >
               <option value="not_timed">Not timed</option>
@@ -155,7 +168,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
           <button
             type="button"
             className="btn-settings-save"
-            onClick={onClose}
+            onClick={handleSaveAndClose}
           >
             Save & Close
           </button>

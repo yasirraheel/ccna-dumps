@@ -73,7 +73,7 @@ function ExamDashboard({
     } catch (e) {
       console.warn("Load user settings error:", e);
     }
-  }, [currentUser?.id]);
+  }, [currentUser]);
 
   // Persist settings whenever modified
   const handleUpdateSettings = (updater) => {
