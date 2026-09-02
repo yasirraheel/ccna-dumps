@@ -36,6 +36,16 @@ try {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
+
+    // Ensure candidate@ccna.com exists with Password123!
+    $checkCandidate = $pdo->query("SELECT id FROM users WHERE email = 'candidate@ccna.com'")->fetch();
+    $candidateHash = password_hash('Password123!', PASSWORD_BCRYPT);
+    if ($checkCandidate) {
+        $pdo->prepare("UPDATE users SET name = 'Yasir Raheel', password_hash = ?, is_verified = 1 WHERE email = 'candidate@ccna.com'")->execute([$candidateHash]);
+    } else {
+        $cId = 'usr_' . time();
+        $pdo->prepare("INSERT INTO users (id, name, email, password_hash, is_verified) VALUES (?, 'Yasir Raheel', 'candidate@ccna.com', ?, 1)")->execute([$cId, $candidateHash]);
+    }
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(["error" => "Database connection failed", "details" => $e->getMessage()]);
