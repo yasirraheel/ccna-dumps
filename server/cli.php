@@ -98,6 +98,6 @@ $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser, $db
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
 ]);
 
-$stmt = $pdo->query("SELECT id, name, email, is_verified, verification_code, reset_token, updated_at, created_at FROM users WHERE email LIKE '%saad%'");
+$stmt = $pdo->query("DESCRIBE exam_attempts");
 print_r($stmt->fetchAll());
 
