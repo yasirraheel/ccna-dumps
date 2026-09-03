@@ -52,7 +52,8 @@ try {
         features JSON,
         is_active BOOLEAN DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    try { $pdo->exec("ALTER TABLE plans CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"); } catch (Exception $e) {}
 
     $planCount = (int)$pdo->query("SELECT COUNT(*) FROM plans")->fetchColumn();
     if ($planCount === 0) {
@@ -865,7 +866,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
     // 13.6 Plans List: GET /api/admin/plans
     if (preg_match('#^/api/admin/plans$#', $basePath) && $method === 'GET') {
         $plans = $pdo->query("SELECT p.*,
-            (SELECT COUNT(*) FROM users u WHERE u.plan = p.id OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL))) as subscribers_count
+            (SELECT COUNT(*) FROM users u WHERE (u.plan COLLATE utf8mb4_general_ci = p.id COLLATE utf8mb4_general_ci) OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL))) as subscribers_count
             FROM plans p ORDER BY p.price ASC")->fetchAll();
         $formatted = array_map(function($p) {
             $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
