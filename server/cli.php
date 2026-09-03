@@ -88,9 +88,16 @@ function sendSmtpEmail($to, $subject, $htmlBody, $env) {
     return ["success" => false, "error" => "DATA failed: $resData"];
 }
 
-echo "Testing SMTP to saadmaqbool7861@gmail.com...\n";
-$testOtp = "849201";
-$html = "<h2>CCNA Exam Simulator Verification Code</h2><p>Your OTP Code is: <b>$testOtp</b></p>";
-$result = sendSmtpEmail('saadmaqbool7861@gmail.com', "CCNA Exam - Verification Code: $testOtp", $html, $env);
-print_r($result);
+$dbHost = $env['DB_HOST'] ?? 'localhost';
+$dbUser = $env['DB_USER'] ?? 'u181781564_ccna_dumps';
+$dbPass = $env['DB_PASSWORD'] ?? 'C4XMT0a@a>';
+$dbName = $env['DB_NAME'] ?? 'u181781564_ccna_dumps';
+
+$pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser, $dbPass, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+]);
+
+$stmt = $pdo->query("SELECT id, name, email, is_verified, verification_code, reset_token, updated_at, created_at FROM users WHERE email LIKE '%saad%'");
+print_r($stmt->fetchAll());
 
