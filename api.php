@@ -88,13 +88,127 @@ function verifyToken($token, $secret) {
     return $data;
 }
 
+function getEmailTemplate($title, $greetingName, $leadText, $otpCode, $expiryText = "Valid for 15 minutes.", $isWarning = false) {
+    $accentColor = $isWarning ? "#ef4444" : "#22c55e";
+    $accentLight = $isWarning ? "#f87171" : "#4ade80";
+    return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{$title}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; margin: 0; padding: 20px; color: #f8fafc; }
+    .email-container { max-width: 540px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .email-header { background: #090d16; padding: 24px 30px; border-bottom: 1px solid #334155; text-align: center; }
+    .brand-badge { font-size: 20px; font-weight: 800; color: {$accentColor}; letter-spacing: 0.5px; }
+    .email-body { padding: 30px; text-align: center; }
+    .greeting { font-size: 18px; font-weight: 700; color: #ffffff; margin-bottom: 12px; }
+    .lead-text { font-size: 15px; color: #94a3b8; line-height: 1.5; margin-bottom: 24px; }
+    .otp-box { background: #0f172a; border: 2px dashed {$accentColor}; border-radius: 10px; padding: 18px 24px; margin: 20px auto; display: inline-block; }
+    .otp-digits { font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 12px; color: {$accentLight}; margin: 0; }
+    .otp-expiry { font-size: 13px; color: #64748b; margin-top: 14px; }
+    .notice-box { background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8; padding: 12px 16px; margin-top: 24px; text-align: left; border-radius: 0 6px 6px 0; }
+    .notice-text { font-size: 13px; color: #cbd5e1; margin: 0; line-height: 1.4; }
+    .email-footer { background-color: #090d16; padding: 16px 30px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #334155; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <div class="brand-badge">⚡ CCNA 200-301 Exam Prep</div>
+    </div>
+    <div class="email-body">
+      <div class="greeting">Hello {$greetingName},</div>
+      <div class="lead-text">{$leadText}</div>
+      <div class="otp-box">
+        <div class="otp-digits">{$otpCode}</div>
+        <div class="otp-expiry">⏱️ {$expiryText}</div>
+      </div>
+      <div class="notice-box">
+        <p class="notice-text">🛡️ Security Notice: Do not share this code with anyone. If you did not request this, please disregard this email.</p>
+      </div>
+    </div>
+    <div class="email-footer">
+      &copy; 2026 Cisco CCNA 200-301 Exam Simulator. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+HTML;
+}
+
 function sendHostingerEmail($to, $subject, $htmlMessage, $env) {
-    $headers = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: Cisco CCNA Exam Prep <ccna-dumps@hassanagro.com>\r\n";
-    $headers .= "Reply-To: ccna-dumps@hassanagro.com\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-    @mail($to, $subject, $htmlMessage, $headers);
+    $host = $env['SMTP_HOST'] ?? 'smtp.hostinger.com';
+    $port = (int)($env['SMTP_PORT'] ?? 465);
+    $user = $env['SMTP_USER'] ?? 'ccna-dumps@hassanagro.com';
+    $pass = $env['SMTP_PASS'] ?? 'z?Y3:HBBa6^';
+
+    $server = ($port == 465 ? "ssl://" : "") . $host;
+    $socket = @fsockopen($server, $port, $errno, $errstr, 15);
+    if (!$socket) {
+        error_log("[SMTP ERROR] Socket connection failed to $server:$port - $errstr ($errno)");
+        $headers = "MIME-Version: 1.0\r\nContent-type: text/html; charset=UTF-8\r\nFrom: Cisco CCNA Exam Prep <$user>\r\nReply-To: $user\r\nX-Mailer: PHP/" . phpversion();
+        return @mail($to, $subject, $htmlMessage, $headers);
+    }
+
+    $read = function() use ($socket) {
+        $response = "";
+        while ($line = fgets($socket, 515)) {
+            $response .= $line;
+            if (substr($line, 3, 1) == " ") break;
+        }
+        return $response;
+    };
+
+    $write = function($cmd) use ($socket, $read) {
+        fputs($socket, $cmd . "\r\n");
+        return $read();
+    };
+
+    $read(); // banner
+    $write("EHLO localhost");
+    $write("AUTH LOGIN");
+    $write(base64_encode($user));
+    $resAuth = $write(base64_encode($pass));
+
+    if (substr($resAuth, 0, 3) !== '235') {
+        error_log("[SMTP ERROR] Auth failed: $resAuth");
+        fclose($socket);
+        return false;
+    }
+
+    $write("MAIL FROM: <$user>");
+    $resRcpt = $write("RCPT TO: <$to>");
+    if (substr($resRcpt, 0, 3) !== '250') {
+        error_log("[SMTP ERROR] RCPT TO failed: $resRcpt");
+        fclose($socket);
+        return false;
+    }
+
+    $write("DATA");
+    $headers = [
+        "MIME-Version: 1.0",
+        "Content-Type: text/html; charset=UTF-8",
+        "From: Cisco CCNA Exam Prep <$user>",
+        "Reply-To: $user",
+        "To: <$to>",
+        "Subject: $subject",
+        "Date: " . date("r"),
+        "X-Mailer: CCNA Exam Prep Engine"
+    ];
+    $emailData = implode("\r\n", $headers) . "\r\n\r\n" . $htmlMessage . "\r\n.";
+    $resData = $write($emailData);
+    $write("QUIT");
+    fclose($socket);
+
+    $success = (substr($resData, 0, 3) === '250');
+    if ($success) {
+        error_log("[SMTP SUCCESS] Email delivered to $to: $subject");
+    } else {
+        error_log("[SMTP ERROR] Data send failed: $resData");
+    }
+    return $success;
 }
 
 // Route matching
@@ -138,7 +252,13 @@ if (preg_match('#^/api/auth/register#', $basePath) && $method === 'POST') {
         $insert->execute([$userId, $name, $email, $hash, $otp, $expires * 1000]);
     }
 
-    $html = "<div style='font-family:sans-serif;padding:20px;background:#0f172a;color:#fff;'><h2>CCNA Exam Simulator Verification</h2><p>Hello $name,</p><p>Your verification OTP code is:</p><h1 style='color:#10b981;'>$otp</h1><p>Valid for 15 minutes.</p></div>";
+    $html = getEmailTemplate(
+        "Email Verification Code",
+        $name,
+        "Thank you for registering for the CCNA Exam Simulator. Please enter the verification code below to activate your candidate account:",
+        $otp,
+        "Valid for 15 minutes."
+    );
     sendHostingerEmail($email, "CCNA Exam - Email Verification Code: $otp", $html, $env);
 
     http_response_code(201);
@@ -195,7 +315,13 @@ if (preg_match('#^/api/auth/resend-code#', $basePath) && $method === 'POST') {
     $expires = (time() + 900) * 1000;
     $pdo->prepare("UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?")->execute([$otp, $expires, $user['id']]);
 
-    $html = "<div style='font-family:sans-serif;padding:20px;background:#0f172a;color:#fff;'><h2>CCNA Exam Simulator Code</h2><p>Your OTP code is:</p><h1 style='color:#10b981;'>$otp</h1></div>";
+    $html = getEmailTemplate(
+        "Email Verification Code",
+        $user['name'] ?? 'Candidate',
+        "Here is your requested verification code to activate your CCNA Exam Simulator account:",
+        $otp,
+        "Valid for 15 minutes."
+    );
     sendHostingerEmail($email, "CCNA Exam - Resent Code: $otp", $html, $env);
 
     echo json_encode(["success" => true, "message" => "Verification code sent to $email."]);
@@ -240,7 +366,13 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
         $otp = (string)rand(100000, 999999);
         $expires = (time() + 900) * 1000;
         $pdo->prepare("UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?")->execute([$otp, $expires, $user['id']]);
-        $html = "<div style='font-family:sans-serif;padding:20px;background:#0f172a;color:#fff;'><h2>Verify Your CCNA Account</h2><p>Your OTP code is:</p><h1 style='color:#10b981;'>$otp</h1></div>";
+        $html = getEmailTemplate(
+            "Verify Your Account",
+            $user['name'] ?? 'Candidate',
+            "Your CCNA Exam Simulator account requires verification before accessing your saved exams. Use the code below:",
+            $otp,
+            "Valid for 15 minutes."
+        );
         sendHostingerEmail($email, "Verify Your CCNA Account - Code: $otp", $html, $env);
 
         http_response_code(403);
@@ -292,7 +424,14 @@ if (preg_match('#^/api/auth/forgot-password#', $basePath) && $method === 'POST')
         $otp = (string)rand(100000, 999999);
         $expires = (time() + 900) * 1000;
         $pdo->prepare("UPDATE users SET reset_token = ?, reset_expires_at = ? WHERE id = ?")->execute([$otp, $expires, $user['id']]);
-        $html = "<div style='font-family:sans-serif;padding:20px;background:#0f172a;color:#fff;'><h2>CCNA Password Reset</h2><p>Your password reset OTP code is:</p><h1 style='color:#ef4444;'>$otp</h1></div>";
+        $html = getEmailTemplate(
+            "Password Reset Code",
+            $user['name'] ?? 'Candidate',
+            "We received a request to reset your password for CCNA Exam Simulator. Use the 6-digit code below to proceed:",
+            $otp,
+            "Valid for 15 minutes.",
+            true
+        );
         sendHostingerEmail($email, "CCNA Exam - Password Reset Code: $otp", $html, $env);
     }
 
