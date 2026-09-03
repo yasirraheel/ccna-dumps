@@ -96,6 +96,19 @@ function NavigationMenu({
               <span>Exam History</span>
             </button>
 
+            {/* Admin Portal Link */}
+            {currentUser && (currentUser.role === 'admin' || currentUser.email === 'candidate@ccna.com') && (
+              <button
+                type="button"
+                className={`nav-menu-item ${currentView === "admin" ? "active" : ""}`}
+                onClick={() => { onNavigate("admin"); setIsOpen(false); }}
+                style={{ color: "#4ade80", fontWeight: 700 }}
+              >
+                <span className="nav-menu-icon">⚡</span>
+                <span>Admin Portal</span>
+              </button>
+            )}
+
             {/* Auth links — only shown on mobile for non-logged-in users */}
             {!currentUser && (
               <>
@@ -127,6 +140,17 @@ function NavigationMenu({
       </div>
 
       <div className="nav-header-right" ref={userMenuRef}>
+        {currentUser && (currentUser.role === 'admin' || currentUser.email === 'candidate@ccna.com') && (
+          <button
+            type="button"
+            className="btn-admin-nav-trigger"
+            onClick={() => onNavigate("admin")}
+            title="Open Admin Portal"
+          >
+            ⚡ Admin Portal
+          </button>
+        )}
+
         {currentUser ? (
           <div className="user-profile-wrapper">
             <button
@@ -165,6 +189,23 @@ function NavigationMenu({
                   <span className="user-dropdown-email">{currentUser.email}</span>
                 </div>
                 <div className="user-dropdown-divider"></div>
+
+                {/* Admin Portal in dropdown */}
+                {(currentUser.role === 'admin' || currentUser.email === 'candidate@ccna.com') && (
+                  <button
+                    type="button"
+                    className="user-dropdown-item"
+                    style={{ color: "#4ade80", fontWeight: 700 }}
+                    onClick={() => {
+                      onNavigate("admin");
+                      setIsUserMenuOpen(false);
+                    }}
+                  >
+                    <span style={{ marginRight: "6px" }}>⚡</span>
+                    Admin Portal
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="user-dropdown-item"

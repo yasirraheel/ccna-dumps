@@ -9,6 +9,7 @@ import ExamHistoryView from "./ExamHistoryView";
 import AuthModal from "./AuthModal";
 import AuthView from "./AuthView";
 import MobileBottomBar from "./MobileBottomBar";
+import AdminLayout from "./Admin/AdminLayout";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions } from "./randomizeOptions";
 
@@ -1051,6 +1052,14 @@ export default function App() {
           />
         )}
 
+        {/* ===== ADMIN PORTAL VIEW ===== */}
+        {status === "ready" && currentView === "admin" && (
+          <AdminLayout
+            currentUser={currentUser}
+            onExitAdmin={() => setCurrentView("dashboard")}
+          />
+        )}
+
         {/* 2. ACTIVE EXAM VIEW */}
         {status === "active" && questions[index] && (
           <QuestionView
@@ -1116,8 +1125,8 @@ export default function App() {
           onLogout={handleLogout}
         />
 
-        {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam and not in full-page auth) */}
-        {status === "ready" && !currentView.startsWith("auth-") && (
+        {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam, auth, or admin) */}
+        {status === "ready" && !currentView.startsWith("auth-") && currentView !== "admin" && (
           <MobileBottomBar
             currentView={currentView}
             onNavigate={setCurrentView}

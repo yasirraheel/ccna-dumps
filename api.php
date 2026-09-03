@@ -38,13 +38,42 @@ try {
     ]);
 
     // Ensure candidate@ccna.com exists with Password123!
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user'"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN plan VARCHAR(50) DEFAULT 'free'"); } catch (Exception $e) {}
+
+    // Ensure plans table exists with seed data
+    $pdo->exec("CREATE TABLE IF NOT EXISTS plans (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) DEFAULT 0.00,
+        billing_cycle VARCHAR(50) DEFAULT 'monthly',
+        duration_days INT DEFAULT 30,
+        description TEXT,
+        features JSON,
+        is_active BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $planCount = (int)$pdo->query("SELECT COUNT(*) FROM plans")->fetchColumn();
+    if ($planCount === 0) {
+        $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, is_active) VALUES
+            ('plan_free', 'Free Study Pass', 0.00, 'lifetime', 3650, 'Standard access to practice questions and basic review.', ?, 1),
+            ('plan_pro', 'CCNA Pro Pass', 19.99, 'monthly', 30, 'Full access to all 228 questions, timed simulations, and AI review report.', ?, 1),
+            ('plan_unlimited', 'CCNA Unlimited Pass', 49.99, 'lifetime', 3650, 'Unlimited lifetime access to all banks, instant feedback, and notes sync.', ?, 1)
+        ")->execute([
+            json_encode(['Exam A (1-50)', 'Exam B (51-100)', 'Basic Question Review', 'Score History']),
+            json_encode(['All Exam Banks (A, B, C, D, D&D)', 'Official 90-min Simulations', 'AI Fix Report Generation', 'Real-time Explanations', 'Sync Notes to Cloud']),
+            json_encode(['Lifetime Access & Updates', 'All 228 Exam Questions', 'Unlimited Retakes & Flagged Mode', 'Instant Explanations', 'Priority Support'])
+        ]);
+    }
+
     $checkCandidate = $pdo->query("SELECT id FROM users WHERE email = 'candidate@ccna.com'")->fetch();
     $candidateHash = password_hash('Password123!', PASSWORD_BCRYPT);
     if ($checkCandidate) {
-        $pdo->prepare("UPDATE users SET name = 'Yasir Raheel', password_hash = ?, is_verified = 1 WHERE email = 'candidate@ccna.com'")->execute([$candidateHash]);
+        $pdo->prepare("UPDATE users SET name = 'Yasir Raheel', password_hash = ?, is_verified = 1, role = 'admin', plan = 'pro' WHERE email = 'candidate@ccna.com'")->execute([$candidateHash]);
     } else {
         $cId = 'usr_' . time();
-        $pdo->prepare("INSERT INTO users (id, name, email, password_hash, is_verified) VALUES (?, 'Yasir Raheel', 'candidate@ccna.com', ?, 1)")->execute([$cId, $candidateHash]);
+        $pdo->prepare("INSERT INTO users (id, name, email, password_hash, is_verified, role, plan) VALUES (?, 'Yasir Raheel', 'candidate@ccna.com', ?, 1, 'admin', 'pro')")->execute([$cId, $candidateHash]);
     }
 } catch (Exception $e) {
     http_response_code(500);
@@ -69,6 +98,8 @@ function createToken($user, $secret) {
         'id' => $user['id'],
         'name' => $user['name'],
         'email' => $user['email'],
+        'role' => $user['role'] ?? 'user',
+        'plan' => $user['plan'] ?? 'free',
         'exp' => time() + (30 * 86400)
     ]));
     $sig = hash_hmac('sha256', "$header.$payload", $secret, true);
@@ -385,7 +416,7 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
         "success" => true,
         "message" => "Login successful!",
         "token" => $token,
-        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "isVerified" => true]
+        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "isVerified" => true]
     ]);
     exit;
 }
@@ -399,11 +430,11 @@ if (preg_match('#^/api/auth/me#', $basePath)) {
     if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
         $decoded = verifyToken($matches[1], $jwtSecret);
         if ($decoded) {
-            $stmt = $pdo->prepare("SELECT id, name, email, is_verified, created_at FROM users WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE id = ?");
             $stmt->execute([$decoded['id']]);
             $u = $stmt->fetch();
             if ($u) {
-                echo json_encode(["user" => ["id" => $u['id'], "name" => $u['name'], "email" => $u['email'], "isVerified" => (bool)$u['is_verified'], "createdAt" => $u['created_at']]]);
+                echo json_encode(["user" => ["id" => $u['id'], "name" => $u['name'], "email" => $u['email'], "role" => $u['role'] ?? 'user', "plan" => $u['plan'] ?? 'free', "isVerified" => (bool)$u['is_verified'], "createdAt" => $u['created_at']]]);
                 exit;
             }
         }
@@ -680,6 +711,239 @@ if (preg_match('#^/api/notes#', $basePath)) {
             $b['noteText'] ?? ''
         ]);
         echo json_encode(["success" => true, "message" => "Note saved"]);
+        exit;
+    }
+}
+
+// 13. Admin API Endpoints
+if (preg_match('#^/api/admin/#', $basePath)) {
+    // 13.1 Admin Stats: GET /api/admin/stats
+    if (preg_match('#^/api/admin/stats#', $basePath) && $method === 'GET') {
+        $totalUsers = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        $verifiedUsers = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE is_verified = 1")->fetchColumn();
+        $totalAttempts = (int)$pdo->query("SELECT COUNT(*) FROM exam_attempts")->fetchColumn();
+        $passedAttempts = (int)$pdo->query("SELECT COUNT(*) FROM exam_attempts WHERE passed = 1")->fetchColumn();
+        $passRate = $totalAttempts > 0 ? round(($passedAttempts / $totalAttempts) * 100, 1) : 0;
+        $totalQuestions = 228;
+        $activePlans = (int)$pdo->query("SELECT COUNT(*) FROM plans WHERE is_active = 1")->fetchColumn();
+
+        $recentAttempts = $pdo->query("SELECT id, candidate_name, user_email, bank_name, score, max_score, percentage, passed, exam_mode, created_at FROM exam_attempts ORDER BY created_at DESC LIMIT 6")->fetchAll();
+        $recentUsers = $pdo->query("SELECT id, name, email, role, plan, is_verified, created_at FROM users ORDER BY created_at DESC LIMIT 6")->fetchAll();
+
+        echo json_encode([
+            "stats" => [
+                "totalUsers" => $totalUsers,
+                "verifiedUsers" => $verifiedUsers,
+                "totalAttempts" => $totalAttempts,
+                "passedAttempts" => $passedAttempts,
+                "passRate" => $passRate,
+                "totalQuestions" => $totalQuestions,
+                "activePlans" => $activePlans
+            ],
+            "recentAttempts" => $recentAttempts,
+            "recentUsers" => $recentUsers
+        ]);
+        exit;
+    }
+
+    // 13.2 Admin Users List: GET /api/admin/users
+    if (preg_match('#^/api/admin/users$#', $basePath) && $method === 'GET') {
+        $search = trim($_GET['search'] ?? '');
+        $role = trim($_GET['role'] ?? '');
+        $status = trim($_GET['status'] ?? '');
+
+        $sql = "SELECT u.id, u.name, u.email, u.role, u.plan, u.is_verified, u.created_at,
+                (SELECT COUNT(*) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as attempts_count,
+                (SELECT MAX(ea.created_at) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as last_exam_at
+                FROM users u WHERE 1=1";
+        $params = [];
+
+        if ($search) {
+            $sql .= " AND (u.name LIKE ? OR u.email LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+        if ($role) {
+            $sql .= " AND u.role = ?";
+            $params[] = $role;
+        }
+        if ($status === 'verified') {
+            $sql .= " AND u.is_verified = 1";
+        } else if ($status === 'unverified') {
+            $sql .= " AND u.is_verified = 0";
+        }
+
+        $sql .= " ORDER BY u.created_at DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll();
+
+        echo json_encode(["users" => $users]);
+        exit;
+    }
+
+    // 13.3 Create User: POST /api/admin/users
+    if (preg_match('#^/api/admin/users$#', $basePath) && $method === 'POST') {
+        $name = trim($body['name'] ?? '');
+        $email = strtolower(trim($body['email'] ?? ''));
+        $password = $body['password'] ?? 'Password123!';
+        $role = $body['role'] ?? 'user';
+        $plan = $body['plan'] ?? 'free';
+        $isVerified = !empty($body['isVerified']) ? 1 : 1;
+
+        if (!$name || !$email) {
+            http_response_code(400);
+            echo json_encode(["error" => "Name and email are required."]);
+            exit;
+        }
+
+        $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $check->execute([$email]);
+        if ($check->fetch()) {
+            http_response_code(409);
+            echo json_encode(["error" => "A candidate with this email already exists."]);
+            exit;
+        }
+
+        $userId = 'usr_' . time() . '_' . substr(md5(rand()), 0, 6);
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("INSERT INTO users (id, name, email, password_hash, is_verified, role, plan) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$userId, $name, $email, $hash, $isVerified, $role, $plan]);
+
+        echo json_encode(["success" => true, "message" => "Candidate created successfully.", "id" => $userId]);
+        exit;
+    }
+
+    // 13.4 Update User: PUT /api/admin/users/:id
+    if (preg_match('#^/api/admin/users/([^/]+)$#', $basePath, $m) && $method === 'PUT') {
+        $userId = $m[1];
+        $name = trim($body['name'] ?? '');
+        $email = strtolower(trim($body['email'] ?? ''));
+        $role = $body['role'] ?? 'user';
+        $plan = $body['plan'] ?? 'free';
+        $isVerified = isset($body['isVerified']) ? (int)$body['isVerified'] : 1;
+
+        $updates = ["name = ?", "email = ?", "role = ?", "plan = ?", "is_verified = ?"];
+        $params = [$name, $email, $role, $plan, $isVerified];
+
+        if (!empty($body['password'])) {
+            $updates[] = "password_hash = ?";
+            $params[] = password_hash($body['password'], PASSWORD_BCRYPT);
+        }
+
+        $params[] = $userId;
+        $sql = "UPDATE users SET " . implode(", ", $updates) . " WHERE id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        echo json_encode(["success" => true, "message" => "User updated successfully."]);
+        exit;
+    }
+
+    // 13.5 Delete User: DELETE /api/admin/users/:id
+    if (preg_match('#^/api/admin/users/([^/]+)$#', $basePath, $m) && $method === 'DELETE') {
+        $userId = $m[1];
+        // Protect candidate@ccna.com from deletion
+        $check = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+        $check->execute([$userId]);
+        $u = $check->fetch();
+        if ($u && $u['email'] === 'candidate@ccna.com') {
+            http_response_code(403);
+            echo json_encode(["error" => "Cannot delete primary demo admin account."]);
+            exit;
+        }
+
+        $pdo->prepare("DELETE FROM exam_attempts WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM saved_sessions WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM candidate_notes WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
+
+        echo json_encode(["success" => true, "message" => "User deleted successfully."]);
+        exit;
+    }
+
+    // 13.6 Plans List: GET /api/admin/plans
+    if (preg_match('#^/api/admin/plans$#', $basePath) && $method === 'GET') {
+        $plans = $pdo->query("SELECT p.*,
+            (SELECT COUNT(*) FROM users u WHERE u.plan = p.id OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL))) as subscribers_count
+            FROM plans p ORDER BY p.price ASC")->fetchAll();
+        $formatted = array_map(function($p) {
+            $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
+            $p['price'] = (float)$p['price'];
+            $p['duration_days'] = (int)$p['duration_days'];
+            $p['is_active'] = (bool)$p['is_active'];
+            $p['subscribers_count'] = (int)$p['subscribers_count'];
+            return $p;
+        }, $plans);
+        echo json_encode(["plans" => $formatted]);
+        exit;
+    }
+
+    // 13.7 Create Plan: POST /api/admin/plans
+    if (preg_match('#^/api/admin/plans$#', $basePath) && $method === 'POST') {
+        $id = trim($body['id'] ?? ('plan_' . time()));
+        $name = trim($body['name'] ?? '');
+        $price = (float)($body['price'] ?? 0);
+        $billingCycle = $body['billingCycle'] ?? 'monthly';
+        $durationDays = (int)($body['durationDays'] ?? 30);
+        $description = trim($body['description'] ?? '');
+        $features = json_encode($body['features'] ?? []);
+        $isActive = !empty($body['isActive']) ? 1 : 1;
+
+        if (!$name) {
+            http_response_code(400);
+            echo json_encode(["error" => "Plan name is required."]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), billing_cycle=VALUES(billing_cycle), duration_days=VALUES(duration_days), description=VALUES(description), features=VALUES(features), is_active=VALUES(is_active)");
+        $stmt->execute([$id, $name, $price, $billingCycle, $durationDays, $description, $features, $isActive]);
+
+        echo json_encode(["success" => true, "message" => "Plan saved successfully."]);
+        exit;
+    }
+
+    // 13.8 Delete Plan: DELETE /api/admin/plans/:id
+    if (preg_match('#^/api/admin/plans/([^/]+)$#', $basePath, $m) && $method === 'DELETE') {
+        $planId = $m[1];
+        $pdo->prepare("DELETE FROM plans WHERE id = ?")->execute([$planId]);
+        echo json_encode(["success" => true, "message" => "Plan deleted successfully."]);
+        exit;
+    }
+
+    // 13.9 Test Email: POST /api/admin/test-email
+    if (preg_match('#^/api/admin/test-email#', $basePath) && $method === 'POST') {
+        $testTo = strtolower(trim($body['to'] ?? ''));
+        if (!$testTo || !filter_var($testTo, FILTER_VALIDATE_EMAIL)) {
+            http_response_code(400);
+            echo json_encode(["error" => "A valid recipient email address is required."]);
+            exit;
+        }
+
+        $testSubject = trim($body['subject'] ?? 'Cisco CCNA Admin Test Email');
+        $testHtml = getEmailTemplate(
+            "Admin SMTP Delivery Test",
+            "Administrator",
+            "This is a live test message sent from the Cisco CCNA Admin Portal using authenticated Hostinger SSL SMTP on port 465.",
+            "TEST-" . rand(100, 999),
+            "Sent: " . date('Y-m-d H:i:s T')
+        );
+
+        $ok = sendHostingerEmail($testTo, $testSubject, $testHtml, $env);
+        if ($ok) {
+            echo json_encode([
+                "success" => true,
+                "message" => "Test email dispatched successfully to $testTo via Hostinger SSL SMTP (465)!"
+            ]);
+        } else {
+            http_response_code(500);
+            echo json_encode([
+                "success" => false,
+                "error" => "Failed to deliver email. Check server mail logs for SMTP details."
+            ]);
+        }
         exit;
     }
 }
