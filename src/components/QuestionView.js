@@ -224,10 +224,11 @@ function QuestionView({
 
   const isRevealed = Boolean(revealedQuestions?.includes(seqNumber - 1));
   const maxAllowed = isMulti ? correctOptions.length : 1;
+  const isTimeOver = secondsRemaining !== null && secondsRemaining <= 0;
 
   const handleOptionClick = (index) => {
-    // Once answer is revealed or in review mode, user cannot modify their selection on this question
-    if (isRevealed || isReviewMode) return;
+    // Once answer is revealed, in review mode, or time has expired, user cannot modify their selection
+    if (isRevealed || isReviewMode || isTimeOver) return;
 
     if (isMulti) {
       const current = selectedIndices;
@@ -664,7 +665,7 @@ function QuestionView({
             question={question}
             dispatch={dispatch}
             answer={answer}
-            isReviewMode={isReviewMode}
+            isReviewMode={isReviewMode || isTimeOver}
           />
         ) : (
           <div className="boson-options-list">
@@ -679,7 +680,7 @@ function QuestionView({
 
                 let cardClass = "boson-option-item";
                 if (isSelected) cardClass += " selected";
-                if (isRevealed || isReviewMode) {
+                if (isRevealed || isReviewMode || isTimeOver) {
                   cardClass += " locked";
                   if (settings?.showAnswersInline !== false || isReviewMode) {
                     if (isCorrectChoice) {

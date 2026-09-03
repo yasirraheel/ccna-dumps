@@ -67,24 +67,24 @@ function AdminQuestions() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th style={{ width: '80px' }}>Q#</th>
-                <th style={{ width: '120px' }}>Type</th>
+                <th style={{ width: '140px', whiteSpace: 'nowrap' }}>Q#</th>
+                <th style={{ width: '160px', whiteSpace: 'nowrap' }}>Type</th>
                 <th>Prompt Summary</th>
-                <th style={{ width: '100px' }}>Exhibit</th>
-                <th style={{ width: '100px' }}>Points</th>
-                <th style={{ width: '100px' }}>Action</th>
+                <th style={{ width: '100px', whiteSpace: 'nowrap' }}>Exhibit</th>
+                <th style={{ width: '90px', whiteSpace: 'nowrap' }}>Points</th>
+                <th style={{ width: '110px', whiteSpace: 'nowrap' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {filtered.slice(0, 100).map((q, idx) => (
                 <tr key={q.id || idx}>
-                  <td>
-                    <span className="badge-pill badge-pro" style={{ fontSize: '11px' }}>
-                      {q.questionNo || `#${idx + 1}`}
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <span className="badge-pill badge-pro" style={{ whiteSpace: 'nowrap', fontSize: '11.5px', padding: '5px 12px', fontWeight: 700 }}>
+                      {q.questionNo || `QUESTION #${idx + 1}`}
                     </span>
                   </td>
-                  <td>
-                    <span style={{ fontSize: '12px', color: q.type === 'drag_drop' ? '#c084fc' : '#38bdf8' }}>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: q.type === 'drag_drop' ? '#c084fc' : '#38bdf8' }}>
                       {q.type === 'drag_drop' ? '🧩 Drag & Drop' : '☑️ Multiple Choice'}
                     </span>
                   </td>

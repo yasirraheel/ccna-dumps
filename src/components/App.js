@@ -227,6 +227,7 @@ function reducer(state, action) {
 
     case "newAnswer": {
       if (state.isReviewMode) return state;
+      if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
       const optIdx =
         typeof action.payload === "number"
           ? action.payload
@@ -245,6 +246,7 @@ function reducer(state, action) {
 
     case "multiSelect": {
       if (state.isReviewMode) return state;
+      if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
       const selections = Array.isArray(action.payload)
         ? action.payload
         : action.payload?.selections || [];
@@ -271,6 +273,7 @@ function reducer(state, action) {
 
     case "dragDropAnswer": {
       if (state.isReviewMode) return state;
+      if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
       const { matches } = action.payload;
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = { matches, confirmed: false };
@@ -381,18 +384,18 @@ function reducer(state, action) {
         status: "ready",
       };
 
-    case "tick":
+    case "tick": {
+      const nextSeconds = state.secondsRemaining - 1;
+      const isTimeUp = nextSeconds <= 0;
       return {
         ...state,
-        secondsRemaining: state.secondsRemaining - 1,
-        highscore:
-          state.secondsRemaining === 0
-            ? state.points > state.highscore
-              ? state.points
-              : state.highscore
-            : state.highscore,
-        status: state.secondsRemaining === 0 ? "finished" : state.status,
+        secondsRemaining: isTimeUp ? 0 : nextSeconds,
+        highscore: isTimeUp
+          ? Math.max(state.highscore, state.points)
+          : state.highscore,
+        status: isTimeUp ? "finished" : state.status,
       };
+    }
 
     default:
       throw new Error("Action unknown");
@@ -421,7 +424,82 @@ export default function App() {
     dispatch,
   ] = useReducer(reducer, initialState);
 
-  const [currentView, setCurrentView] = useState("dashboard"); // 'dashboard', 'resume-exams', 'history', 'auth-login', 'auth-signup', 'auth-verify', 'auth-forgot', 'auth-reset'
+  const getViewFromUrl = () => {
+    const path = window.location.pathname.toLowerCase().replace(/\/+$/, "");
+    const search = new URLSearchParams(window.location.search);
+    const viewParam = search.get("view");
+    const hash = window.location.hash.toLowerCase().replace(/^#\/?/, "");
+
+    if (path === "/admin" || path.startsWith("/admin/") || viewParam === "admin" || hash.startsWith("admin")) {
+      return "admin";
+    }
+    if (path === "/history" || viewParam === "history" || hash === "history") {
+      return "history";
+    }
+    if (path === "/my-exams" || path === "/resume-exams" || viewParam === "resume-exams" || hash === "my-exams" || hash === "resume-exams") {
+      return "resume-exams";
+    }
+    if (path === "/login" || viewParam === "login" || hash === "login") {
+      return "auth-login";
+    }
+    if (path === "/signup" || viewParam === "signup" || hash === "signup") {
+      return "auth-signup";
+    }
+    if (path === "/verify" || viewParam === "verify" || hash === "verify") {
+      return "auth-verify";
+    }
+    if (path === "/forgot-password" || path === "/forgot" || viewParam === "forgot" || hash === "forgot") {
+      return "auth-forgot";
+    }
+    if (path === "/reset-password" || path === "/reset" || viewParam === "reset" || hash === "reset") {
+      return "auth-reset";
+    }
+    return "dashboard";
+  };
+
+  const [currentView, setCurrentView] = useState(getViewFromUrl);
+
+  const handleNavigate = (view) => {
+    setCurrentView(view);
+    let targetUrl = "/";
+    if (view === "admin") {
+      targetUrl = "/admin";
+    } else if (view === "history") {
+      targetUrl = "/history";
+    } else if (view === "resume-exams") {
+      targetUrl = "/my-exams";
+    } else if (view === "auth-login") {
+      targetUrl = "/login";
+    } else if (view === "auth-signup") {
+      targetUrl = "/signup";
+    } else if (view === "auth-verify") {
+      targetUrl = "/verify";
+    } else if (view === "auth-forgot") {
+      targetUrl = "/forgot-password";
+    } else if (view === "auth-reset") {
+      targetUrl = "/reset-password";
+    } else {
+      targetUrl = "/";
+    }
+
+    if (view === "admin") {
+      if (!window.location.pathname.toLowerCase().startsWith("/admin")) {
+        window.history.pushState({ view }, "", targetUrl);
+      }
+    } else {
+      if (window.location.pathname !== targetUrl) {
+        window.history.pushState({ view }, "", targetUrl);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentView(getViewFromUrl());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   
   // User Authentication State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -473,8 +551,7 @@ export default function App() {
   }, []);
 
   const handleOpenAuth = (mode = "login") => {
-    // Navigate to full-page auth view instead of modal
-    setCurrentView(`auth-${mode}`);
+    handleNavigate(`auth-${mode}`);
   };
 
   const handleAuthSuccess = (user, token) => {
@@ -483,8 +560,7 @@ export default function App() {
       setCandidateName(user.name);
       localStorage.setItem("ccna_candidate_name", user.name);
     }
-    // After successful auth, return to dashboard
-    setCurrentView("dashboard");
+    handleNavigate("dashboard");
   };
 
   const handleLogout = () => {
@@ -568,7 +644,11 @@ export default function App() {
 
   // *** EXAM TIMER COUNTDOWN ***
   useEffect(() => {
-    if (status !== "active" || secondsRemaining === null || secondsRemaining <= 0) return;
+    if (status !== "active" || secondsRemaining === null) return;
+    if (secondsRemaining <= 0) {
+      dispatch({ type: "finish" });
+      return;
+    }
     const interval = setInterval(() => {
       dispatch({ type: "tick" });
     }, 1000);
@@ -985,7 +1065,7 @@ export default function App() {
     return (
       <AdminLayout
         currentUser={currentUser}
-        onExitAdmin={() => setCurrentView("dashboard")}
+        onExitAdmin={() => handleNavigate("dashboard")}
       />
     );
   }
@@ -1001,7 +1081,7 @@ export default function App() {
           <AuthView
             initialMode={currentView.replace("auth-", "")}
             onAuthSuccess={handleAuthSuccess}
-            onClose={() => setCurrentView("dashboard")}
+            onClose={() => handleNavigate("dashboard")}
             currentUser={currentUser}
             onLogout={handleLogout}
           />
@@ -1019,7 +1099,7 @@ export default function App() {
             savedSessions={currentUser ? savedSessions : []}
             onResumeExam={handleResumeSession}
             onDiscardSavedSession={() => handleDeleteSession(savedSessions[0]?.id)}
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             pastExams={currentUser ? pastExams : []}
             onReviewExam={handleReviewCompletedExam}
             onRetakeExam={handleRetakeAllQuestions}
@@ -1037,7 +1117,7 @@ export default function App() {
             savedSessions={currentUser ? savedSessions : []}
             onResumeSession={handleResumeSession}
             onDeleteSession={handleDeleteSession}
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             candidateName={currentUser?.name || candidateName}
             currentUser={currentUser}
             onOpenAuth={handleOpenAuth}
@@ -1048,7 +1128,7 @@ export default function App() {
         {status === "ready" && currentView === "history" && (
           <ExamHistoryView
             pastExams={currentUser ? pastExams : []}
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             candidateName={candidateName}
             onClearHistory={handleClearHistory}
             onReviewExam={handleReviewCompletedExam}
@@ -1085,7 +1165,7 @@ export default function App() {
             onExitReview={() => dispatch({ type: "exitReview" })}
             onExitToDashboard={() => {
               dispatch({ type: "restart" });
-              setCurrentView("dashboard");
+              handleNavigate("dashboard");
             }}
             points={points}
             maxPossiblePoints={maxPossiblePoints}
@@ -1131,7 +1211,7 @@ export default function App() {
         {status === "ready" && !currentView.startsWith("auth-") && currentView !== "admin" && (
           <MobileBottomBar
             currentView={currentView}
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             savedCount={currentUser ? savedSessions.length : 0}
             historyCount={currentUser ? pastExams.length : 0}
             currentUser={currentUser}

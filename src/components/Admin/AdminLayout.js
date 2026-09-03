@@ -7,10 +7,47 @@ import AdminQuestions from './AdminQuestions';
 import AdminSettings from './AdminSettings';
 
 function AdminLayout({ currentUser, onExitAdmin }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const getInitialAdminTab = () => {
+    const path = window.location.pathname.toLowerCase().replace(/\/+$/, "");
+    const search = new URLSearchParams(window.location.search);
+    const tabParam = search.get("tab");
+    if (tabParam) return tabParam;
+    if (path.includes("/admin/users")) return "users";
+    if (path.includes("/admin/plans")) return "plans";
+    if (path.includes("/admin/questions")) return "questions";
+    if (path.includes("/admin/settings")) return "settings";
+    return "dashboard";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialAdminTab);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [statsData, setStatsData] = useState(null);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setMobileOpen(false);
+    const targetUrl = tab === "dashboard" ? "/admin" : `/admin/${tab}`;
+    if (window.location.pathname !== targetUrl) {
+      window.history.pushState({ adminTab: tab }, "", targetUrl);
+    }
+  };
+
+  useEffect(() => {
+    const handlePop = () => {
+      setActiveTab(getInitialAdminTab());
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
+
+  useEffect(() => {
+    const currentPath = window.location.pathname.toLowerCase().replace(/\/+$/, "");
+    const expected = activeTab === "dashboard" ? "/admin" : `/admin/${activeTab}`;
+    if (currentPath !== expected && (currentPath === "/admin" || currentPath === "" || currentPath === "/")) {
+      window.history.replaceState({ adminTab: activeTab }, "", expected);
+    }
+  }, [activeTab]);
 
   const fetchStats = async () => {
     try {
@@ -67,7 +104,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           <button
             type="button"
             className={`admin-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('dashboard'); setMobileOpen(false); }}
+            onClick={() => switchTab('dashboard')}
           >
             <span className="admin-nav-icon">📊</span>
             <span>Dashboard</span>
@@ -77,7 +114,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           <button
             type="button"
             className={`admin-nav-item ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('users'); setMobileOpen(false); }}
+            onClick={() => switchTab('users')}
           >
             <span className="admin-nav-icon">👥</span>
             <span>Candidates (Users)</span>
@@ -86,7 +123,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           <button
             type="button"
             className={`admin-nav-item ${activeTab === 'plans' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('plans'); setMobileOpen(false); }}
+            onClick={() => switchTab('plans')}
           >
             <span className="admin-nav-icon">💳</span>
             <span>Plans & Billing</span>
@@ -95,7 +132,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           <button
             type="button"
             className={`admin-nav-item ${activeTab === 'questions' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('questions'); setMobileOpen(false); }}
+            onClick={() => switchTab('questions')}
           >
             <span className="admin-nav-icon">❓</span>
             <span>Question Banks</span>
@@ -105,7 +142,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           <button
             type="button"
             className={`admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('settings'); setMobileOpen(false); }}
+            onClick={() => switchTab('settings')}
           >
             <span className="admin-nav-icon">⚙️</span>
             <span>Settings & SMTP</span>
@@ -163,9 +200,9 @@ function AdminLayout({ currentUser, onExitAdmin }) {
               stats={statsData?.stats}
               recentAttempts={statsData?.recentAttempts}
               recentUsers={statsData?.recentUsers}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => switchTab(tab)}
               onOpenCreateUser={() => {
-                setActiveTab('users');
+                switchTab('users');
                 setIsCreateUserOpen(true);
               }}
             />
