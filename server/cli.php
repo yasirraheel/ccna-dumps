@@ -120,6 +120,10 @@ foreach ($cols as $sql) {
     }
 }
 
-$stmt = $pdo->query("SELECT p.*, (SELECT COUNT(*) FROM users u WHERE u.plan = p.id OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL))) as subscribers_count FROM plans p ORDER BY p.price ASC");
-print_r($stmt->fetchAll());
+try {
+    $stmt = $pdo->query("SELECT p.*, (SELECT COUNT(*) FROM users u WHERE u.plan = p.id OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL))) as subscribers_count FROM plans p ORDER BY p.price ASC");
+    print_r($stmt->fetchAll());
+} catch (Exception $e) {
+    echo "Plans Query Error: " . $e->getMessage() . "\n";
+}
 
