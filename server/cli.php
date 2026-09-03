@@ -98,6 +98,28 @@ $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser, $db
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
 ]);
 
+$cols = [
+    "ALTER TABLE exam_attempts ADD COLUMN max_score INT DEFAULT 1000",
+    "ALTER TABLE exam_attempts ADD COLUMN bank_name VARCHAR(200) DEFAULT 'CCNA Exam'",
+    "ALTER TABLE exam_attempts ADD COLUMN exam_mode VARCHAR(50) DEFAULT 'study'",
+    "ALTER TABLE exam_attempts ADD COLUMN exam_date BIGINT DEFAULT 0",
+    "ALTER TABLE exam_attempts ADD COLUMN questions JSON",
+    "ALTER TABLE exam_attempts ADD COLUMN answers JSON",
+    "ALTER TABLE exam_attempts ADD COLUMN flagged_questions JSON",
+    "ALTER TABLE exam_attempts ADD COLUMN revealed_questions JSON",
+    "ALTER TABLE exam_attempts ADD COLUMN settings JSON",
+    "ALTER TABLE exam_attempts ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+];
+
+foreach ($cols as $sql) {
+    try {
+        $pdo->exec($sql);
+        echo "OK: $sql\n";
+    } catch (Exception $e) {
+        echo "Skip/Error: " . $e->getMessage() . "\n";
+    }
+}
+
 $stmt = $pdo->query("DESCRIBE exam_attempts");
 print_r($stmt->fetchAll());
 
