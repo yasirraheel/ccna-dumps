@@ -163,10 +163,12 @@
 .admin-viewport {
   margin-left: 260px;
   flex: 1;
+  width: calc(100% - 260px);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #090d16;
+  box-sizing: border-box;
 }
 
 .admin-topbar {
@@ -523,33 +525,60 @@
   border-color: #475569;
 }
 
+.admin-actions-cell {
+  display: inline-flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 8px;
+  white-space: nowrap;
+}
+
 .btn-table-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: #1e293b;
   border: 1px solid #334155;
   color: #cbd5e1;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  margin-right: 6px;
-  transition: all 0.15s;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1;
 }
 
-.btn-table-action:hover {
-  background: #334155;
+.btn-table-edit {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+.btn-table-edit:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
   color: #fff;
+  transform: translateY(-1px);
 }
 
 .btn-table-delete {
   background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.35);
   color: #f87171;
 }
 
-.btn-table-delete:hover {
+.btn-table-delete:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
   color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-table-delete:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .admin-search-input {

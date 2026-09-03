@@ -980,6 +980,16 @@ export default function App() {
     0
   );
 
+  // Full-width root-level render for Admin Portal
+  if (status === "ready" && currentView === "admin") {
+    return (
+      <AdminLayout
+        currentUser={currentUser}
+        onExitAdmin={() => setCurrentView("dashboard")}
+      />
+    );
+  }
+
   return (
     <div className="cisco-simulator-root">
       <div className="simulator-app-container">
@@ -1049,14 +1059,6 @@ export default function App() {
             currentUser={currentUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
-          />
-        )}
-
-        {/* ===== ADMIN PORTAL VIEW ===== */}
-        {status === "ready" && currentView === "admin" && (
-          <AdminLayout
-            currentUser={currentUser}
-            onExitAdmin={() => setCurrentView("dashboard")}
           />
         )}
 
