@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { getIncorrectQuestionIndices } from "../utils/examScoring";
 
 function FinishScreen({
   points,
@@ -36,51 +37,17 @@ function FinishScreen({
   const ciscoScaleScore = Math.round(300 + (percentage / 100) * 700); // 300 - 1000 scale
   const isPassed = ciscoScaleScore >= 825 || percentage >= 82.5;
 
+  const incorrectIndices = getIncorrectQuestionIndices(questions, answers);
+  const incorrectCount = incorrectIndices.length;
   let answeredCount = 0;
-  let correctCount = 0;
-  const incorrectIndices = [];
-
-  questions.forEach((q, idx) => {
+  questions.forEach((_, idx) => {
     const ans = answers ? answers[idx] : null;
     if (ans !== null && ans !== undefined) {
       answeredCount++;
-      if (q.type === "drag_drop" || q.dragDropData) {
-        if (ans?.confirmed && ans?.isCorrect) {
-          correctCount++;
-        } else {
-          incorrectIndices.push(idx);
-        }
-      } else {
-        const correctArr = Array.isArray(q.correctOption)
-          ? q.correctOption
-          : [q.correctOption];
-        if (typeof ans === "number") {
-          if (correctArr.includes(ans)) {
-            correctCount++;
-          } else {
-            incorrectIndices.push(idx);
-          }
-        } else if (ans.selections) {
-          const sels = ans.selections || [];
-          if (
-            sels.length === correctArr.length &&
-            correctArr.every((c) => sels.includes(c))
-          ) {
-            correctCount++;
-          } else {
-            incorrectIndices.push(idx);
-          }
-        } else {
-          incorrectIndices.push(idx);
-        }
-      }
-    } else {
-      incorrectIndices.push(idx);
     }
   });
-
+  const correctCount = Math.max(0, questions.length - incorrectCount);
   const flaggedCount = flaggedQuestions.length;
-  const incorrectCount = incorrectIndices.length;
 
   return (
     <div className="finish-screen-container">

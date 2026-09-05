@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminFetch } from '../../utils/adminApi';
+import CustomConfirmModal from '../CustomConfirmModal';
 
 function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const [users, setUsers] = useState([]);
@@ -9,6 +10,15 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [editingUser, setEditingUser] = useState(null);
   const [actionFeedback, setActionFeedback] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    type: 'warning',
+    onConfirm: null,
+  });
 
   // New User Form State
   const [newUserData, setNewUserData] = useState({
@@ -91,26 +101,43 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
     }
   };
 
-  const handleDeleteUser = async (user) => {
+  const handleDeleteUser = (user) => {
     if (user.email === 'candidate@ccna.com') {
-      alert('Cannot delete primary demo admin account.');
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Protected Admin Account',
+        message: 'Cannot delete primary demo admin account (candidate@ccna.com).',
+        confirmText: 'Understood',
+        cancelText: null,
+        type: 'warning',
+        onConfirm: () => setConfirmDialog((prev) => ({ ...prev, isOpen: false })),
+      });
       return;
     }
-    if (!window.confirm(`Are you sure you want to permanently delete user "${user.name}" (${user.email})? All their exam history will be erased.`)) {
-      return;
-    }
-    try {
-      const res = await adminFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setActionFeedback({ type: 'success', message: 'User deleted.' });
-        fetchUsers();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to delete user.');
-      }
-    } catch (e) {
-      alert('Network error deleting user.');
-    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete User Account',
+      message: `Are you sure you want to permanently delete user "${user.name}" (${user.email})? All their exam history and progress will be permanently erased.`,
+      confirmText: 'Delete User',
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await adminFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+          if (res.ok) {
+            setActionFeedback({ type: 'success', message: 'User deleted.' });
+            fetchUsers();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            setActionFeedback({ type: 'error', message: data.error || 'Failed to delete user.' });
+          }
+        } catch (e) {
+          setActionFeedback({ type: 'error', message: 'Network error deleting user.' });
+        }
+      },
+    });
   };
 
   const handleToggleVerify = async (user) => {
@@ -529,6 +556,18 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
           </div>
         </div>
       )}
+
+      {/* CUSTOM CONFIRMATION / ALERT MODAL */}
+      <CustomConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        cancelText={confirmDialog.cancelText}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

@@ -2832,13 +2832,36 @@ body {
 }
 
 .palette-modal-header,
-.settings-modal-header,
-.custom-confirm-header {
+.settings-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.8rem 2.2rem;
   border-bottom: 1px solid var(--color-border);
+}
+
+.custom-confirm-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.8rem 2.2rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.confirm-icon-wrap {
+  font-size: 2.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-confirm-message {
+  font-size: 1.5rem;
+  line-height: 1.6;
+  color: var(--color-text-main, #cbd5e1);
+  margin: 0;
 }
 
 .palette-modal-title,
@@ -3154,6 +3177,16 @@ body {
 .btn-settings-save:hover,
 .btn-confirm-primary:hover {
   background-color: var(--color-green-hover);
+}
+
+.btn-confirm-success {
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+}
+
+.btn-confirm-success:hover {
+  background-color: #059669;
 }
 
 .btn-confirm-danger {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminFetch } from '../../utils/adminApi';
 import { EXAM_BANKS } from '../../utils/planPermissions';
+import CustomConfirmModal from '../CustomConfirmModal';
 
 const DEFAULT_BANK_PERMS = {
   bank_a: { enabled: true, max_questions: 50 },
@@ -29,6 +30,15 @@ function AdminPlans() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [featureInput, setFeatureInput] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    type: 'warning',
+    onConfirm: null,
+  });
 
   const fetchPlans = async () => {
     try {
@@ -74,22 +84,43 @@ function AdminPlans() {
     }
   };
 
-  const handleDeletePlan = async (plan) => {
+  const handleDeletePlan = (plan) => {
     if (plan.id === 'plan_free' || plan.id === 'plan_pro') {
-      alert('Default core plans cannot be deleted.');
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Protected Core Plan',
+        message: 'Default core plans (Free Pass & Pro Pass) cannot be deleted as they are required by the system.',
+        confirmText: 'Understood',
+        cancelText: null,
+        type: 'warning',
+        onConfirm: () => setConfirmDialog((prev) => ({ ...prev, isOpen: false })),
+      });
       return;
     }
-    if (!window.confirm(`Delete plan "${plan.name}"?`)) return;
 
-    try {
-      const res = await adminFetch(`/api/admin/plans/${plan.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setActionFeedback({ type: 'success', message: 'Plan deleted.' });
-        fetchPlans();
-      }
-    } catch (e) {
-      alert('Failed to delete plan.');
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Plan',
+      message: `Are you sure you want to permanently delete the plan "${plan.name}"? Users currently subscribed will lose access to its custom bank allocations.`,
+      confirmText: 'Delete Plan',
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        try {
+          const res = await adminFetch(`/api/admin/plans/${plan.id}`, { method: 'DELETE' });
+          if (res.ok) {
+            setActionFeedback({ type: 'success', message: 'Plan deleted.' });
+            fetchPlans();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            setActionFeedback({ type: 'error', message: data.error || 'Failed to delete plan.' });
+          }
+        } catch (e) {
+          setActionFeedback({ type: 'error', message: 'Network error deleting plan.' });
+        }
+      },
+    });
   };
 
   const handleAddFeature = () => {
@@ -550,6 +581,18 @@ function AdminPlans() {
           </div>
         </div>
       )}
+
+      {/* CUSTOM CONFIRMATION / ALERT MODAL */}
+      <CustomConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmText={confirmDialog.confirmText}
+        cancelText={confirmDialog.cancelText}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

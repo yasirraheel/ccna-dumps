@@ -10,6 +10,7 @@ import {
   getPlanDisplayInfo,
   EXAM_BANKS
 } from "../utils/planPermissions";
+import { getIncorrectQuestionIndices } from "../utils/examScoring";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -645,33 +646,16 @@ function ExamDashboard({
                 ? lastCompletedExam.flaggedQuestions.length
                 : 0;
 
-              let incorrectCount = 0;
-              if (lastCompletedExam.questions && lastCompletedExam.answers) {
-                lastCompletedExam.questions.forEach((q, idx) => {
-                  const userAns = lastCompletedExam.answers[idx];
-                  if (userAns === undefined || userAns === null) {
-                    incorrectCount++;
-                    return;
-                  }
-                  if (q.type === "drag_drop" || Boolean(q.dragDropData)) {
-                    const correctPairs = q.dragDropData?.correctPairs || {};
-                    const userPairs = typeof userAns === "object" ? userAns : {};
-                    const allCorrect = Object.entries(correctPairs).every(
-                      ([slotId, targetVal]) => userPairs[slotId] === targetVal
+              const incorrectIndices =
+                lastCompletedExam.incorrectQuestions !== undefined
+                  ? lastCompletedExam.incorrectQuestions
+                  : getIncorrectQuestionIndices(
+                      lastCompletedExam.questions,
+                      lastCompletedExam.answers
                     );
-                    if (!allCorrect) incorrectCount++;
-                  } else {
-                    const correctArr = Array.isArray(q.correctOption)
-                      ? q.correctOption
-                      : [q.correctOption];
-                    const userArr = Array.isArray(userAns) ? userAns : [userAns];
-                    const isCorrect =
-                      correctArr.length === userArr.length &&
-                      correctArr.every((v) => userArr.includes(v));
-                    if (!isCorrect) incorrectCount++;
-                  }
-                });
-              }
+              const incorrectCount = Array.isArray(incorrectIndices)
+                ? incorrectIndices.length
+                : 0;
 
               return (
                 <div className="past-exam-preview-card">

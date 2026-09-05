@@ -11,8 +11,10 @@ import AuthView from "./AuthView";
 import MobileBottomBar from "./MobileBottomBar";
 import AdminLayout from "./Admin/AdminLayout";
 import UpgradePlanModal from "./UpgradePlanModal";
+import CustomConfirmModal from "./CustomConfirmModal";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions } from "./randomizeOptions";
+import { calculateTotalPoints, getIncorrectQuestionIndices } from "../utils/examScoring";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
@@ -43,94 +45,6 @@ const initialState = {
   revealedQuestions: [],
   isReviewMode: false,
 };
-
-function calculateTotalPoints(questions, answers) {
-  if (!questions || !answers) return 0;
-  let total = 0;
-  for (let i = 0; i < questions.length; i++) {
-    const q = questions[i];
-    const ans = answers[i];
-    if (ans === null || ans === undefined) continue;
-
-    const pointValue = q.points || 10;
-    const rawCorrect = q.correctOptions || q.correctOption;
-    const correctArr = Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect];
-
-    if (q.type === "drag_drop" || q.dragDropData) {
-      if (ans?.confirmed && ans?.isCorrect) {
-        total += pointValue;
-      }
-    } else if (correctArr.length > 1) {
-      const userSelections = Array.isArray(ans)
-        ? ans
-        : Array.isArray(ans?.selections)
-        ? ans.selections
-        : typeof ans === "number"
-        ? [ans]
-        : [];
-      const isMatch =
-        userSelections.length === correctArr.length &&
-        userSelections.every((idx) => correctArr.includes(idx));
-      if (isMatch) {
-        total += pointValue;
-      }
-    } else {
-      const chosenOpt =
-        typeof ans === "number"
-          ? ans
-          : Array.isArray(ans)
-          ? ans[0]
-          : ans?.selections?.[0];
-      if (chosenOpt !== undefined && correctArr.includes(chosenOpt)) {
-        total += pointValue;
-      }
-    }
-  }
-  return total;
-}
-
-function getIncorrectQuestionIndices(questions, answers) {
-  if (!questions) return [];
-  const incorrectIndices = [];
-  for (let i = 0; i < questions.length; i++) {
-    const q = questions[i];
-    const ans = answers ? answers[i] : null;
-    if (ans === null || ans === undefined) {
-      incorrectIndices.push(i);
-      continue;
-    }
-    const rawCorrect = q.correctOptions || q.correctOption;
-    const correctArr = Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect];
-    if (q.type === "drag_drop" || q.dragDropData) {
-      if (!ans?.confirmed || !ans?.isCorrect) {
-        incorrectIndices.push(i);
-      }
-    } else if (correctArr.length > 1) {
-      const userSelections = Array.isArray(ans)
-        ? ans
-        : Array.isArray(ans?.selections)
-        ? ans.selections
-        : typeof ans === "number"
-        ? [ans]
-        : [];
-      const isMatch =
-        userSelections.length === correctArr.length &&
-        userSelections.every((idx) => correctArr.includes(idx));
-      if (!isMatch) incorrectIndices.push(i);
-    } else {
-      const chosenOpt =
-        typeof ans === "number"
-          ? ans
-          : Array.isArray(ans)
-          ? ans[0]
-          : ans?.selections?.[0];
-      if (chosenOpt === undefined || !correctArr.includes(chosenOpt)) {
-        incorrectIndices.push(i);
-      }
-    }
-  }
-  return incorrectIndices;
-}
 
 function reducer(state, action) {
   switch (action.type) {
@@ -522,6 +436,20 @@ export default function App() {
     lockContext: null,
   });
 
+  const [alertDialog, setAlertDialog] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "OK",
+    cancelText: null,
+    type: "info",
+    onConfirm: null,
+  });
+
+  const closeAlert = () => {
+    setAlertDialog((prev) => ({ ...prev, isOpen: false }));
+  };
+
   const handleOpenUpgrade = (lockContext = null) => {
     setUpgradeModal({ isOpen: true, lockContext });
   };
@@ -803,6 +731,7 @@ export default function App() {
         questions: [...questions],
         answers: [...answers],
         flaggedQuestions: [...flaggedQuestions],
+        incorrectQuestions: getIncorrectQuestionIndices(questions, answers),
         revealedQuestions: [...revealedQuestions],
         settings: { ...settings },
         examMode,
@@ -1019,7 +948,14 @@ export default function App() {
     let flaggedList = baseList.filter((_, idx) => flags.includes(idx));
 
     if (flaggedList.length === 0) {
-      alert("No questions were marked for review in this exam session.");
+      setAlertDialog({
+        isOpen: true,
+        title: "No Flagged Questions",
+        message: "No questions were marked for review in this exam session.",
+        confirmText: "OK",
+        cancelText: null,
+        type: "info",
+      });
       return;
     }
 
@@ -1054,7 +990,14 @@ export default function App() {
     let incorrectList = baseList.filter((_, idx) => incorrectIdxs.includes(idx));
 
     if (incorrectList.length === 0) {
-      alert("Congratulations! All questions were answered correctly in this exam.");
+      setAlertDialog({
+        isOpen: true,
+        title: "Perfect Score! 🌟",
+        message: "Congratulations! All questions were answered correctly in this exam session. There are no incorrect questions to retake.",
+        confirmText: "Awesome!",
+        cancelText: null,
+        type: "success",
+      });
       return;
     }
 
@@ -1313,6 +1256,23 @@ export default function App() {
           onOpenAuth={handleOpenAuth}
           onPlanUpgraded={handlePlanUpgraded}
           lockContext={upgradeModal.lockContext}
+        />
+
+        {/* 4.6 CUSTOM ALERT / CONFIRMATION MODAL */}
+        <CustomConfirmModal
+          isOpen={alertDialog.isOpen}
+          title={alertDialog.title}
+          message={alertDialog.message}
+          confirmText={alertDialog.confirmText || "OK"}
+          cancelText={alertDialog.cancelText || null}
+          type={alertDialog.type || "info"}
+          onConfirm={() => {
+            if (typeof alertDialog.onConfirm === "function") {
+              alertDialog.onConfirm();
+            }
+            closeAlert();
+          }}
+          onCancel={closeAlert}
         />
 
         {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam, auth, or admin) */}
