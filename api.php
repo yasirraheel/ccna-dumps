@@ -40,6 +40,7 @@ try {
     // Ensure candidate@ccna.com exists with Password123!
     try { $pdo->exec("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user'"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN plan VARCHAR(50) DEFAULT 'free'"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL"); } catch (Exception $e) {}
 
     // Ensure plans table exists with seed data
     $pdo->exec("CREATE TABLE IF NOT EXISTS plans (
