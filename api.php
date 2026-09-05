@@ -777,19 +777,38 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             }
         }
 
+        try {
+            $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL");
+        } catch (Exception $e) {}
+
+        $bankName = $s['selectedBankName'] ?? $s['bankName'] ?? 'CCNA Exam';
+        
+        $startedAt = $s['startedAt'] ?? $s['started_at'] ?? null;
+        if (!$startedAt && isset($s['id']) && preg_match('/session_(\d+)/', $s['id'], $sm)) {
+            $startedAt = (float)$sm[1];
+        }
+        if (!$startedAt) {
+            $startedAt = time() * 1000;
+        }
+
+        $updatedAt = $s['savedAt'] ?? $s['updatedAt'] ?? (time() * 1000);
+
         $stmt = $pdo->prepare("INSERT INTO saved_sessions 
-            (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, question_notes, settings, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, question_notes, settings, started_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            user_id=VALUES(user_id), user_email=VALUES(user_email), q_index=VALUES(q_index), points=VALUES(points),
-            seconds_remaining=VALUES(seconds_remaining), answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
-            revealed_questions=VALUES(revealed_questions), question_notes=VALUES(question_notes), settings=VALUES(settings), updated_at=VALUES(updated_at)");
+            user_id=VALUES(user_id), user_email=VALUES(user_email), bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode),
+            q_index=VALUES(q_index), points=VALUES(points), seconds_remaining=VALUES(seconds_remaining), time_spent_seconds=VALUES(time_spent_seconds),
+            answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
+            revealed_questions=VALUES(revealed_questions), question_notes=VALUES(question_notes), settings=VALUES(settings),
+            started_at=COALESCE(saved_sessions.started_at, VALUES(started_at)),
+            updated_at=VALUES(updated_at)");
         $stmt->execute([
             $s['id'],
             $s['userId'] ?? null,
             isset($s['userEmail']) ? strtolower($s['userEmail']) : null,
             $s['candidateName'] ?? 'Candidate',
-            $s['bankName'] ?? 'CCNA Exam',
+            $bankName,
             $s['examMode'] ?? 'study',
             $s['index'] ?? 0,
             $s['points'] ?? 0,
@@ -801,7 +820,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             json_encode($s['revealedQuestions'] ?? []),
             json_encode($s['questionNotes'] ?? []),
             json_encode($s['settings'] ?? []),
-            $s['updatedAt'] ?? (time() * 1000)
+            $startedAt,
+            $updatedAt
         ]);
         http_response_code(201);
         echo json_encode(["success" => true, "message" => "Session saved", "sessionId" => $s['id']]);
@@ -820,12 +840,22 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         $stmt->execute([$userId ?: $userEmail]);
         $rows = $stmt->fetchAll();
         $formatted = array_map(function($r) {
+            $startedAt = !empty($r['started_at']) ? (float)$r['started_at'] : null;
+            if (!$startedAt && preg_match('/session_(\d+)/', $r['id'], $sm)) {
+                $startedAt = (float)$sm[1];
+            }
+            if (!$startedAt) {
+                $startedAt = (float)$r['updated_at'];
+            }
+            $savedAt = (float)$r['updated_at'];
+
             return [
                 'id' => $r['id'],
                 'userId' => $r['user_id'],
                 'userEmail' => $r['user_email'],
                 'candidateName' => $r['candidate_name'],
                 'bankName' => $r['bank_name'],
+                'selectedBankName' => $r['bank_name'],
                 'examMode' => $r['exam_mode'],
                 'index' => (int)$r['q_index'],
                 'points' => (int)$r['points'],
@@ -837,7 +867,9 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),
                 'questionNotes' => json_decode($r['question_notes'] ?? '{}', true),
                 'settings' => json_decode($r['settings'] ?? '{}', true),
-                'updatedAt' => (float)$r['updated_at']
+                'startedAt' => $startedAt,
+                'savedAt' => $savedAt,
+                'updatedAt' => $savedAt
             ];
         }, $rows);
         echo json_encode(["sessions" => $formatted]);

@@ -42,6 +42,7 @@ const initialState = {
   },
   selectedBankName: "Full CCNA Exam",
   activeSessionId: null,
+  startedAt: null,
   revealedQuestions: [],
   isReviewMode: false,
 };
@@ -75,6 +76,7 @@ function reducer(state, action) {
       else if (settings?.timerMode === "60s_per_q")
         timerSeconds = questions.length * 60;
 
+      const startTime = Date.now();
       return {
         ...state,
         questions,
@@ -87,7 +89,8 @@ function reducer(state, action) {
         answers: initialAnswers,
         points: 0,
         secondsRemaining: timerSeconds,
-        activeSessionId: `session_${Date.now()}`,
+        activeSessionId: `session_${startTime}`,
+        startedAt: startTime,
         revealedQuestions: [],
         isReviewMode: false,
       };
@@ -107,7 +110,20 @@ function reducer(state, action) {
         activeSessionId,
         revealedQuestions,
         isReviewMode,
+        startedAt,
       } = action.payload;
+
+      let initialStartTime = startedAt;
+      if (!initialStartTime && typeof activeSessionId === "string" && activeSessionId.startsWith("session_")) {
+        const parsed = parseInt(activeSessionId.replace("session_", ""), 10);
+        if (!isNaN(parsed) && parsed > 1000000000000) {
+          initialStartTime = parsed;
+        }
+      }
+      if (!initialStartTime) {
+        initialStartTime = state.startedAt || Date.now();
+      }
+
       return {
         ...state,
         questions,
@@ -121,7 +137,8 @@ function reducer(state, action) {
         settings: settings || initialState.settings,
         selectedBankName: selectedBankName || "Resumed CCNA Exam",
         status: "active",
-        activeSessionId: activeSessionId || `session_${Date.now()}`,
+        activeSessionId: activeSessionId || `session_${initialStartTime}`,
+        startedAt: initialStartTime,
         revealedQuestions: revealedQuestions || [],
         isReviewMode: Boolean(isReviewMode),
       };
@@ -333,6 +350,7 @@ export default function App() {
       settings,
       selectedBankName,
       activeSessionId,
+      startedAt,
       revealedQuestions,
       isReviewMode,
     },
@@ -535,11 +553,32 @@ export default function App() {
     setCurrentUser(null);
   };
 
+  const normalizeSessionData = (s) => {
+    if (!s) return s;
+    let startedAt = s.startedAt || s.started_at;
+    if (!startedAt && typeof s.id === "string" && s.id.startsWith("session_")) {
+      const parsed = parseInt(s.id.replace("session_", ""), 10);
+      if (!isNaN(parsed) && parsed > 1000000000000) {
+        startedAt = parsed;
+      }
+    }
+    if (!startedAt) {
+      startedAt = s.savedAt || s.updatedAt || s.updated_at || Date.now();
+    }
+    return {
+      ...s,
+      startedAt,
+      savedAt: s.savedAt || s.updatedAt || s.updated_at || Date.now(),
+      selectedBankName: s.selectedBankName || s.bankName || "Exam A",
+    };
+  };
+
   // Multi-session state
   const [savedSessions, setSavedSessions] = useState(() => {
     try {
       const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed.map(normalizeSessionData) : [];
     } catch {
       return [];
     }
@@ -599,9 +638,10 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (data.sessions && Array.isArray(data.sessions)) {
-          setSavedSessions(data.sessions);
+          const normalized = data.sessions.map(normalizeSessionData);
+          setSavedSessions(normalized);
           try {
-            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(data.sessions));
+            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(normalized));
           } catch {}
         }
       })
@@ -629,8 +669,20 @@ export default function App() {
       !isReviewMode &&
       !activeSessionId?.startsWith("review_")
     ) {
+      const sessionKey = activeSessionId || "";
+      let initialStartTime = startedAt;
+      if (!initialStartTime && sessionKey.startsWith("session_")) {
+        const parsed = parseInt(sessionKey.replace("session_", ""), 10);
+        if (!isNaN(parsed) && parsed > 1000000000000) {
+          initialStartTime = parsed;
+        }
+      }
+      if (!initialStartTime) {
+        initialStartTime = Date.now();
+      }
+
       const currentSessionObj = {
-        id: activeSessionId || `session_${Date.now()}`,
+        id: activeSessionId || `session_${initialStartTime}`,
         userId: currentUser?.id || null,
         userEmail: currentUser?.email || null,
         status: "active",
@@ -643,37 +695,44 @@ export default function App() {
         examMode,
         settings,
         selectedBankName,
+        bankName: selectedBankName,
         flaggedQuestions,
         candidateName: currentUser?.name || candidateName,
         revealedQuestions: revealedQuestions || [],
-        startedAt: Date.now(),
+        startedAt: initialStartTime,
         savedAt: Date.now(),
+        updatedAt: Date.now(),
       };
 
       setSavedSessions((prev) => {
         const existingIdx = prev.findIndex((s) => s.id === currentSessionObj.id);
+        const finalSession = { ...currentSessionObj };
         let updated;
         if (existingIdx >= 0) {
+          const prevStart = prev[existingIdx].startedAt || prev[existingIdx].started_at;
+          if (prevStart) {
+            finalSession.startedAt = prevStart;
+          }
           updated = [...prev];
-          currentSessionObj.startedAt = prev[existingIdx].startedAt || currentSessionObj.startedAt;
-          updated[existingIdx] = currentSessionObj;
+          updated[existingIdx] = finalSession;
         } else {
-          updated = [currentSessionObj, ...prev];
+          updated = [finalSession, ...prev];
         }
         try {
           localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated));
         } catch (e) {
           console.warn("Sessions save error:", e);
         }
+
+        // MySQL backend sync for active session tied to user
+        fetch(`${API_BASE_URL}/sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalSession),
+        }).catch(() => {});
+
         return updated;
       });
-
-      // MySQL backend sync for active session tied to user
-      fetch(`${API_BASE_URL}/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(currentSessionObj),
-      }).catch(() => {});
     }
   }, [
     status,
@@ -690,6 +749,7 @@ export default function App() {
     candidateName,
     currentUser,
     activeSessionId,
+    startedAt,
     revealedQuestions,
     isReviewMode,
   ]);
@@ -843,6 +903,18 @@ export default function App() {
   const handleResumeSession = (session) => {
     if (!requireAuth()) return;
     setFlaggedQuestions(session.flaggedQuestions || []);
+
+    let initialStartTime = session.startedAt || session.started_at;
+    if (!initialStartTime && typeof session.id === "string" && session.id.startsWith("session_")) {
+      const parsed = parseInt(session.id.replace("session_", ""), 10);
+      if (!isNaN(parsed) && parsed > 1000000000000) {
+        initialStartTime = parsed;
+      }
+    }
+    if (!initialStartTime) {
+      initialStartTime = session.savedAt || session.updatedAt || session.updated_at || Date.now();
+    }
+
     dispatch({
       type: "resumeExam",
       payload: {
@@ -854,9 +926,10 @@ export default function App() {
         secondsRemaining: session.secondsRemaining,
         examMode: session.examMode || "study",
         settings: session.settings || initialState.settings,
-        selectedBankName: session.selectedBankName || "Resumed CCNA Exam",
+        selectedBankName: session.selectedBankName || session.bankName || "Resumed CCNA Exam",
         activeSessionId: session.id,
         revealedQuestions: session.revealedQuestions || [],
+        startedAt: initialStartTime,
       },
     });
   };

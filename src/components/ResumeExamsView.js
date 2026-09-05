@@ -22,9 +22,19 @@ function ResumeExamsView({
     onConfirm: () => {},
   });
 
-  const formatRelativeTime = (timestamp) => {
-    if (!timestamp) return "Just now";
-    const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+  const formatRelativeTime = (timestamp, fallbackSessionId) => {
+    let effective = timestamp;
+    if (!effective && typeof fallbackSessionId === "string" && fallbackSessionId.startsWith("session_")) {
+      const parsed = parseInt(fallbackSessionId.replace("session_", ""), 10);
+      if (!isNaN(parsed) && parsed > 1000000000000) {
+        effective = parsed;
+      }
+    }
+    if (!effective) return "Just now";
+    const ts = typeof effective === "string" ? new Date(effective).getTime() : Number(effective);
+    if (!ts || isNaN(ts)) return "Just now";
+    const numTs = ts < 1e11 ? ts * 1000 : ts;
+    const diffSec = Math.max(0, Math.floor((Date.now() - numTs) / 1000));
     if (diffSec < 60) return "Just now";
     const diffMin = Math.floor(diffSec / 60);
     if (diffMin < 60) return `${diffMin} min${diffMin > 1 ? "s" : ""} ago`;
@@ -123,10 +133,10 @@ function ResumeExamsView({
 
                   <div className="session-meta-lines">
                     <div>
-                      Started <strong>{formatRelativeTime(session.startedAt)}</strong>
+                      Started <strong>{formatRelativeTime(session.startedAt || session.started_at, session.id)}</strong>
                     </div>
                     <div>
-                      Last accessed <strong>{formatRelativeTime(session.savedAt)}</strong>
+                      Last accessed <strong>{formatRelativeTime(session.savedAt || session.updatedAt || session.updated_at)}</strong>
                     </div>
                   </div>
 
