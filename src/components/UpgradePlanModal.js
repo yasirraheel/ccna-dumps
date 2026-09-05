@@ -1,5 +1,49 @@
 import React, { useState, useEffect } from "react";
-import { normalizePlan } from "../utils/planPermissions";
+
+const DEFAULT_PLANS = [
+  {
+    id: "plan_free",
+    name: "Free Study Pass",
+    price: 0,
+    billing_cycle: "lifetime",
+    description: "Standard access to introductory exam banks.",
+    features: [
+      "Exam A (Questions 1–50)",
+      "Exam B (Questions 51–100)",
+      "Study Mode with Explanations",
+      "Local Question Notes & History"
+    ]
+  },
+  {
+    id: "plan_pro",
+    name: "CCNA Pro Pass",
+    price: 19.99,
+    billing_cycle: "monthly",
+    description: "Full access to all 228 questions, simulations, and Drag & Drop.",
+    featured: true,
+    features: [
+      "All Exam Banks (A, B, C, D, D&D)",
+      "Full 228 Exam Questions",
+      "Official 90-min Timed Simulations",
+      "Drag & Drop Interactive Questions",
+      "Cloud Notes & Progress Sync"
+    ]
+  },
+  {
+    id: "plan_unlimited",
+    name: "CCNA Unlimited Pass",
+    price: 49.99,
+    billing_cycle: "lifetime",
+    description: "Lifetime unrestricted access to all question banks & future updates.",
+    features: [
+      "Lifetime Access & All Updates",
+      "All 228 CCNA Questions",
+      "Unlimited Simulations & Retakes",
+      "Real-time Instant Answers",
+      "Priority Sync & Full Access"
+    ]
+  }
+];
 
 function UpgradePlanModal({
   isOpen,
@@ -28,7 +72,20 @@ function UpgradePlanModal({
 
   if (!isOpen) return null;
 
-  const currentPlan = normalizePlan(currentUser?.plan);
+  const displayPlans = plans.length > 0 ? plans : DEFAULT_PLANS;
+  const userPlanKey = String(currentUser?.plan || "free").toLowerCase().trim();
+  const userPlanName = String(currentUser?.planName || "").toLowerCase().trim();
+
+  const currentPlanObj = displayPlans.find(
+    (p) =>
+      p.id === userPlanKey ||
+      p.id === `plan_${userPlanKey}` ||
+      p.id?.replace(/^plan_/, "") === userPlanKey.replace(/^plan_/, "") ||
+      p.name?.toLowerCase() === userPlanKey ||
+      (userPlanName && p.name?.toLowerCase() === userPlanName)
+  );
+
+  const currentPrice = currentPlanObj ? parseFloat(currentPlanObj.price || 0) : 0;
 
   const handleSelectPlan = async (planId) => {
     if (!currentUser) {
@@ -37,8 +94,12 @@ function UpgradePlanModal({
       return;
     }
 
-    const normalizedTarget = normalizePlan(planId);
-    if (normalizedTarget === currentPlan) {
+    const isAlreadyCurrent =
+      planId === userPlanKey ||
+      planId === `plan_${userPlanKey}` ||
+      planId?.replace(/^plan_/, "") === userPlanKey.replace(/^plan_/, "");
+
+    if (isAlreadyCurrent) {
       setFeedback({ type: "info", message: "You are already on this plan." });
       return;
     }
@@ -73,54 +134,6 @@ function UpgradePlanModal({
       setUpgradingId(null);
     }
   };
-
-  const defaultPlans = [
-    {
-      id: "plan_free",
-      name: "Free Study Pass",
-      price: 0,
-      billing_cycle: "lifetime",
-      description: "Standard access to introductory exam banks.",
-      features: [
-        "Exam A (Questions 1–50)",
-        "Exam B (Questions 51–100)",
-        "Study Mode with Explanations",
-        "Local Question Notes & History"
-      ]
-    },
-    {
-      id: "plan_pro",
-      name: "CCNA Pro Pass",
-      price: 19.99,
-      billing_cycle: "monthly",
-      description: "Full access to all 228 questions, simulations, and Drag & Drop.",
-      featured: true,
-      features: [
-        "All Exam Banks (A, B, C, D, D&D)",
-        "Full 228 Exam Questions",
-        "Official 90-min Timed Simulations",
-        "Drag & Drop Interactive Questions",
-        "Cloud Notes & Progress Sync"
-      ]
-    },
-    {
-      id: "plan_unlimited",
-      name: "CCNA Unlimited Pass",
-      price: 49.99,
-      billing_cycle: "lifetime",
-      description: "Lifetime unrestricted access to all question banks & future updates.",
-      features: [
-        "Lifetime Access & All Updates",
-        "All 228 CCNA Questions",
-        "Unlimited Simulations & Retakes",
-        "Real-time Instant Answers",
-        "Priority Sync & Full Access"
-      ]
-    }
-  ];
-
-  const displayPlans = plans.length > 0 ? plans : defaultPlans;
-
   return (
     <div className="upgrade-modal-backdrop" onClick={onClose}>
       <div
@@ -155,9 +168,25 @@ function UpgradePlanModal({
 
         <div className="upgrade-plans-grid">
           {displayPlans.map((p) => {
-            const normalizedP = normalizePlan(p.id);
-            const isCurrent = normalizedP === currentPlan;
+            const isCurrent =
+              p.id === userPlanKey ||
+              p.id === `plan_${userPlanKey}` ||
+              p.id?.replace(/^plan_/, "") === userPlanKey.replace(/^plan_/, "") ||
+              p.name?.toLowerCase() === userPlanKey ||
+              (userPlanName && p.name?.toLowerCase() === userPlanName);
+
             const isFeatured = p.id === "plan_pro" || p.featured;
+            const targetPrice = parseFloat(p.price || 0);
+
+            const actionLabel = upgradingId === p.id
+              ? "Activating..."
+              : !currentUser
+              ? "Sign In to Select"
+              : targetPrice > currentPrice
+              ? `Upgrade to ${p.name}`
+              : targetPrice < currentPrice
+              ? `Switch to ${p.name}`
+              : `Select ${p.name}`;
 
             return (
               <div
@@ -214,13 +243,7 @@ function UpgradePlanModal({
                       onClick={() => handleSelectPlan(p.id)}
                       disabled={upgradingId !== null}
                     >
-                      {upgradingId === p.id
-                        ? "Activating..."
-                        : !currentUser
-                        ? "Sign In to Select"
-                        : p.price === 0
-                        ? "Downgrade to Free"
-                        : `Upgrade to ${p.name}`}
+                      {actionLabel}
                     </button>
                   )}
                 </div>

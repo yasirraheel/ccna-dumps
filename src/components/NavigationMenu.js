@@ -31,20 +31,49 @@ function NavigationMenu({
     };
   }, []);
 
-  useEffect(() => {
+  const [plans, setPlans] = useState(() => {
     try {
-      if (!localStorage.getItem('ccna_cached_plans')) {
-        fetch('/api/plans')
-          .then((res) => res.json())
-          .then((data) => {
-            if (data && data.plans) {
-              localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
-            }
-          })
-          .catch(() => {});
-      }
-    } catch {}
+      const cached = localStorage.getItem('ccna_cached_plans');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    fetch('/api/plans')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.plans) {
+          setPlans(data.plans);
+          try {
+            localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
+          } catch {}
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const userPlanKey = currentUser?.plan;
+  const currentPlanObj = plans.find(
+    (p) =>
+      p.id === userPlanKey ||
+      p.id === `plan_${userPlanKey}` ||
+      p.id?.replace(/^plan_/, '') === String(userPlanKey).replace(/^plan_/, '') ||
+      p.name?.toLowerCase() === String(userPlanKey).toLowerCase()
+  );
+
+  const currentPrice = currentPlanObj ? parseFloat(currentPlanObj.price || 0) : 0;
+  const higherPlans = plans
+    .filter((p) => parseFloat(p.price || 0) > currentPrice)
+    .sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
+
+  const hasUpgradeAvailable =
+    !isUserAdmin(currentUser) &&
+    (higherPlans.length > 0 || !currentUser?.plan || currentUser?.plan === 'free' || currentUser?.plan === 'plan_free');
+
+  const nextPlan = higherPlans[0] || null;
+  const upgradeLabel = nextPlan ? `Upgrade to ${nextPlan.name}` : "Upgrade Plan";
 
   const displayName = currentUser?.name || candidateName || "Candidate";
 
@@ -168,14 +197,14 @@ function NavigationMenu({
           </button>
         )}
 
-        {currentUser && !isUserAdmin(currentUser) && (
+        {currentUser && hasUpgradeAvailable && (
           <button
             type="button"
             className="btn-upgrade-nav-trigger"
             onClick={() => onOpenUpgrade && onOpenUpgrade()}
-            title="View CCNA Exam Passes & Plans"
+            title={nextPlan ? `Upgrade to ${nextPlan.name}` : "View CCNA Exam Passes & Plans"}
           >
-            ⚡ Upgrade Pass
+            ⚡ {upgradeLabel}
           </button>
         )}
 
@@ -220,7 +249,7 @@ function NavigationMenu({
                 </div>
                 <div className="user-dropdown-divider"></div>
 
-                {!getPlanDisplayInfo(currentUser).isProOrAbove && (
+                {hasUpgradeAvailable && (
                   <button
                     type="button"
                     className="user-dropdown-item user-dropdown-upgrade"
@@ -231,7 +260,7 @@ function NavigationMenu({
                     }}
                   >
                     <span style={{ marginRight: "6px" }}>⚡</span>
-                    Upgrade to Pro Pass
+                    {upgradeLabel}
                   </button>
                 )}
 

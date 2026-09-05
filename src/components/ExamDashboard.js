@@ -227,11 +227,20 @@ function ExamDashboard({
     let { filtered, bankTitle } = getBankFilteredQuestions();
 
     if (isSimulation) {
-      // Simulation: enforce random 70-80 questions
-      const simCount = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
-      const shuffled = [...filtered].sort(() => Math.random() - 0.5);
-      filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
-      bankTitle = `${bankTitle} — Simulation (${filtered.length} Qs)`;
+      if (selectedBank === "bank_all") {
+        // When all 228 questions are selected: 70-80 random questions across all 228 questions
+        const simCount = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
+        bankTitle = `All Questions — Simulation (${filtered.length} Qs)`;
+      } else {
+        // When any specific bank is selected: 70% to 80% random questions from that bank
+        const randomPercent = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
+        const simCount = Math.max(1, Math.round(filtered.length * (randomPercent / 100)));
+        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
+        bankTitle = `${bankTitle} — Simulation (${filtered.length} Qs - ${randomPercent}%)`;
+      }
     } else if (effectiveSettings.randomizeQuestions) {
       filtered = [...filtered].sort(() => Math.random() - 0.5);
     }
@@ -580,7 +589,9 @@ function ExamDashboard({
                     This exam has{" "}
                     <strong>
                       {isSimulation
-                        ? "70–80 random questions"
+                        ? selectedBank === "bank_all"
+                          ? "70–80 random questions (All 228 pool)"
+                          : `70%–80% random questions (~${Math.max(1, Math.round(getBankFilteredQuestions().filtered.length * 0.75))} Qs from this bank)`
                         : `${getBankFilteredQuestions().filtered.length} questions`}
                     </strong>
                   </div>
