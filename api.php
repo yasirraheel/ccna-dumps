@@ -522,6 +522,39 @@ if (preg_match('#^/api/history#', $basePath)) {
     if ($method === 'POST') {
         $b = $body;
         $id = $b['id'] ?? ('exam_' . time());
+
+        // Enforce user plan restriction
+        $userEmail = isset($b['userEmail']) ? strtolower($b['userEmail']) : null;
+        if ($userEmail) {
+            $uStmt = $pdo->prepare("SELECT role, plan FROM users WHERE email = ?");
+            $uStmt->execute([$userEmail]);
+            $uData = $uStmt->fetch();
+            $uRole = $uData['role'] ?? 'user';
+            $uPlan = strtolower($uData['plan'] ?? 'free');
+
+            if ($uRole !== 'admin' && ($uPlan === 'free' || $uPlan === 'plan_free')) {
+                $bankName = strtolower($b['bankName'] ?? '');
+                $examMode = strtolower($b['examMode'] ?? 'study');
+
+                $isRestrictedBank = (
+                    strpos($bankName, 'exam c') !== false ||
+                    strpos($bankName, 'exam d') !== false ||
+                    strpos($bankName, 'drag & drop') !== false ||
+                    strpos($bankName, 'all available') !== false ||
+                    strpos($bankName, 'full question') !== false
+                );
+                $isRestrictedMode = ($examMode === 'simulation');
+
+                if ($isRestrictedBank || $isRestrictedMode) {
+                    http_response_code(403);
+                    echo json_encode([
+                        "error" => "Plan restriction: Access to this exam bank or simulation mode requires a CCNA Pro Pass or Unlimited Pass."
+                    ]);
+                    exit;
+                }
+            }
+        }
+
         $stmt = $pdo->prepare("INSERT INTO exam_attempts 
             (id, user_id, user_email, candidate_name, bank_name, score, max_score, percentage, passed, total_questions, time_spent_seconds, exam_date, questions, answers, flagged_questions, revealed_questions, settings, exam_mode)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -606,6 +639,39 @@ if (preg_match('#^/api/history#', $basePath)) {
 if (preg_match('#^/api/sessions#', $basePath)) {
     if ($method === 'POST') {
         $s = $body;
+
+        // Enforce user plan restriction on saving session
+        $userEmail = isset($s['userEmail']) ? strtolower($s['userEmail']) : null;
+        if ($userEmail) {
+            $uStmt = $pdo->prepare("SELECT role, plan FROM users WHERE email = ?");
+            $uStmt->execute([$userEmail]);
+            $uData = $uStmt->fetch();
+            $uRole = $uData['role'] ?? 'user';
+            $uPlan = strtolower($uData['plan'] ?? 'free');
+
+            if ($uRole !== 'admin' && ($uPlan === 'free' || $uPlan === 'plan_free')) {
+                $bankName = strtolower($s['bankName'] ?? '');
+                $examMode = strtolower($s['examMode'] ?? 'study');
+
+                $isRestrictedBank = (
+                    strpos($bankName, 'exam c') !== false ||
+                    strpos($bankName, 'exam d') !== false ||
+                    strpos($bankName, 'drag & drop') !== false ||
+                    strpos($bankName, 'all available') !== false ||
+                    strpos($bankName, 'full question') !== false
+                );
+                $isRestrictedMode = ($examMode === 'simulation');
+
+                if ($isRestrictedBank || $isRestrictedMode) {
+                    http_response_code(403);
+                    echo json_encode([
+                        "error" => "Plan restriction: Cannot save session for locked bank/mode."
+                    ]);
+                    exit;
+                }
+            }
+        }
+
         $stmt = $pdo->prepare("INSERT INTO saved_sessions 
             (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, question_notes, settings, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -714,6 +780,66 @@ if (preg_match('#^/api/notes#', $basePath)) {
         echo json_encode(["success" => true, "message" => "Note saved"]);
         exit;
     }
+}
+
+// 12.5 Public Plans & User Upgrade API
+if (preg_match('#^/api/plans$#', $basePath) && $method === 'GET') {
+    $plans = $pdo->query("SELECT id, name, price, billing_cycle, duration_days, description, features, is_active FROM plans WHERE is_active = 1 ORDER BY price ASC")->fetchAll();
+    $formatted = array_map(function($p) {
+        $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
+        $p['price'] = (float)$p['price'];
+        $p['duration_days'] = (int)$p['duration_days'];
+        return $p;
+    }, $plans);
+    echo json_encode(["plans" => $formatted]);
+    exit;
+}
+
+if (preg_match('#^/api/user/upgrade-plan$#', $basePath) && $method === 'POST') {
+    $auth = getBearerToken();
+    $user = verifyToken($auth);
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(["error" => "Unauthorized. Please sign in to upgrade your plan."]);
+        exit;
+    }
+
+    $targetPlan = trim($body['plan'] ?? '');
+    if ($targetPlan === 'pro') $targetPlan = 'plan_pro';
+    else if ($targetPlan === 'unlimited') $targetPlan = 'plan_unlimited';
+    else if ($targetPlan === 'free') $targetPlan = 'plan_free';
+
+    $pCheck = $pdo->prepare("SELECT id, name FROM plans WHERE id = ? AND is_active = 1");
+    $pCheck->execute([$targetPlan]);
+    $planRow = $pCheck->fetch();
+
+    if (!$planRow) {
+        http_response_code(400);
+        echo json_encode(["error" => "Selected plan is invalid or inactive."]);
+        exit;
+    }
+
+    $pdo->prepare("UPDATE users SET plan = ? WHERE id = ?")->execute([$targetPlan, $user['id']]);
+
+    $uStmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified FROM users WHERE id = ?");
+    $uStmt->execute([$user['id']]);
+    $updatedUser = $uStmt->fetch();
+
+    $newToken = createToken($updatedUser);
+    echo json_encode([
+        "success" => true,
+        "message" => "Successfully upgraded to " . $planRow['name'] . "!",
+        "user" => [
+            "id" => $updatedUser['id'],
+            "name" => $updatedUser['name'],
+            "email" => $updatedUser['email'],
+            "role" => $updatedUser['role'] ?? 'user',
+            "plan" => $updatedUser['plan'] ?? 'free',
+            "isVerified" => (bool)$updatedUser['is_verified']
+        ],
+        "token" => $newToken
+    ]);
+    exit;
 }
 
 // 13. Admin API Endpoints

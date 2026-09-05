@@ -10,6 +10,7 @@ import AuthModal from "./AuthModal";
 import AuthView from "./AuthView";
 import MobileBottomBar from "./MobileBottomBar";
 import AdminLayout from "./Admin/AdminLayout";
+import UpgradePlanModal from "./UpgradePlanModal";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions } from "./randomizeOptions";
 
@@ -515,6 +516,32 @@ export default function App() {
     isOpen: false,
     mode: "login", // 'login' | 'signup' | 'verify'
   });
+
+  const [upgradeModal, setUpgradeModal] = useState({
+    isOpen: false,
+    lockContext: null,
+  });
+
+  const handleOpenUpgrade = (lockContext = null) => {
+    setUpgradeModal({ isOpen: true, lockContext });
+  };
+
+  const handleCloseUpgrade = () => {
+    setUpgradeModal({ isOpen: false, lockContext: null });
+  };
+
+  const handlePlanUpgraded = (updatedUser, token) => {
+    if (updatedUser) {
+      setCurrentUser(updatedUser);
+      localStorage.setItem("ccna_auth_user", JSON.stringify(updatedUser));
+      if (updatedUser.name) {
+        setCandidateName(updatedUser.name);
+      }
+    }
+    if (token) {
+      localStorage.setItem("ccna_auth_token", token);
+    }
+  };
 
   const [candidateName, setCandidateName] = useState(() => {
     try {
@@ -1109,6 +1136,7 @@ export default function App() {
             currentUser={currentUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
+            onOpenUpgrade={handleOpenUpgrade}
           />
         )}
 
@@ -1205,6 +1233,16 @@ export default function App() {
           currentUser={currentUser}
           onAuthSuccess={handleAuthSuccess}
           onLogout={handleLogout}
+        />
+
+        {/* 4.5 UPGRADE PLAN / PASS SELECTION MODAL */}
+        <UpgradePlanModal
+          isOpen={upgradeModal.isOpen}
+          onClose={handleCloseUpgrade}
+          currentUser={currentUser}
+          onOpenAuth={handleOpenAuth}
+          onPlanUpgraded={handlePlanUpgraded}
+          lockContext={upgradeModal.lockContext}
         />
 
         {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam, auth, or admin) */}

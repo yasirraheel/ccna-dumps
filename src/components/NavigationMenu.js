@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { getPlanDisplayInfo, isUserAdmin } from "../utils/planPermissions";
 
 function NavigationMenu({
   currentView,
@@ -7,6 +8,7 @@ function NavigationMenu({
   currentUser,
   onOpenAuth,
   onLogout,
+  onOpenUpgrade,
   pageTitle = "Cisco 200-301 CCNA",
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -151,6 +153,17 @@ function NavigationMenu({
           </button>
         )}
 
+        {currentUser && !isUserAdmin(currentUser) && (
+          <button
+            type="button"
+            className="btn-upgrade-nav-trigger"
+            onClick={() => onOpenUpgrade && onOpenUpgrade()}
+            title="View CCNA Exam Passes & Plans"
+          >
+            ⚡ Upgrade Pass
+          </button>
+        )}
+
         {currentUser ? (
           <div className="user-profile-wrapper">
             <button
@@ -172,11 +185,9 @@ function NavigationMenu({
               <div className="user-profile-meta">
                 <span className="user-profile-name">{displayName}</span>
                 <div className="nav-verified-badge">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                  <span>Verified</span>
+                  <span className={`nav-plan-pill ${getPlanDisplayInfo(currentUser).badgeClass}`}>
+                    {getPlanDisplayInfo(currentUser).name}
+                  </span>
                 </div>
               </div>
               <span className="user-dropdown-caret">▾</span>
@@ -187,8 +198,26 @@ function NavigationMenu({
                 <div className="user-dropdown-info">
                   <strong>{displayName}</strong>
                   <span className="user-dropdown-email">{currentUser.email}</span>
+                  <div className="user-dropdown-plan-tag">
+                    Pass: <strong>{getPlanDisplayInfo(currentUser).name}</strong>
+                  </div>
                 </div>
                 <div className="user-dropdown-divider"></div>
+
+                {!getPlanDisplayInfo(currentUser).isProOrAbove && (
+                  <button
+                    type="button"
+                    className="user-dropdown-item user-dropdown-upgrade"
+                    style={{ color: "#38bdf8", fontWeight: 700 }}
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      if (onOpenUpgrade) onOpenUpgrade();
+                    }}
+                  >
+                    <span style={{ marginRight: "6px" }}>⚡</span>
+                    Upgrade to Pro Pass
+                  </button>
+                )}
 
                 {/* Admin Portal in dropdown */}
                 {(currentUser.role === 'admin' || currentUser.email === 'candidate@ccna.com') && (

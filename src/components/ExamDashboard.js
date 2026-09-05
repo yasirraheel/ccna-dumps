@@ -3,6 +3,11 @@ import ExamSettingsModal from "./ExamSettingsModal";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { randomizeQuestionOptions } from "./randomizeOptions";
+import {
+  isPlanAllowedForBank,
+  isPlanAllowedForMode,
+  getPlanDisplayInfo
+} from "../utils/planPermissions";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -37,6 +42,7 @@ function ExamDashboard({
   currentUser,
   onOpenAuth,
   onLogout,
+  onOpenUpgrade,
 }) {
   const [selectedBank, setSelectedBank] = useState("bank_a");
   const [examMode, setExamMode] = useState("study");
@@ -133,6 +139,32 @@ function ExamDashboard({
 
   const isSimulation = examMode === "simulation";
 
+  const handleBankSelect = (bankKey, bankLabel) => {
+    if (!isPlanAllowedForBank(currentUser, bankKey)) {
+      if (onOpenUpgrade) {
+        onOpenUpgrade({
+          title: `🔒 ${bankLabel} is Locked`,
+          reason: `${bankLabel} is an exclusive feature of CCNA Pro Pass and Unlimited Pass. Your current plan is ${getPlanDisplayInfo(currentUser).name}. Upgrade to unlock all exam banks.`
+        });
+      }
+      return;
+    }
+    setSelectedBank(bankKey);
+  };
+
+  const handleModeSelect = (mode) => {
+    if (!isPlanAllowedForMode(currentUser, mode)) {
+      if (onOpenUpgrade) {
+        onOpenUpgrade({
+          title: "🔒 Simulation Mode is Locked",
+          reason: "Official 90-minute timed Simulation Mode with randomized questions is an exclusive feature of CCNA Pro Pass and Unlimited Pass. Your current plan is " + getPlanDisplayInfo(currentUser).name + "."
+        });
+      }
+      return;
+    }
+    setExamMode(mode);
+  };
+
   const effectiveSettings = isSimulation
     ? {
         randomizeQuestions: true,
@@ -146,6 +178,26 @@ function ExamDashboard({
     : settings;
 
   const handleBeginExam = () => {
+    if (!isPlanAllowedForBank(currentUser, selectedBank)) {
+      if (onOpenUpgrade) {
+        onOpenUpgrade({
+          title: "🔒 Selected Exam Bank is Locked",
+          reason: "Please upgrade your pass to access this exam bank, or select Exam A or Exam B."
+        });
+      }
+      return;
+    }
+
+    if (!isPlanAllowedForMode(currentUser, examMode)) {
+      if (onOpenUpgrade) {
+        onOpenUpgrade({
+          title: "🔒 Simulation Mode is Locked",
+          reason: "Simulation Mode requires a CCNA Pro Pass or Unlimited Pass. Please switch to Study Mode or upgrade your pass."
+        });
+      }
+      return;
+    }
+
     let { filtered, bankTitle } = getBankFilteredQuestions();
 
     if (isSimulation) {
@@ -199,6 +251,7 @@ function ExamDashboard({
         currentUser={currentUser}
         onOpenAuth={onOpenAuth}
         onLogout={onLogout}
+        onOpenUpgrade={onOpenUpgrade}
         pageTitle="Cisco 200-301 CCNA"
       />
 
@@ -330,13 +383,21 @@ function ExamDashboard({
                   <span className="candidate-auth-label">Candidate</span>
                   <span className="candidate-auth-name">{currentUser.name}</span>
                 </div>
-                <span className="candidate-verified-badge">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                  Verified
-                </span>
+                <div className="candidate-plan-capsule-group">
+                  <span className={`candidate-plan-badge ${getPlanDisplayInfo(currentUser).badgeClass}`}>
+                    {getPlanDisplayInfo(currentUser).name.toUpperCase()}
+                  </span>
+                  {!getPlanDisplayInfo(currentUser).isProOrAbove && (
+                    <button
+                      type="button"
+                      className="btn-candidate-upgrade"
+                      onClick={() => onOpenUpgrade && onOpenUpgrade()}
+                      title="Upgrade to unlock all banks & simulations"
+                    >
+                      ⚡ Upgrade
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <button
@@ -377,13 +438,14 @@ function ExamDashboard({
                     className={`bank-radio-card ${
                       selectedBank === "bank_a" ? "active" : ""
                     }`}
+                    onClick={() => handleBankSelect("bank_a", "Exam A")}
                   >
                     <input
                       type="radio"
                       name="examBank"
                       value="bank_a"
                       checked={selectedBank === "bank_a"}
-                      onChange={() => setSelectedBank("bank_a")}
+                      onChange={() => handleBankSelect("bank_a", "Exam A")}
                     />
                     <span className="radio-circle"></span>
                     <span className="bank-name">Exam A</span>
@@ -394,86 +456,139 @@ function ExamDashboard({
                     className={`bank-radio-card ${
                       selectedBank === "bank_b" ? "active" : ""
                     }`}
+                    onClick={() => handleBankSelect("bank_b", "Exam B")}
                   >
                     <input
                       type="radio"
                       name="examBank"
                       value="bank_b"
                       checked={selectedBank === "bank_b"}
-                      onChange={() => setSelectedBank("bank_b")}
+                      onChange={() => handleBankSelect("bank_b", "Exam B")}
                     />
                     <span className="radio-circle"></span>
                     <span className="bank-name">Exam B</span>
                     <span className="bank-meta">50 Qs (51–100)</span>
                   </label>
 
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_c" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_c"
-                      checked={selectedBank === "bank_c"}
-                      onChange={() => setSelectedBank("bank_c")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">Exam C</span>
-                    <span className="bank-meta">50 Qs (101–150)</span>
-                  </label>
+                  {/* Bank C: Pro/Unlimited */}
+                  {(() => {
+                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_c");
+                    return (
+                      <label
+                        className={`bank-radio-card ${
+                          selectedBank === "bank_c" ? "active" : ""
+                        } ${isLocked ? "bank-locked" : ""}`}
+                        onClick={(e) => {
+                          if (isLocked) {
+                            e.preventDefault();
+                            handleBankSelect("bank_c", "Exam C (spoto-101-150)");
+                          }
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="examBank"
+                          value="bank_c"
+                          checked={selectedBank === "bank_c"}
+                          onChange={() => handleBankSelect("bank_c", "Exam C (spoto-101-150)")}
+                        />
+                        <span className="radio-circle"></span>
+                        <span className="bank-name">Exam C</span>
+                        <span className="bank-meta">50 Qs (101–150)</span>
+                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
+                      </label>
+                    );
+                  })()}
 
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_d" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_d"
-                      checked={selectedBank === "bank_d"}
-                      onChange={() => setSelectedBank("bank_d")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">Exam D</span>
-                    <span className="bank-meta">57 Qs (151–207)</span>
-                  </label>
+                  {/* Bank D: Pro/Unlimited */}
+                  {(() => {
+                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_d");
+                    return (
+                      <label
+                        className={`bank-radio-card ${
+                          selectedBank === "bank_d" ? "active" : ""
+                        } ${isLocked ? "bank-locked" : ""}`}
+                        onClick={(e) => {
+                          if (isLocked) {
+                            e.preventDefault();
+                            handleBankSelect("bank_d", "Exam D (spoto-151-207)");
+                          }
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="examBank"
+                          value="bank_d"
+                          checked={selectedBank === "bank_d"}
+                          onChange={() => handleBankSelect("bank_d", "Exam D (spoto-151-207)")}
+                        />
+                        <span className="radio-circle"></span>
+                        <span className="bank-name">Exam D</span>
+                        <span className="bank-meta">57 Qs (151–207)</span>
+                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
+                      </label>
+                    );
+                  })()}
 
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_dragdrop" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_dragdrop"
-                      checked={selectedBank === "bank_dragdrop"}
-                      onChange={() => setSelectedBank("bank_dragdrop")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">Drag & Drop Special</span>
-                    <span className="bank-meta">{allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length} Qs (D&D)</span>
-                  </label>
+                  {/* Drag & Drop Special: Pro/Unlimited */}
+                  {(() => {
+                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_dragdrop");
+                    return (
+                      <label
+                        className={`bank-radio-card ${
+                          selectedBank === "bank_dragdrop" ? "active" : ""
+                        } ${isLocked ? "bank-locked" : ""}`}
+                        onClick={(e) => {
+                          if (isLocked) {
+                            e.preventDefault();
+                            handleBankSelect("bank_dragdrop", "Drag & Drop Special");
+                          }
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="examBank"
+                          value="bank_dragdrop"
+                          checked={selectedBank === "bank_dragdrop"}
+                          onChange={() => handleBankSelect("bank_dragdrop", "Drag & Drop Special")}
+                        />
+                        <span className="radio-circle"></span>
+                        <span className="bank-name">Drag & Drop Special</span>
+                        <span className="bank-meta">{allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length} Qs (D&D)</span>
+                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
+                      </label>
+                    );
+                  })()}
 
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_all" ? "active" : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_all"
-                      checked={selectedBank === "bank_all"}
-                      onChange={() => setSelectedBank("bank_all")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">All Questions</span>
-                    <span className="bank-meta">{totalQuestionsCount} Qs</span>
-                  </label>
+                  {/* All Questions: Pro/Unlimited */}
+                  {(() => {
+                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_all");
+                    return (
+                      <label
+                        className={`bank-radio-card ${
+                          selectedBank === "bank_all" ? "active" : ""
+                        } ${isLocked ? "bank-locked" : ""}`}
+                        onClick={(e) => {
+                          if (isLocked) {
+                            e.preventDefault();
+                            handleBankSelect("bank_all", "All Available Questions");
+                          }
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="examBank"
+                          value="bank_all"
+                          checked={selectedBank === "bank_all"}
+                          onChange={() => handleBankSelect("bank_all", "All Available Questions")}
+                        />
+                        <span className="radio-circle"></span>
+                        <span className="bank-name">All Questions</span>
+                        <span className="bank-meta">{totalQuestionsCount} Qs</span>
+                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
+                      </label>
+                    );
+                  })()}
 
                 </div>
 
@@ -483,23 +598,30 @@ function ExamDashboard({
                     <button
                       type="button"
                       className={`mode-toggle-btn ${examMode === "study" ? "active-study" : ""}`}
-                      onClick={() => setExamMode("study")}
+                      onClick={() => handleModeSelect("study")}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                       </svg>
                       Study Mode
                     </button>
-                    <button
-                      type="button"
-                      className={`mode-toggle-btn ${examMode === "simulation" ? "active-sim" : ""}`}
-                      onClick={() => setExamMode("simulation")}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                      </svg>
-                      Simulation
-                    </button>
+                    {(() => {
+                      const isSimLocked = !isPlanAllowedForMode(currentUser, "simulation");
+                      return (
+                        <button
+                          type="button"
+                          className={`mode-toggle-btn ${examMode === "simulation" ? "active-sim" : ""} ${isSimLocked ? "mode-locked" : ""}`}
+                          onClick={() => handleModeSelect("simulation")}
+                          title={isSimLocked ? "CCNA Pro Pass required for Timed Simulation" : "Official 90-min simulation"}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          <span>Simulation</span>
+                          {isSimLocked && <span className="mode-lock-pill">🔒 PRO</span>}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
