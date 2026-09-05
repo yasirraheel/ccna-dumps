@@ -103,18 +103,76 @@ export const getModeRequiredPlanName = (mode) => {
   return 'CCNA Pro Pass';
 };
 
-export const getPlanDisplayInfo = (user) => {
+export const getPlanDisplayInfo = (user, plans = []) => {
   if (isUserAdmin(user)) {
-    return { name: 'Admin', badgeClass: 'plan-badge-admin', isProOrAbove: true };
+    return { name: user?.planName || 'Admin', badgeClass: 'plan-badge-admin', isProOrAbove: true };
   }
+
+  // 1. Check passed plans or cached dynamic plans
+  let allPlans = Array.isArray(plans) && plans.length > 0 ? plans : [];
+  if (allPlans.length === 0) {
+    try {
+      const cached = localStorage.getItem('ccna_cached_plans');
+      if (cached) {
+        allPlans = JSON.parse(cached) || [];
+      }
+    } catch {}
+  }
+
+  const userPlanKey = user?.plan;
+  if (userPlanKey && allPlans.length > 0) {
+    const matched = allPlans.find(
+      (p) =>
+        p.id === userPlanKey ||
+        p.id === `plan_${userPlanKey}` ||
+        p.id?.replace(/^plan_/, '') === String(userPlanKey).replace(/^plan_/, '') ||
+        p.name?.toLowerCase() === String(userPlanKey).toLowerCase()
+    );
+    if (matched && matched.name) {
+      const norm = normalizePlan(matched.id);
+      const isPaid = (matched.price && parseFloat(matched.price) > 0) || norm === 'pro' || norm === 'unlimited';
+      const badgeClass =
+        norm === 'unlimited'
+          ? 'plan-badge-unlimited'
+          : norm === 'free'
+          ? 'plan-badge-free'
+          : isPaid
+          ? 'plan-badge-pro'
+          : 'plan-badge-free';
+      return {
+        name: matched.name,
+        badgeClass,
+        isProOrAbove: isPaid,
+      };
+    }
+  }
+
+  // 2. Direct planName property on user object (from API / DB)
+  if (user?.planName) {
+    const rawName = user.planName;
+    const norm = normalizePlan(user.plan || rawName);
+    const badgeClass =
+      norm === 'unlimited'
+        ? 'plan-badge-unlimited'
+        : norm === 'free'
+        ? 'plan-badge-free'
+        : 'plan-badge-pro';
+    return {
+      name: rawName,
+      badgeClass,
+      isProOrAbove: norm === 'pro' || norm === 'unlimited',
+    };
+  }
+
+  // 3. Fallback to canonical original database plan names
   const plan = normalizePlan(user?.plan);
   switch (plan) {
     case 'unlimited':
-      return { name: 'Unlimited', badgeClass: 'plan-badge-unlimited', isProOrAbove: true };
+      return { name: 'CCNA Unlimited Pass', badgeClass: 'plan-badge-unlimited', isProOrAbove: true };
     case 'pro':
-      return { name: 'Pro Pass', badgeClass: 'plan-badge-pro', isProOrAbove: true };
+      return { name: 'CCNA Pro Pass', badgeClass: 'plan-badge-pro', isProOrAbove: true };
     case 'free':
     default:
-      return { name: 'Free Pass', badgeClass: 'plan-badge-free', isProOrAbove: false };
+      return { name: 'Free Study Pass', badgeClass: 'plan-badge-free', isProOrAbove: false };
   }
 };

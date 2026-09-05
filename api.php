@@ -187,6 +187,24 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
     ];
 }
 
+function getUserPlanOriginalName($pdo, $planId) {
+    $pId = $planId ?: 'plan_free';
+    if ($pId === 'free') $pId = 'plan_free';
+    else if ($pId === 'pro') $pId = 'plan_pro';
+    else if ($pId === 'unlimited') $pId = 'plan_unlimited';
+
+    try {
+        $stmt = $pdo->prepare("SELECT name FROM plans WHERE id = ?");
+        $stmt->execute([$pId]);
+        $name = $stmt->fetchColumn();
+        if ($name) return $name;
+    } catch (Exception $e) {}
+
+    if ($pId === 'plan_pro') return 'CCNA Pro Pass';
+    if ($pId === 'plan_unlimited') return 'CCNA Unlimited Pass';
+    return 'Free Study Pass';
+}
+
 function getEmailTemplate($title, $greetingName, $leadText, $otpCode, $expiryText = "Valid for 15 minutes.", $isWarning = false) {
     $accentColor = $isWarning ? "#ef4444" : "#22c55e";
     $accentLight = $isWarning ? "#f87171" : "#4ade80";
@@ -407,7 +425,7 @@ if (preg_match('#^/api/auth/verify-email#', $basePath) && $method === 'POST') {
             "success" => true,
             "message" => "Email verified successfully!",
             "token" => $token,
-            "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
+            "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "planName" => getUserPlanOriginalName($pdo, $user['plan'] ?? 'free'), "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
         ]);
         exit;
     }
@@ -504,7 +522,7 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
         "success" => true,
         "message" => "Login successful!",
         "token" => $token,
-        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
+        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "planName" => getUserPlanOriginalName($pdo, $user['plan'] ?? 'free'), "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
     ]);
     exit;
 }
@@ -522,7 +540,7 @@ if (preg_match('#^/api/auth/me#', $basePath)) {
             $stmt->execute([$decoded['id']]);
             $u = $stmt->fetch();
             if ($u) {
-                echo json_encode(["user" => ["id" => $u['id'], "name" => $u['name'], "email" => $u['email'], "role" => $u['role'] ?? 'user', "plan" => $u['plan'] ?? 'free', "isVerified" => (bool)$u['is_verified'], "createdAt" => $u['created_at'], "planPermissions" => getUserPlanPermissions($pdo, $u['plan'] ?? 'free', $u['role'] ?? 'user', $u['email'] ?? '')]]);
+                echo json_encode(["user" => ["id" => $u['id'], "name" => $u['name'], "email" => $u['email'], "role" => $u['role'] ?? 'user', "plan" => $u['plan'] ?? 'free', "planName" => getUserPlanOriginalName($pdo, $u['plan'] ?? 'free'), "isVerified" => (bool)$u['is_verified'], "createdAt" => $u['created_at'], "planPermissions" => getUserPlanPermissions($pdo, $u['plan'] ?? 'free', $u['role'] ?? 'user', $u['email'] ?? '')]]);
                 exit;
             }
         }
@@ -923,6 +941,7 @@ if (preg_match('#^/api/user/upgrade-plan$#', $basePath) && $method === 'POST') {
             "email" => $updatedUser['email'],
             "role" => $updatedUser['role'] ?? 'user',
             "plan" => $updatedUser['plan'] ?? 'free',
+            "planName" => $planRow['name'] ?? getUserPlanOriginalName($pdo, $updatedUser['plan'] ?? 'free'),
             "isVerified" => (bool)$updatedUser['is_verified'],
             "planPermissions" => getUserPlanPermissions($pdo, $updatedUser['plan'] ?? 'free', $updatedUser['role'] ?? 'user', $updatedUser['email'] ?? '')
         ],

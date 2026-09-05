@@ -503,6 +503,17 @@ export default function App() {
         })
         .catch(() => {});
     }
+
+    fetch(`${API_BASE_URL}/plans`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.plans) {
+          try {
+            localStorage.setItem("ccna_cached_plans", JSON.stringify(data.plans));
+          } catch {}
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleOpenAuth = (mode = "login") => {

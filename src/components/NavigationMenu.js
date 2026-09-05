@@ -31,6 +31,21 @@ function NavigationMenu({
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('ccna_cached_plans')) {
+        fetch('/api/plans')
+          .then((res) => res.json())
+          .then((data) => {
+            if (data && data.plans) {
+              localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  }, []);
+
   const displayName = currentUser?.name || candidateName || "Candidate";
 
   const getInitials = (name) => {
@@ -186,6 +201,7 @@ function NavigationMenu({
                 <span className="user-profile-name">{displayName}</span>
                 <div className="nav-verified-badge">
                   <span className={`nav-plan-pill ${getPlanDisplayInfo(currentUser).badgeClass}`}>
+                    <span className="nav-plan-dot" />
                     {getPlanDisplayInfo(currentUser).name}
                   </span>
                 </div>

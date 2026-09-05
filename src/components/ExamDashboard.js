@@ -79,6 +79,9 @@ function ExamDashboard({
       .then((data) => {
         if (data && data.plans) {
           setAvailablePlans(data.plans);
+          try {
+            localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
+          } catch {}
         }
       })
       .catch((err) => console.warn('Could not load dynamic plans:', err));
@@ -397,32 +400,7 @@ function ExamDashboard({
           <div className="section-header-flex">
             <h2 className="section-green-heading">Get started on a new exam</h2>
 
-            {currentUser ? (
-              <div
-                className="candidate-auth-status-card candidate-card-verified"
-                title={`Signed in as ${currentUser.email}`}
-              >
-                <div className="candidate-auth-left">
-                  <span className="candidate-auth-label">Candidate</span>
-                  <span className="candidate-auth-name">{currentUser.name}</span>
-                </div>
-                <div className="candidate-plan-capsule-group">
-                  <span className={`candidate-plan-badge ${getPlanDisplayInfo(currentUser).badgeClass}`}>
-                    {getPlanDisplayInfo(currentUser).name.toUpperCase()}
-                  </span>
-                  {!getPlanDisplayInfo(currentUser).isProOrAbove && (
-                    <button
-                      type="button"
-                      className="btn-candidate-upgrade"
-                      onClick={() => onOpenUpgrade && onOpenUpgrade()}
-                      title="Upgrade to unlock all banks & simulations"
-                    >
-                      ⚡ Upgrade
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
+            {!currentUser && (
               <button
                 type="button"
                 className="candidate-auth-status-card candidate-card-unauth"
