@@ -44,8 +44,17 @@ function ResumeExamsView({
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   };
 
+  const cleanBankTitle = (name) => {
+    if (!name) return "";
+    return String(name)
+      .replace(/spoto-?/gi, "")
+      .replace(/\(\s*\)/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
   const handleDeleteSessionClick = (session) => {
-    const bank = session.selectedBankName || "Exam A";
+    const bank = cleanBankTitle(session.selectedBankName || session.bankName || "Exam A");
     setConfirmDialog({
       isOpen: true,
       title: "Discard Saved Exam Session?",
@@ -117,7 +126,7 @@ function ResumeExamsView({
                       </span>
 
                       <span className="session-badge badge-bank">
-                        {session.selectedBankName || "Exam A"}
+                        {cleanBankTitle(session.selectedBankName || session.bankName || "Exam A")}
                       </span>
 
                       <button

@@ -41,6 +41,10 @@ try {
     try { $pdo->exec("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user'"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN plan VARCHAR(50) DEFAULT 'free'"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL"); } catch (Exception $e) {}
+    try {
+        $pdo->exec("UPDATE exam_attempts SET bank_name = REPLACE(REPLACE(bank_name, 'spoto-', ''), 'spoto', '') WHERE bank_name LIKE '%spoto%'");
+        $pdo->exec("UPDATE saved_sessions SET bank_name = REPLACE(REPLACE(bank_name, 'spoto-', ''), 'spoto', '') WHERE bank_name LIKE '%spoto%'");
+    } catch (Exception $e) {}
 
     // Ensure plans table exists with seed data
     $pdo->exec("CREATE TABLE IF NOT EXISTS plans (
@@ -148,6 +152,14 @@ function verifyToken($token, $secret) {
     if (!$data || !isset($data['id'])) return false;
     if (isset($data['exp']) && $data['exp'] < time()) return false;
     return $data;
+}
+
+function cleanBankName($name) {
+    if (!$name) return '';
+    $cleaned = preg_replace('/spoto-?/i', '', $name);
+    $cleaned = preg_replace('/\(\s*\)/', '', $cleaned);
+    $cleaned = preg_replace('/\s{2,}/', ' ', $cleaned);
+    return trim($cleaned);
 }
 
 function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = '') {
@@ -672,7 +684,7 @@ if (preg_match('#^/api/history#', $basePath)) {
             $b['userId'] ?? null,
             isset($b['userEmail']) ? strtolower($b['userEmail']) : null,
             $b['candidateName'] ?? 'Candidate',
-            $b['bankName'] ?? 'CCNA Exam',
+            cleanBankName($b['bankName'] ?? 'CCNA Exam'),
             $b['score'] ?? 0,
             $b['maxScore'] ?? 1000,
             $b['percentage'] ?? 0,
@@ -709,7 +721,7 @@ if (preg_match('#^/api/history#', $basePath)) {
                 'userId' => $r['user_id'],
                 'userEmail' => $r['user_email'],
                 'candidateName' => $r['candidate_name'],
-                'bankName' => $r['bank_name'],
+                'bankName' => cleanBankName($r['bank_name']),
                 'score' => (int)$r['score'],
                 'maxScore' => (int)$r['max_score'],
                 'percentage' => (float)$r['percentage'],
@@ -734,9 +746,14 @@ if (preg_match('#^/api/history#', $basePath)) {
             $pdo->prepare("DELETE FROM exam_attempts WHERE id = ?")->execute([$m[1]]);
         } else {
             $userId = $_GET['userId'] ?? null;
-            if ($userId) $pdo->prepare("DELETE FROM exam_attempts WHERE user_id = ?")->execute([$userId]);
+            $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : null;
+            if ($userId) {
+                $pdo->prepare("DELETE FROM exam_attempts WHERE user_id = ?")->execute([$userId]);
+            } else if ($userEmail) {
+                $pdo->prepare("DELETE FROM exam_attempts WHERE user_email = ?")->execute([$userEmail]);
+            }
         }
-        echo json_encode(["success" => true, "message" => "History deleted"]);
+        echo json_encode(["success" => true, "message" => "History cleared"]);
         exit;
     }
 }
@@ -782,7 +799,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL");
         } catch (Exception $e) {}
 
-        $bankName = $s['selectedBankName'] ?? $s['bankName'] ?? 'CCNA Exam';
+        $bankName = cleanBankName($s['selectedBankName'] ?? $s['bankName'] ?? 'CCNA Exam');
         
         $startedAt = $s['startedAt'] ?? $s['started_at'] ?? null;
         if (!$startedAt && isset($s['id']) && preg_match('/session_(\d+)/', $s['id'], $sm)) {
@@ -855,8 +872,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'userId' => $r['user_id'],
                 'userEmail' => $r['user_email'],
                 'candidateName' => $r['candidate_name'],
-                'bankName' => $r['bank_name'],
-                'selectedBankName' => $r['bank_name'],
+                'bankName' => cleanBankName($r['bank_name']),
+                'selectedBankName' => cleanBankName($r['bank_name']),
                 'examMode' => $r['exam_mode'],
                 'index' => (int)$r['q_index'],
                 'points' => (int)$r['points'],

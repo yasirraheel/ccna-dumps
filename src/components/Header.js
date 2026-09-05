@@ -2,6 +2,15 @@ import React, { useState } from "react";
 import Timer from "./Timer";
 import CustomConfirmModal from "./CustomConfirmModal";
 
+const cleanBankTitle = (name) => {
+  if (!name) return "";
+  return String(name)
+    .replace(/spoto-?/gi, "")
+    .replace(/\(\s*\)/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
+
 function Header({
   status,
   examMode,
@@ -33,7 +42,7 @@ function Header({
           <span className="cisco-logo-text">Cisco 200-301 CCNA</span>
         </div>
         {status === "active" && (
-          <span className="header-bank-badge">{selectedBankName}</span>
+          <span className="header-bank-badge">{cleanBankTitle(selectedBankName)}</span>
         )}
       </div>
 

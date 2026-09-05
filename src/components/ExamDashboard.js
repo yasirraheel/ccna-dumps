@@ -122,19 +122,19 @@ function ExamDashboard({
     switch (selectedBank) {
       case "bank_a":
         filtered = allQuestions.slice(0, 50);
-        bankTitle = "Exam A (spoto-1-50)";
+        bankTitle = "Exam A (1–50)";
         break;
       case "bank_b":
         filtered = allQuestions.slice(50, 100);
-        bankTitle = "Exam B (spoto-51-100)";
+        bankTitle = "Exam B (51–100)";
         break;
       case "bank_c":
         filtered = allQuestions.slice(100, 150);
-        bankTitle = "Exam C (spoto-101-150)";
+        bankTitle = "Exam C (101–150)";
         break;
       case "bank_d":
         filtered = allQuestions.slice(150, 207);
-        bankTitle = "Exam D (spoto-151-207)";
+        bankTitle = "Exam D (151–207)";
         break;
       case "bank_dragdrop":
         filtered = allQuestions.filter(
@@ -280,6 +280,15 @@ function ExamDashboard({
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   };
 
+  const cleanBankTitle = (name) => {
+    if (!name) return "";
+    return String(name)
+      .replace(/spoto-?/gi, "")
+      .replace(/\(\s*\)/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
   const activeSession =
     currentUser && (savedSession || (savedSessions.length > 0 ? savedSessions[0] : null));
 
@@ -337,7 +346,7 @@ function ExamDashboard({
                       </span>
 
                       <span className="pickup-badge badge-bank">
-                        {activeSession.selectedBankName || "Exam A"}
+                        {cleanBankTitle(activeSession.selectedBankName || "Exam A")}
                       </span>
                     </div>
                   </div>
@@ -349,7 +358,7 @@ function ExamDashboard({
                       setConfirmDialog({
                         isOpen: true,
                         title: "Discard Saved Exam Session?",
-                        message: `Are you sure you want to discard your saved session for "${activeSession.selectedBankName || "Exam A"}"? Your progress will be reset.`,
+                        message: `Are you sure you want to discard your saved session for "${cleanBankTitle(activeSession.selectedBankName || "Exam A")}"? Your progress will be reset.`,
                         confirmText: "Discard Session",
                         cancelText: "Cancel",
                         type: "danger",
@@ -675,7 +684,7 @@ function ExamDashboard({
                             : `Recent Exam #${idx + 1}:`}
                         </span>
                         <h3 className="past-exam-title">
-                          Cisco 200-301 CCNA ({exam.bankName || "CCNA Exam"})
+                          Cisco 200-301 CCNA ({cleanBankTitle(exam.bankName || "CCNA Exam")})
                         </h3>
                       </div>
 

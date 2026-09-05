@@ -26,11 +26,20 @@ function ExamHistoryView({
     onConfirm: () => {},
   });
 
+  const cleanBankTitle = (name) => {
+    if (!name) return "";
+    return String(name)
+      .replace(/spoto-?/gi, "")
+      .replace(/\(\s*\)/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
   const handleDeleteItemClick = (exam) => {
     setConfirmDialog({
       isOpen: true,
       title: "Delete Exam Record?",
-      message: `Are you sure you want to delete the completed record for "${exam.bankName || "CCNA Exam"}"? This action cannot be undone.`,
+      message: `Are you sure you want to delete the completed record for "${cleanBankTitle(exam.bankName || "CCNA Exam")}"? This action cannot be undone.`,
       confirmText: "Delete Record",
       cancelText: "Cancel",
       type: "danger",
@@ -127,7 +136,7 @@ function ExamHistoryView({
                   <div className="history-card-top-bar">
                     <div className="history-title-group">
                       <span className="history-badge-cert">Cisco 200-301 CCNA</span>
-                      <h3 className="history-card-bank-name">{exam.bankName || "CCNA Exam"}</h3>
+                      <h3 className="history-card-bank-name">{cleanBankTitle(exam.bankName || "CCNA Exam")}</h3>
                       <span className="history-card-date">🕒 {dateStr}</span>
                     </div>
 
