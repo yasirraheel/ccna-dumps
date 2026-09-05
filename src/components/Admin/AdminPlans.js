@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { adminFetch } from '../../utils/adminApi';
 
 function AdminPlans() {
   const [plans, setPlans] = useState([]);
@@ -11,7 +12,7 @@ function AdminPlans() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/plans');
+      const res = await adminFetch('/api/admin/plans');
       const data = await res.json();
       if (data.plans) {
         setPlans(data.plans);
@@ -33,7 +34,7 @@ function AdminPlans() {
     if (!target) return;
 
     try {
-      const res = await fetch('/api/admin/plans', {
+      const res = await adminFetch('/api/admin/plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(target)
@@ -60,7 +61,7 @@ function AdminPlans() {
     if (!window.confirm(`Delete plan "${plan.name}"?`)) return;
 
     try {
-      const res = await fetch(`/api/admin/plans/${plan.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/plans/${plan.id}`, { method: 'DELETE' });
       if (res.ok) {
         setActionFeedback({ type: 'success', message: 'Plan deleted.' });
         fetchPlans();

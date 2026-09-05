@@ -6159,3 +6159,125 @@ body {
   font-size: 1.25rem;
   color: #64748b;
 }
+
+/* ==========================================================================
+   ADMIN PORTAL AUTHENTICATION & ACCESS GUARD
+   ========================================================================== */
+.admin-auth-guard-container {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, #0d1726 0%, #06090f 100%);
+  padding: 2rem;
+}
+
+.admin-auth-guard-card {
+  background: #0d1522;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 1.6rem;
+  padding: 3.5rem 3rem;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(56, 189, 248, 0.08);
+}
+
+.admin-auth-guard-card.denied-card {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(239, 68, 68, 0.1);
+}
+
+.guard-icon-lock {
+  font-size: 4.5rem;
+  margin-bottom: 1.2rem;
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.4));
+}
+
+.guard-icon-denied {
+  font-size: 4.5rem;
+  margin-bottom: 1.2rem;
+  filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.4));
+}
+
+.guard-pill-tag {
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  padding: 0.3rem 1.2rem;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.4rem;
+}
+
+.guard-pill-tag.denied-pill {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.guard-card-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 0 0 1rem 0;
+  letter-spacing: -0.5px;
+}
+
+.guard-card-desc {
+  font-size: 1.4rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0 0 2.5rem 0;
+}
+
+.guard-card-desc strong {
+  color: #f8fafc;
+}
+
+.guard-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.btn-guard-primary {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  border: 1px solid #38bdf8;
+  color: #ffffff;
+  padding: 1.2rem 2rem;
+  border-radius: 0.9rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4);
+}
+
+.btn-guard-primary:hover {
+  background: #0284c7;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(2, 132, 199, 0.6);
+}
+
+.btn-guard-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  padding: 1.1rem 2rem;
+  border-radius: 0.9rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-guard-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}

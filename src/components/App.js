@@ -1087,8 +1087,78 @@ export default function App() {
     0
   );
 
-  // Full-width root-level render for Admin Portal
+  const isAdminUser = Boolean(
+    currentUser &&
+    (currentUser.role === "admin" || currentUser.email === "candidate@ccna.com")
+  );
+
+  // Full-width root-level render for Admin Portal (STRICT SECURITY CHECK)
   if (status === "ready" && currentView === "admin") {
+    if (!currentUser) {
+      return (
+        <div className="admin-auth-guard-container">
+          <div className="admin-auth-guard-card">
+            <div className="guard-icon-lock">🔒</div>
+            <div className="guard-pill-tag">Administrator Portal</div>
+            <h2 className="guard-card-title">Authentication Required</h2>
+            <p className="guard-card-desc">
+              Access to the CCNA Simulator Administrator Portal requires verified administrator credentials. You are currently not signed in.
+            </p>
+            <div className="guard-card-actions">
+              <button
+                type="button"
+                className="btn-guard-primary"
+                onClick={() => handleNavigate("auth-login")}
+              >
+                Sign In as Admin ➜
+              </button>
+              <button
+                type="button"
+                className="btn-guard-secondary"
+                onClick={() => handleNavigate("dashboard")}
+              >
+                Return to Candidate Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (!isAdminUser) {
+      return (
+        <div className="admin-auth-guard-container">
+          <div className="admin-auth-guard-card denied-card">
+            <div className="guard-icon-denied">⛔</div>
+            <div className="guard-pill-tag denied-pill">Access Denied (403)</div>
+            <h2 className="guard-card-title">Administrator Privileges Required</h2>
+            <p className="guard-card-desc">
+              Your account (<strong>{currentUser.email}</strong>) does not have administrator privileges. Only system administrators are authorized to access this portal.
+            </p>
+            <div className="guard-card-actions">
+              <button
+                type="button"
+                className="btn-guard-primary"
+                onClick={() => handleNavigate("dashboard")}
+              >
+                Return to Candidate Dashboard ➜
+              </button>
+              <button
+                type="button"
+                className="btn-guard-secondary"
+                onClick={() => {
+                  handleLogout();
+                  handleNavigate("auth-login");
+                }}
+              >
+                Sign In with Different Account
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <AdminLayout
         currentUser={currentUser}

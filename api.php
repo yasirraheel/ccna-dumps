@@ -162,7 +162,7 @@ function getEmailTemplate($title, $greetingName, $leadText, $otpCode, $expiryTex
       </div>
     </div>
     <div class="email-footer">
-      &copy; 2026 Cisco CCNA 200-301 Exam Simulator. All rights reserved.
+      &copy; 2026 CCNA 200-301 Exam Prep. All rights reserved.
     </div>
   </div>
 </body>
@@ -177,10 +177,10 @@ function sendHostingerEmail($to, $subject, $htmlMessage, $env) {
     $pass = $env['SMTP_PASS'] ?? 'z?Y3:HBBa6^';
 
     $server = ($port == 465 ? "ssl://" : "") . $host;
-    $socket = @fsockopen($server, $port, $errno, $errstr, 15);
+    $socket = @fsockopen($server, $port, $errno, $errstr, 20);
     if (!$socket) {
         error_log("[SMTP ERROR] Socket connection failed to $server:$port - $errstr ($errno)");
-        $headers = "MIME-Version: 1.0\r\nContent-type: text/html; charset=UTF-8\r\nFrom: Cisco CCNA Exam Prep <$user>\r\nReply-To: $user\r\nX-Mailer: PHP/" . phpversion();
+        $headers = "MIME-Version: 1.0\r\nContent-type: text/html; charset=UTF-8\r\nFrom: CCNA Exam Prep <$user>\r\nReply-To: CCNA Exam Prep <$user>\r\nX-Mailer: PHP/" . phpversion();
         return @mail($to, $subject, $htmlMessage, $headers);
     }
 
@@ -199,7 +199,7 @@ function sendHostingerEmail($to, $subject, $htmlMessage, $env) {
     };
 
     $read(); // banner
-    $write("EHLO localhost");
+    $write("EHLO hassanagro.com");
     $write("AUTH LOGIN");
     $write(base64_encode($user));
     $resAuth = $write(base64_encode($pass));
@@ -210,8 +210,8 @@ function sendHostingerEmail($to, $subject, $htmlMessage, $env) {
         return false;
     }
 
-    $write("MAIL FROM: <$user>");
-    $resRcpt = $write("RCPT TO: <$to>");
+    $write("MAIL FROM:<$user>");
+    $resRcpt = $write("RCPT TO:<$to>");
     if (substr($resRcpt, 0, 3) !== '250') {
         error_log("[SMTP ERROR] RCPT TO failed: $resRcpt");
         fclose($socket);
@@ -219,17 +219,37 @@ function sendHostingerEmail($to, $subject, $htmlMessage, $env) {
     }
 
     $write("DATA");
+
+    $boundary = "----=_Part_" . md5(uniqid((string)microtime(true), true));
+    $msgId = "<" . time() . "." . bin2hex(random_bytes(8)) . "@hassanagro.com>";
+
+    // Plain text alternative
+    $plainText = strip_tags(str_replace(['<br>', '<br/>', '<br />', '</p>', '</div>'], "\r\n", $htmlMessage));
+    $plainText = preg_replace("/[\r\n]+/", "\r\n", $plainText);
+    $plainText = trim($plainText);
+
     $headers = [
         "MIME-Version: 1.0",
-        "Content-Type: text/html; charset=UTF-8",
-        "From: Cisco CCNA Exam Prep <$user>",
-        "Reply-To: $user",
+        "Date: " . date("r"),
+        "Message-ID: $msgId",
+        "From: CCNA Exam Prep <$user>",
+        "Reply-To: CCNA Exam Prep <$user>",
         "To: <$to>",
         "Subject: $subject",
-        "Date: " . date("r"),
-        "X-Mailer: CCNA Exam Prep Engine"
+        "Content-Type: multipart/alternative; boundary=\"$boundary\""
     ];
-    $emailData = implode("\r\n", $headers) . "\r\n\r\n" . $htmlMessage . "\r\n.";
+
+    $body = "--$boundary\r\n" .
+        "Content-Type: text/plain; charset=UTF-8\r\n" .
+        "Content-Transfer-Encoding: 7bit\r\n\r\n" .
+        $plainText . "\r\n\r\n" .
+        "--$boundary\r\n" .
+        "Content-Type: text/html; charset=UTF-8\r\n" .
+        "Content-Transfer-Encoding: 7bit\r\n\r\n" .
+        $htmlMessage . "\r\n\r\n" .
+        "--$boundary--";
+
+    $emailData = implode("\r\n", $headers) . "\r\n\r\n" . $body . "\r\n.";
     $resData = $write($emailData);
     $write("QUIT");
     fclose($socket);
@@ -291,7 +311,7 @@ if (preg_match('#^/api/auth/register#', $basePath) && $method === 'POST') {
         $otp,
         "Valid for 15 minutes."
     );
-    sendHostingerEmail($email, "CCNA Exam - Email Verification Code: $otp", $html, $env);
+    sendHostingerEmail($email, "CCNA Exam Prep - Verification Code: $otp", $html, $env);
 
     http_response_code(201);
     echo json_encode(["success" => true, "message" => "Verification code sent to $email.", "email" => $email, "isVerified" => false]);
@@ -354,7 +374,7 @@ if (preg_match('#^/api/auth/resend-code#', $basePath) && $method === 'POST') {
         $otp,
         "Valid for 15 minutes."
     );
-    sendHostingerEmail($email, "CCNA Exam - Resent Code: $otp", $html, $env);
+    sendHostingerEmail($email, "CCNA Exam Prep - Resent Code: $otp", $html, $env);
 
     echo json_encode(["success" => true, "message" => "Verification code sent to $email."]);
     exit;
@@ -405,7 +425,7 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
             $otp,
             "Valid for 15 minutes."
         );
-        sendHostingerEmail($email, "Verify Your CCNA Account - Code: $otp", $html, $env);
+        sendHostingerEmail($email, "CCNA Exam Prep - Verification Code: $otp", $html, $env);
 
         http_response_code(403);
         echo json_encode(["error" => "Email not verified.", "needsVerification" => true, "email" => $email]);
@@ -464,7 +484,7 @@ if (preg_match('#^/api/auth/forgot-password#', $basePath) && $method === 'POST')
             "Valid for 15 minutes.",
             true
         );
-        sendHostingerEmail($email, "CCNA Exam - Password Reset Code: $otp", $html, $env);
+        sendHostingerEmail($email, "CCNA Exam Prep - Password Reset Code: $otp", $html, $env);
     }
 
     echo json_encode(["success" => true, "message" => "Password reset code sent if account exists."]);
@@ -842,8 +862,44 @@ if (preg_match('#^/api/user/upgrade-plan$#', $basePath) && $method === 'POST') {
     exit;
 }
 
+function checkAdminAuth($pdo, $jwtSecret) {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!$auth && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $auth = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    if (!preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
+        http_response_code(401);
+        echo json_encode(["error" => "Authentication required. Please sign in as an administrator."]);
+        exit;
+    }
+    $decoded = verifyToken($matches[1], $jwtSecret);
+    if (!$decoded || !isset($decoded['id'])) {
+        http_response_code(401);
+        echo json_encode(["error" => "Invalid or expired session. Please sign in again."]);
+        exit;
+    }
+    $stmt = $pdo->prepare("SELECT id, name, email, role FROM users WHERE id = ?");
+    $stmt->execute([$decoded['id']]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(["error" => "User account not found."]);
+        exit;
+    }
+    $role = $user['role'] ?? 'user';
+    $email = strtolower($user['email'] ?? '');
+    if ($role !== 'admin' && $email !== 'candidate@ccna.com') {
+        http_response_code(403);
+        echo json_encode(["error" => "Access denied. Administrator privileges required."]);
+        exit;
+    }
+    return $user;
+}
+
 // 13. Admin API Endpoints
 if (preg_match('#^/api/admin/#', $basePath)) {
+    checkAdminAuth($pdo, $jwtSecret);
+
     // 13.1 Admin Stats: GET /api/admin/stats
     if (preg_match('#^/api/admin/stats#', $basePath) && $method === 'GET') {
         $totalUsers = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
@@ -1049,11 +1105,15 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             exit;
         }
 
-        $testSubject = trim($body['subject'] ?? 'Cisco CCNA Admin Test Email');
+        $testSubject = trim($body['subject'] ?? 'CCNA Exam Prep - SMTP Test Email');
+        if (stripos($testSubject, 'Cisco') !== false) {
+            $testSubject = trim(preg_replace('/\s+/', ' ', str_ireplace('Cisco', '', $testSubject)));
+            if (!$testSubject) $testSubject = 'CCNA Exam Prep - SMTP Test Email';
+        }
         $testHtml = getEmailTemplate(
             "Admin SMTP Delivery Test",
             "Administrator",
-            "This is a live test message sent from the Cisco CCNA Admin Portal using authenticated Hostinger SSL SMTP on port 465.",
+            "This is a live test message sent from the CCNA Admin Portal using authenticated Hostinger SSL SMTP on port 465.",
             "TEST-" . rand(100, 999),
             "Sent: " . date('Y-m-d H:i:s T')
         );

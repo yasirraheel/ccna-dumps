@@ -5,6 +5,7 @@ import AdminUsers from './AdminUsers';
 import AdminPlans from './AdminPlans';
 import AdminQuestions from './AdminQuestions';
 import AdminSettings from './AdminSettings';
+import { adminFetch } from '../../utils/adminApi';
 
 function AdminLayout({ currentUser, onExitAdmin }) {
   const getInitialAdminTab = () => {
@@ -51,7 +52,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/admin/stats');
+      const res = await adminFetch('/api/admin/stats');
       const data = await res.json();
       if (data.stats) {
         setStatsData(data);

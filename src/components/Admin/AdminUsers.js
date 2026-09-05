@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { adminFetch } from '../../utils/adminApi';
 
 function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const [users, setUsers] = useState([]);
@@ -27,7 +28,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
       if (roleFilter) query.append('role', roleFilter);
       if (statusFilter) query.append('status', statusFilter);
 
-      const res = await fetch(`/api/admin/users?${query.toString()}`);
+      const res = await adminFetch(`/api/admin/users?${query.toString()}`);
       const data = await res.json();
       if (data.users) {
         setUsers(data.users);
@@ -49,7 +50,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newUserData)
@@ -72,7 +73,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
     e.preventDefault();
     if (!editingUser) return;
     try {
-      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+      const res = await adminFetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingUser)
@@ -99,7 +100,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/users/${user.id}`, { method: 'DELETE' });
       if (res.ok) {
         setActionFeedback({ type: 'success', message: 'User deleted.' });
         fetchUsers();
@@ -115,7 +116,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const handleToggleVerify = async (user) => {
     try {
       const updated = { ...user, isVerified: user.is_verified ? 0 : 1 };
-      await fetch(`/api/admin/users/${user.id}`, {
+      await adminFetch(`/api/admin/users/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated)

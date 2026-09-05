@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { adminFetch } from '../../utils/adminApi';
 
 function AdminSettings({ currentUser }) {
   const [testEmailTo, setTestEmailTo] = useState(currentUser?.email || 'saadmaqbool7861@gmail.com');
-  const [testSubject, setTestSubject] = useState('Cisco CCNA Admin Live Test');
+  const [testSubject, setTestSubject] = useState('CCNA Exam Prep - SMTP Test Email');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailResult, setEmailResult] = useState(null);
 
@@ -12,7 +13,7 @@ function AdminSettings({ currentUser }) {
       setSendingEmail(true);
       setEmailResult(null);
 
-      const res = await fetch('/api/admin/test-email', {
+      const res = await adminFetch('/api/admin/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
