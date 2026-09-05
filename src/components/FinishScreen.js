@@ -6,7 +6,6 @@ function FinishScreen({
   maxPossiblePoints,
   highscore,
   candidateName,
-  saveStatus,
   dispatch,
   numQuestions,
   answers,
@@ -112,10 +111,6 @@ function FinishScreen({
               <span className="pin-label">Passing Score</span>
             </div>
           </div>
-        </div>
-
-        <div className="report-footer-info">
-          {saveStatus && <span className="save-status-indicator">💾 {saveStatus}</span>}
         </div>
 
         {/* ACTION BUTTONS & RETAKE DROPDOWN */}

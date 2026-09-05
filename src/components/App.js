@@ -501,7 +501,6 @@ export default function App() {
   });
 
   const [flaggedQuestions, setFlaggedQuestions] = useState([]);
-  const [saveStatus, setSaveStatus] = useState("");
   const hasSavedRef = useRef(false);
 
   // Validate session on launch
@@ -758,7 +757,6 @@ export default function App() {
   useEffect(() => {
     if (status === "active") {
       hasSavedRef.current = false;
-      setSaveStatus("");
     }
 
     if (status === "finished" && !hasSavedRef.current) {
@@ -766,11 +764,8 @@ export default function App() {
 
       // DO NOT save reviewing existing exam as a duplicate exam entry in history
       if (isReviewMode || activeSessionId?.startsWith("review_")) {
-        setSaveStatus("Review completed");
         return;
       }
-
-      setSaveStatus("Saving to History...");
 
       const numQuestions = questions.length;
       const maxPossiblePoints = questions.reduce(
@@ -836,18 +831,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(completedRecord),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setSaveStatus("Saved to MySQL Database ✓");
-          } else {
-            setSaveStatus("Saved locally");
-          }
-        })
-        .catch(() => {
-          setSaveStatus("Saved locally");
-        });
+      }).catch(() => {});
 
       // Also clean active session from MySQL if present
       if (activeSessionId) {
@@ -1307,7 +1291,6 @@ export default function App() {
             maxPossiblePoints={maxPossiblePoints}
             highscore={highscore}
             candidateName={candidateName}
-            saveStatus={saveStatus}
             dispatch={dispatch}
             numQuestions={numQuestions}
             answers={answers}
