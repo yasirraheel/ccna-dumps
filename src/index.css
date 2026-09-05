@@ -6486,3 +6486,273 @@ body {
   color: #f87171;
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
+
+/* ==========================================================================
+   EXAM PAUSE CONTROLS & BLURRED OVERLAY
+   ========================================================================== */
+.btn-boson-pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  padding: 0.55rem 1.15rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-boson-pause:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-boson-pause.is-paused {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.25));
+  border-color: #22c55e;
+  color: #4ade80;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+  animation: pausePillPulse 2s infinite ease-in-out;
+}
+
+@keyframes pausePillPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.25); }
+  50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); }
+}
+
+.exam-timer-pill.timer-paused {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  color: #fbbf24 !important;
+  animation: none !important;
+}
+
+/* Severe blur on question content during pause */
+.boson-exsim-view.is-paused {
+  position: relative;
+}
+
+.boson-exsim-view.is-paused .boson-main-header,
+.boson-exsim-view.is-paused .boson-question-body,
+.boson-exsim-view.is-paused .boson-side-arrow,
+.boson-exsim-view.is-paused .boson-bottom-controls {
+  filter: blur(24px) brightness(0.25) !important;
+  opacity: 0.12 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  transition: filter 0.25s ease, opacity 0.25s ease;
+}
+
+/* Dark Frosted Glass Backdrop Overlay */
+.exam-paused-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(8, 14, 26, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.exam-paused-modal {
+  background: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(56, 189, 248, 0.12);
+  border-radius: 1.6rem;
+  padding: 3.2rem 2.8rem;
+  max-width: 48rem;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: scaleUpModal 0.25s ease-out;
+}
+
+@keyframes scaleUpModal {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.paused-icon-pulse-wrapper {
+  position: relative;
+  width: 7.2rem;
+  height: 7.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.8rem;
+}
+
+.paused-pulse-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, transparent 70%);
+  animation: pulseGlowRing 2.4s infinite ease-in-out;
+}
+
+@keyframes pulseGlowRing {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.25); opacity: 0.9; }
+}
+
+.paused-icon-badge {
+  position: relative;
+  width: 6.4rem;
+  height: 6.4rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45);
+}
+
+.paused-modal-title {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 0 0 0.8rem 0;
+  letter-spacing: -0.5px;
+}
+
+.paused-modal-subtitle {
+  font-size: 1.4rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0 0 2.2rem 0;
+  max-width: 38rem;
+}
+
+.paused-modal-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 2.6rem;
+}
+
+@media (max-width: 480px) {
+  .paused-modal-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+}
+
+.paused-stat-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1.2rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.paused-stat-card.highlight {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.paused-stat-label {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.paused-stat-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.paused-timer-highlight {
+  color: #fbbf24 !important;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+}
+
+.paused-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.btn-paused-resume-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid #4ade80;
+  color: #ffffff;
+  font-size: 1.55rem;
+  font-weight: 700;
+  padding: 1.3rem 2.4rem;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 18px rgba(34, 197, 94, 0.35);
+  font-family: inherit;
+  width: 100%;
+}
+
+.btn-paused-resume-primary:hover {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(34, 197, 94, 0.5);
+}
+
+.btn-paused-exit-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 1.35rem;
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.btn-paused-exit-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mobile-bar-btn.active-pause {
+  color: #fbbf24;
+}
+
+.mobile-bar-btn.active-pause .mobile-bar-icon-wrap {
+  color: #fbbf24;
+}
+

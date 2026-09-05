@@ -81,6 +81,8 @@ function QuestionView({
   candidateName,
   currentUser,
   secondsRemaining,
+  isPaused = false,
+  onTogglePause,
 }) {
   const [isZoomed, setIsZoomed] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -117,6 +119,15 @@ function QuestionView({
     setCurrentNoteText(existingComment);
     setIsNoteBoxOpen(false);
   }, [question?.id, seqNumber, existingComment]);
+
+  useEffect(() => {
+    if (isPaused) {
+      setIsZoomed(false);
+      setIsNoteBoxOpen(false);
+      setShowPaletteModal(false);
+      setIsAllNotesModalOpen(false);
+    }
+  }, [isPaused]);
 
   const handleSaveComment = (textToSave) => {
     const trimmed = textToSave ? textToSave.trim() : "";
@@ -317,7 +328,7 @@ function QuestionView({
   const timerIsLow = secondsRemaining !== null && secondsRemaining < 300;
 
   return (
-    <div className="boson-exsim-view">
+    <div className={`boson-exsim-view ${isPaused ? "is-paused" : ""}`}>
       {/* TOP NAVIGATION BAR: Back to Exam, Notes Button, Timer & User Avatar */}
       <div className="boson-top-bar">
         <div className="top-bar-left-actions">
@@ -348,12 +359,51 @@ function QuestionView({
         <div className="top-bar-right-group">
           {/* TIMER PILL */}
           {timerDisplay && (
-            <div className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""}`}>
+            <div
+              className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""} ${isPaused ? "timer-paused" : ""}`}
+              onClick={!isReviewMode && onTogglePause ? onTogglePause : undefined}
+              title={
+                !isReviewMode && onTogglePause
+                  ? isPaused
+                    ? "Exam Paused (Click to resume)"
+                    : "Exam Running (Click to pause)"
+                  : undefined
+              }
+              style={{ cursor: !isReviewMode && onTogglePause ? "pointer" : "default" }}
+              role={!isReviewMode && onTogglePause ? "button" : undefined}
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
               </svg>
-              <span>{timerDisplay}</span>
+              <span>{isPaused ? "⏸️ PAUSED" : timerDisplay}</span>
             </div>
+          )}
+
+          {/* PAUSE / RESUME BUTTON */}
+          {!isReviewMode && onTogglePause && (
+            <button
+              type="button"
+              className={`btn-boson-pause ${isPaused ? "is-paused" : ""}`}
+              onClick={onTogglePause}
+              title={isPaused ? "Resume Exam" : "Pause Exam (Freeze timer & blur question)"}
+            >
+              {isPaused ? (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  <span>Resume</span>
+                </>
+              ) : (
+                <>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                  </svg>
+                  <span>Pause</span>
+                </>
+              )}
+            </button>
           )}
 
           <div
@@ -489,7 +539,7 @@ function QuestionView({
       </div>
 
       {/* FLOATING SIDE ARROWS (Green < and > on edges) */}
-      {canGoPrev && (
+      {!isPaused && canGoPrev && (
         <button
           type="button"
           className="boson-side-arrow side-arrow-left"
@@ -500,7 +550,7 @@ function QuestionView({
         </button>
       )}
 
-      {canGoNext && (
+      {!isPaused && canGoNext && (
         <button
           type="button"
           className="boson-side-arrow side-arrow-right"
@@ -891,6 +941,80 @@ function QuestionView({
         </div>
       )}
 
+      {/* EXAM PAUSED BLUR OVERLAY & RESUME MODAL */}
+      {isPaused && (
+        <div
+          className="exam-paused-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paused-dialog-title"
+        >
+          <div className="exam-paused-modal">
+            <div className="paused-icon-pulse-wrapper">
+              <div className="paused-pulse-glow"></div>
+              <div className="paused-icon-badge">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4.5" height="16" rx="1.5" />
+                  <rect x="13.5" y="4" width="4.5" height="16" rx="1.5" />
+                </svg>
+              </div>
+            </div>
+
+            <h2 id="paused-dialog-title" className="paused-modal-title">
+              Exam Paused
+            </h2>
+
+            <p className="paused-modal-subtitle">
+              Your exam timer is stopped and question content is hidden.
+              Take a break and resume whenever you are ready!
+            </p>
+
+            <div className="paused-modal-stats-grid">
+              <div className="paused-stat-card">
+                <span className="paused-stat-label">Current Question</span>
+                <span className="paused-stat-value">#{seqNumber} of {numQuestions}</span>
+              </div>
+              {secondsRemaining !== null && (
+                <div className="paused-stat-card highlight">
+                  <span className="paused-stat-label">Timer Paused At</span>
+                  <span className="paused-stat-value paused-timer-highlight">
+                    ⏱️ {formatTime(secondsRemaining)}
+                  </span>
+                </div>
+              )}
+              <div className="paused-stat-card">
+                <span className="paused-stat-label">Exam Mode</span>
+                <span className="paused-stat-value">
+                  {examMode === "sim" ? "⏱️ Simulation" : "📖 Study Mode"}
+                </span>
+              </div>
+            </div>
+
+            <div className="paused-modal-actions">
+              <button
+                type="button"
+                className="btn-paused-resume-primary"
+                onClick={onTogglePause}
+                autoFocus
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                <span>Resume Exam</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-paused-exit-secondary"
+                onClick={handleExitClick}
+              >
+                <span>Save & Return to Menu</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MOBILE BOTTOM NAVIGATION BAR FOR ACTIVE EXAMS */}
       <MobileBottomBar
         isExamActive={true}
@@ -902,6 +1026,8 @@ function QuestionView({
         onExitReview={onExitReview}
         onToggleFlag={() => onToggleFlag(seqNumber - 1)}
         isCurrentFlagged={isFlagged}
+        isPaused={isPaused}
+        onTogglePause={onTogglePause}
       />
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ExamSettingsModal from "./ExamSettingsModal";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
-import { randomizeQuestionOptions } from "./randomizeOptions";
+import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import {
   isPlanAllowedForBank,
   isPlanAllowedForMode,
@@ -230,19 +230,19 @@ function ExamDashboard({
       if (selectedBank === "bank_all") {
         // When all 228 questions are selected: 70-80 random questions across all 228 questions
         const simCount = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
-        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        const shuffled = aggressiveShuffle(filtered);
         filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
         bankTitle = `All Questions — Simulation (${filtered.length} Qs)`;
       } else {
         // When any specific bank is selected: 70% to 80% random questions from that bank
         const randomPercent = Math.floor(Math.random() * (80 - 70 + 1)) + 70;
         const simCount = Math.max(1, Math.round(filtered.length * (randomPercent / 100)));
-        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+        const shuffled = aggressiveShuffle(filtered);
         filtered = shuffled.slice(0, Math.min(simCount, shuffled.length));
         bankTitle = `${bankTitle} — Simulation (${filtered.length} Qs - ${randomPercent}%)`;
       }
     } else if (effectiveSettings.randomizeQuestions) {
-      filtered = [...filtered].sort(() => Math.random() - 0.5);
+      filtered = aggressiveShuffle(filtered);
     }
 
     // When randomizeAnswers is enabled, randomize the display order of MCQ options

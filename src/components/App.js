@@ -13,7 +13,7 @@ import AdminLayout from "./Admin/AdminLayout";
 import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { ccnaQuestions } from "../data/ccnaQuestions";
-import { randomizeQuestionOptions } from "./randomizeOptions";
+import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices } from "../utils/examScoring";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
@@ -45,6 +45,7 @@ const initialState = {
   startedAt: null,
   revealedQuestions: [],
   isReviewMode: false,
+  isPaused: false,
 };
 
 function reducer(state, action) {
@@ -93,6 +94,7 @@ function reducer(state, action) {
         startedAt: startTime,
         revealedQuestions: [],
         isReviewMode: false,
+        isPaused: false,
       };
     }
 
@@ -141,6 +143,7 @@ function reducer(state, action) {
         startedAt: initialStartTime,
         revealedQuestions: revealedQuestions || [],
         isReviewMode: Boolean(isReviewMode),
+        isPaused: false,
       };
     }
 
@@ -158,7 +161,7 @@ function reducer(state, action) {
     }
 
     case "newAnswer": {
-      if (state.isReviewMode) return state;
+      if (state.isReviewMode || state.isPaused) return state;
       if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
       const optIdx =
         typeof action.payload === "number"
@@ -177,7 +180,7 @@ function reducer(state, action) {
     }
 
     case "multiSelect": {
-      if (state.isReviewMode) return state;
+      if (state.isReviewMode || state.isPaused) return state;
       if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
       const selections = Array.isArray(action.payload)
         ? action.payload
@@ -195,7 +198,7 @@ function reducer(state, action) {
     }
 
     case "commitCurrentAnswer": {
-      if (state.isReviewMode) return state;
+      if (state.isReviewMode || state.isPaused) return state;
       const updatedPoints = calculateTotalPoints(state.questions, state.answers);
       return {
         ...state,
@@ -204,7 +207,7 @@ function reducer(state, action) {
     }
 
     case "dragDropAnswer": {
-      if (state.isReviewMode) return state;
+      if (state.isReviewMode || state.isPaused) return state;
       if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
       const { matches } = action.payload;
       const newAnswersList = [...state.answers];
@@ -218,7 +221,7 @@ function reducer(state, action) {
     }
 
     case "confirmDragDrop": {
-      if (state.isReviewMode) return state;
+      if (state.isReviewMode || state.isPaused) return state;
       const currentQuestion = state.questions[state.index];
       const correctMatches =
         currentQuestion.dragDropData?.correctMatches || {};
@@ -256,6 +259,7 @@ function reducer(state, action) {
     case "nextQuestion":
     case "prevQuestion":
     case "goToQuestion": {
+      if (state.isPaused) return state;
       const nextIdx =
         action.type === "nextQuestion"
           ? state.index + 1
@@ -283,6 +287,7 @@ function reducer(state, action) {
         ...state,
         status: "active",
         isReviewMode: true,
+        isPaused: false,
         index: targetIdx,
         answer: state.answers[targetIdx] ?? null,
         revealedQuestions: allRevealed,
@@ -294,6 +299,28 @@ function reducer(state, action) {
         ...state,
         status: "finished",
         isReviewMode: false,
+        isPaused: false,
+      };
+    }
+
+    case "pauseExam": {
+      return {
+        ...state,
+        isPaused: true,
+      };
+    }
+
+    case "unpauseExam": {
+      return {
+        ...state,
+        isPaused: false,
+      };
+    }
+
+    case "togglePauseExam": {
+      return {
+        ...state,
+        isPaused: !state.isPaused,
       };
     }
 
@@ -302,6 +329,7 @@ function reducer(state, action) {
       return {
         ...state,
         status: "finished",
+        isPaused: false,
         points: finalPoints,
         highscore:
           finalPoints > state.highscore ? finalPoints : state.highscore,
@@ -314,9 +342,11 @@ function reducer(state, action) {
         allQuestions: state.allQuestions,
         questions: state.allQuestions,
         status: "ready",
+        isPaused: false,
       };
 
     case "tick": {
+      if (state.isPaused) return state;
       const nextSeconds = state.secondsRemaining - 1;
       const isTimeUp = nextSeconds <= 0;
       return {
@@ -353,6 +383,7 @@ export default function App() {
       startedAt,
       revealedQuestions,
       isReviewMode,
+      isPaused,
     },
     dispatch,
   ] = useReducer(reducer, initialState);
@@ -649,7 +680,7 @@ export default function App() {
 
   // *** EXAM TIMER COUNTDOWN ***
   useEffect(() => {
-    if (status !== "active" || secondsRemaining === null) return;
+    if (status !== "active" || secondsRemaining === null || isPaused) return;
     if (secondsRemaining <= 0) {
       dispatch({ type: "finish" });
       return;
@@ -658,7 +689,7 @@ export default function App() {
       dispatch({ type: "tick" });
     }, 1000);
     return () => clearInterval(interval);
-  }, [status, secondsRemaining]);
+  }, [status, secondsRemaining, isPaused]);
 
   // 2. Keep active exam session saved in savedSessions list on every change (tied to user)
   useEffect(() => {
@@ -991,7 +1022,7 @@ export default function App() {
     const stngs = examRecord?.settings || settings;
 
     if (stngs?.randomizeQuestions) {
-      qList = [...qList].sort(() => Math.random() - 0.5);
+      qList = aggressiveShuffle(qList);
     }
     if (stngs?.randomizeAnswers) {
       qList = qList.map(randomizeQuestionOptions);
@@ -1032,7 +1063,7 @@ export default function App() {
     const stngs = examRecord?.settings || settings;
 
     if (stngs?.randomizeQuestions) {
-      flaggedList = [...flaggedList].sort(() => Math.random() - 0.5);
+      flaggedList = aggressiveShuffle(flaggedList);
     }
     if (stngs?.randomizeAnswers) {
       flaggedList = flaggedList.map(randomizeQuestionOptions);
@@ -1074,7 +1105,7 @@ export default function App() {
     const stngs = examRecord?.settings || settings;
 
     if (stngs?.randomizeQuestions) {
-      incorrectList = [...incorrectList].sort(() => Math.random() - 0.5);
+      incorrectList = aggressiveShuffle(incorrectList);
     }
     if (stngs?.randomizeAnswers) {
       incorrectList = incorrectList.map(randomizeQuestionOptions);
@@ -1266,6 +1297,8 @@ export default function App() {
             flaggedQuestions={flaggedQuestions}
             revealedQuestions={revealedQuestions}
             isReviewMode={isReviewMode}
+            isPaused={isPaused}
+            onTogglePause={() => dispatch({ type: "togglePauseExam" })}
             onToggleFlag={handleToggleFlag}
             onGoToQuestion={(targetIdx) =>
               dispatch({ type: "goToQuestion", payload: targetIdx })

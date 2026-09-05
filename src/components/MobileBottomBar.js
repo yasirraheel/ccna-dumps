@@ -17,11 +17,39 @@ function MobileBottomBar({
   onOpenSettings,
   currentUser,
   onOpenAuth,
+  isPaused = false,
+  onTogglePause,
 }) {
   if (isExamActive) {
     // Exam Active Bottom Bar
     return (
       <nav className="mobile-app-bottom-bar exam-active-bar" aria-label="Exam Actions">
+        {/* Toggle Pause / Resume */}
+        {!isReviewMode && onTogglePause && (
+          <button
+            type="button"
+            className={`mobile-bar-btn ${isPaused ? "active-pause" : ""}`}
+            onClick={onTogglePause}
+            title={isPaused ? "Resume Exam" : "Pause Exam"}
+          >
+            <div className="mobile-bar-icon-wrap">
+              {isPaused ? (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="#22c55e">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              )}
+            </div>
+            <span className="mobile-bar-label">
+              {isPaused ? "Resume" : "Pause"}
+            </span>
+          </button>
+        )}
+
         {/* Toggle Flag / Bookmark */}
         <button
           type="button"

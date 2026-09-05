@@ -1,19 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 function ExamSettingsModal({ settings, setSettings, onClose }) {
-  const [draft, setDraft] = useState({ ...settings });
+  const [draft, setDraft] = useState(() => ({ ...settings }));
+
+  useEffect(() => {
+    setDraft({ ...settings });
+  }, [settings]);
 
   const handleChange = (key, value) => {
-    const updated = { ...draft, [key]: value };
-    setDraft(updated);
-    if (setSettings) {
-      setSettings(updated);
-    }
+    setDraft((prev) => {
+      const updated = { ...prev, [key]: value };
+      if (setSettings) {
+        setSettings(updated);
+      }
+      return updated;
+    });
   };
 
   const handleSaveAndClose = () => {
     if (setSettings) {
-      setSettings(draft);
+      setSettings((current) => ({ ...current, ...draft }));
     }
     onClose();
   };
