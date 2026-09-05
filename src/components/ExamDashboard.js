@@ -283,8 +283,15 @@ function ExamDashboard({
   const activeSession =
     currentUser && (savedSession || (savedSessions.length > 0 ? savedSessions[0] : null));
 
-  const lastCompletedExam =
-    currentUser && pastExams.length > 0 ? pastExams[pastExams.length - 1] : null;
+  const sortedPastExams = (currentUser && Array.isArray(pastExams))
+    ? [...pastExams].sort((a, b) => {
+        const dateA = Number(a?.date || 0);
+        const dateB = Number(b?.date || 0);
+        return dateB - dateA;
+      })
+    : [];
+
+  const latestThreeExams = sortedPastExams.slice(0, 3);
 
   return (
     <div className="boson-dashboard-wrapper">
@@ -624,136 +631,143 @@ function ExamDashboard({
         {/* ===================================================================
             SECTION 3: REVIEW YOUR PAST EXAMS (Screenshot 2 Matching)
             =================================================================== */}
-        {lastCompletedExam && (
+        {latestThreeExams.length > 0 && (
           <section className="dashboard-section past-exams-block">
             <div className="section-header-flex">
               <h2 className="section-green-heading">Review your past exams</h2>
-              {pastExams.length > 1 && (
+              {pastExams.length > 3 && (
                 <button
                   type="button"
                   className="link-view-more"
                   onClick={() => onNavigate("history")}
                 >
-                  View Full History...
+                  View Full History ({pastExams.length})...
                 </button>
               )}
             </div>
 
-            {/* Helper counts for past exam */}
-            {(() => {
-              const flaggedCount = lastCompletedExam.flaggedQuestions
-                ? lastCompletedExam.flaggedQuestions.length
-                : 0;
+            <div className="past-exams-list">
+              {latestThreeExams.map((exam, idx) => {
+                const flaggedCount = exam.flaggedQuestions
+                  ? exam.flaggedQuestions.length
+                  : 0;
 
-              const incorrectIndices =
-                lastCompletedExam.incorrectQuestions !== undefined
-                  ? lastCompletedExam.incorrectQuestions
-                  : getIncorrectQuestionIndices(
-                      lastCompletedExam.questions,
-                      lastCompletedExam.answers
-                    );
-              const incorrectCount = Array.isArray(incorrectIndices)
-                ? incorrectIndices.length
-                : 0;
+                const incorrectIndices =
+                  exam.incorrectQuestions !== undefined
+                    ? exam.incorrectQuestions
+                    : getIncorrectQuestionIndices(
+                        exam.questions,
+                        exam.answers
+                      );
+                const incorrectCount = Array.isArray(incorrectIndices)
+                  ? incorrectIndices.length
+                  : 0;
 
-              return (
-                <div className="past-exam-preview-card">
-                  <div className="past-exam-header">
-                    <div>
-                      <span className="past-exam-sub">Last Exam:</span>
-                      <h3 className="past-exam-title">
-                        Cisco 200-301 CCNA ({lastCompletedExam.bankName || "CCNA Exam"})
-                      </h3>
-                    </div>
+                return (
+                  <div key={exam.id || `past_${idx}`} className="past-exam-preview-card">
+                    <div className="past-exam-header">
+                      <div>
+                        <span className="past-exam-sub">
+                          {idx === 0
+                            ? "Last Exam:"
+                            : idx === 1
+                            ? "Previous Exam:"
+                            : `Recent Exam #${idx + 1}:`}
+                        </span>
+                        <h3 className="past-exam-title">
+                          Cisco 200-301 CCNA ({exam.bankName || "CCNA Exam"})
+                        </h3>
+                      </div>
 
-                    <span
-                      className={`history-status-badge ${
-                        lastCompletedExam.passed ? "badge-pass" : "badge-fail"
-                      }`}
-                    >
-                      {lastCompletedExam.passed ? "PASS ✓" : "FAIL ✕"}
-                    </span>
-                  </div>
-
-                  <div className="past-exam-stats-row">
-                    <div className="stat-item">
-                      <span className="stat-label">Final Score:</span>
-                      <strong className="stat-val">
-                        {lastCompletedExam.score} / {lastCompletedExam.maxScore || 1000}
-                      </strong>
-                    </div>
-
-                    <div className="stat-item">
-                      <span className="stat-label">Accuracy:</span>
-                      <strong
-                        className={`stat-val ${
-                          lastCompletedExam.passed ? "text-green" : "text-danger"
+                      <span
+                        className={`history-status-badge ${
+                          exam.passed ? "badge-pass" : "badge-fail"
                         }`}
                       >
-                        {lastCompletedExam.percentage}%
-                      </strong>
-                    </div>
-
-                    <div className="stat-item">
-                      <span className="stat-label">Date:</span>
-                      <span className="stat-val text-muted">
-                        {formatRelativeTime(lastCompletedExam.date)}
+                        {exam.passed ? "PASS ✓" : "FAIL ✕"}
                       </span>
                     </div>
+
+                    <div className="past-exam-stats-row">
+                      <div className="stat-item">
+                        <span className="stat-label">Final Score:</span>
+                        <strong className="stat-val">
+                          {exam.score} / {exam.maxScore || 1000}
+                        </strong>
+                      </div>
+
+                      <div className="stat-item">
+                        <span className="stat-label">Accuracy:</span>
+                        <strong
+                          className={`stat-val ${
+                            exam.passed ? "text-green" : "text-danger"
+                          }`}
+                        >
+                          {exam.percentage}%
+                        </strong>
+                      </div>
+
+                      <div className="stat-item">
+                        <span className="stat-label">Date:</span>
+                        <span className="stat-val text-muted">
+                          {formatRelativeTime(exam.date)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="past-exam-footer-actions">
+                      {onReviewExam && (
+                        <button
+                          type="button"
+                          className="btn-history-action btn-history-review"
+                          onClick={() => onReviewExam(exam)}
+                        >
+                          🔍 Review Exam (Read-Only)
+                        </button>
+                      )}
+
+                      {(onRetakeAll || onRetakeExam) && (
+                        <button
+                          type="button"
+                          className="btn-history-action btn-history-retake-all"
+                          onClick={() => (onRetakeAll || onRetakeExam)(exam)}
+                        >
+                          ↺ Retake All Questions
+                        </button>
+                      )}
+
+                      {flaggedCount > 0 && onRetakeFlagged && (
+                        <button
+                          type="button"
+                          className="btn-history-action btn-history-retake-flagged"
+                          onClick={() => onRetakeFlagged(exam)}
+                        >
+                          ⚑ Retake Flagged Only ({flaggedCount})
+                        </button>
+                      )}
+
+                      {incorrectCount > 0 && onRetakeIncorrect && (
+                        <button
+                          type="button"
+                          className="btn-history-action btn-history-retake-incorrect"
+                          onClick={() => onRetakeIncorrect(exam)}
+                        >
+                          ✕ Retake Incorrect Only ({incorrectCount})
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn-history-action btn-history-view-all"
+                        onClick={() => onNavigate("history")}
+                      >
+                        View All History ➜
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="past-exam-footer-actions">
-                    {onReviewExam && (
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-review"
-                        onClick={() => onReviewExam(lastCompletedExam)}
-                      >
-                        🔍 Review Exam (Read-Only)
-                      </button>
-                    )}
-
-                    {(onRetakeAll || onRetakeExam) && (
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-retake-all"
-                        onClick={() => (onRetakeAll || onRetakeExam)(lastCompletedExam)}
-                      >
-                        ↺ Retake All Questions
-                      </button>
-                    )}
-
-                    {flaggedCount > 0 && onRetakeFlagged && (
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-retake-flagged"
-                        onClick={() => onRetakeFlagged(lastCompletedExam)}
-                      >
-                        ⚑ Retake Flagged Only ({flaggedCount})
-                      </button>
-                    )}
-
-                    {incorrectCount > 0 && onRetakeIncorrect && (
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-retake-incorrect"
-                        onClick={() => onRetakeIncorrect(lastCompletedExam)}
-                      >
-                        ✕ Retake Incorrect Only ({incorrectCount})
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      className="btn-history-action btn-history-view-all"
-                      onClick={() => onNavigate("history")}
-                    >
-                      View All History ➜
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })}
+            </div>
           </section>
         )}
       </div>
