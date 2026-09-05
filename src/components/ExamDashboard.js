@@ -6,7 +6,9 @@ import { randomizeQuestionOptions } from "./randomizeOptions";
 import {
   isPlanAllowedForBank,
   isPlanAllowedForMode,
-  getPlanDisplayInfo
+  getBankAllowedQuestionCount,
+  getPlanDisplayInfo,
+  EXAM_BANKS
 } from "../utils/planPermissions";
 
 const DEFAULT_STUDY_SETTINGS = {
@@ -67,6 +69,19 @@ function ExamDashboard({
       return DEFAULT_STUDY_SETTINGS;
     }
   });
+
+  const [availablePlans, setAvailablePlans] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/plans')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.plans) {
+          setAvailablePlans(data.plans);
+        }
+      })
+      .catch((err) => console.warn('Could not load dynamic plans:', err));
+  }, []);
 
   // Sync settings when user logs in or changes
   useEffect(() => {
@@ -134,17 +149,24 @@ function ExamDashboard({
         break;
     }
 
+    const totalInBank = filtered.length;
+    const allowedLimit = getBankAllowedQuestionCount(currentUser, selectedBank, totalInBank, availablePlans);
+    if (allowedLimit > 0 && allowedLimit < totalInBank) {
+      filtered = filtered.slice(0, allowedLimit);
+      bankTitle = `${bankTitle} (${filtered.length} Qs Allowed)`;
+    }
+
     return { filtered, bankTitle };
   };
 
   const isSimulation = examMode === "simulation";
 
   const handleBankSelect = (bankKey, bankLabel) => {
-    if (!isPlanAllowedForBank(currentUser, bankKey)) {
+    if (!isPlanAllowedForBank(currentUser, bankKey, availablePlans)) {
       if (onOpenUpgrade) {
         onOpenUpgrade({
           title: `🔒 ${bankLabel} is Locked`,
-          reason: `${bankLabel} is an exclusive feature of CCNA Pro Pass and Unlimited Pass. Your current plan is ${getPlanDisplayInfo(currentUser).name}. Upgrade to unlock all exam banks.`
+          reason: `${bankLabel} is not unlocked on your current ${getPlanDisplayInfo(currentUser).name}. Upgrade your plan to access this exam bank.`
         });
       }
       return;
@@ -153,11 +175,11 @@ function ExamDashboard({
   };
 
   const handleModeSelect = (mode) => {
-    if (!isPlanAllowedForMode(currentUser, mode)) {
+    if (!isPlanAllowedForMode(currentUser, mode, availablePlans)) {
       if (onOpenUpgrade) {
         onOpenUpgrade({
           title: "🔒 Simulation Mode is Locked",
-          reason: "Official 90-minute timed Simulation Mode with randomized questions is an exclusive feature of CCNA Pro Pass and Unlimited Pass. Your current plan is " + getPlanDisplayInfo(currentUser).name + "."
+          reason: "Official 90-minute timed Simulation Mode with randomized questions is restricted on your current plan (" + getPlanDisplayInfo(currentUser).name + "). Upgrade to unlock full timed simulations."
         });
       }
       return;
@@ -178,21 +200,21 @@ function ExamDashboard({
     : settings;
 
   const handleBeginExam = () => {
-    if (!isPlanAllowedForBank(currentUser, selectedBank)) {
+    if (!isPlanAllowedForBank(currentUser, selectedBank, availablePlans)) {
       if (onOpenUpgrade) {
         onOpenUpgrade({
           title: "🔒 Selected Exam Bank is Locked",
-          reason: "Please upgrade your pass to access this exam bank, or select Exam A or Exam B."
+          reason: "Please upgrade your pass to access this exam bank, or select an allowed exam bank."
         });
       }
       return;
     }
 
-    if (!isPlanAllowedForMode(currentUser, examMode)) {
+    if (!isPlanAllowedForMode(currentUser, examMode, availablePlans)) {
       if (onOpenUpgrade) {
         onOpenUpgrade({
           title: "🔒 Simulation Mode is Locked",
-          reason: "Simulation Mode requires a CCNA Pro Pass or Unlimited Pass. Please switch to Study Mode or upgrade your pass."
+          reason: "Simulation Mode is restricted on your current plan. Please switch to Study Mode or upgrade your pass."
         });
       }
       return;
@@ -434,162 +456,50 @@ function ExamDashboard({
                 </div>
 
                 <div className="bank-options-list">
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_a" ? "active" : ""
-                    }`}
-                    onClick={() => handleBankSelect("bank_a", "Exam A")}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_a"
-                      checked={selectedBank === "bank_a"}
-                      onChange={() => handleBankSelect("bank_a", "Exam A")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">Exam A</span>
-                    <span className="bank-meta">50 Qs (1–50)</span>
-                  </label>
+                  {EXAM_BANKS.map((bank) => {
+                    const isLocked = !isPlanAllowedForBank(currentUser, bank.key, availablePlans);
+                    const totalInBank = bank.key === "bank_dragdrop"
+                      ? allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length
+                      : (bank.key === "bank_all" ? totalQuestionsCount : bank.totalQuestions);
+                    const allowedCount = getBankAllowedQuestionCount(currentUser, bank.key, totalInBank, availablePlans);
 
-                  <label
-                    className={`bank-radio-card ${
-                      selectedBank === "bank_b" ? "active" : ""
-                    }`}
-                    onClick={() => handleBankSelect("bank_b", "Exam B")}
-                  >
-                    <input
-                      type="radio"
-                      name="examBank"
-                      value="bank_b"
-                      checked={selectedBank === "bank_b"}
-                      onChange={() => handleBankSelect("bank_b", "Exam B")}
-                    />
-                    <span className="radio-circle"></span>
-                    <span className="bank-name">Exam B</span>
-                    <span className="bank-meta">50 Qs (51–100)</span>
-                  </label>
+                    let metaText = `${totalInBank} Qs`;
+                    if (isLocked) {
+                      metaText = `${totalInBank} Qs (Locked)`;
+                    } else if (allowedCount > 0 && allowedCount < totalInBank) {
+                      metaText = `${allowedCount} of ${totalInBank} Qs Allowed`;
+                    }
 
-                  {/* Bank C: Pro/Unlimited */}
-                  {(() => {
-                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_c");
+                    const displayName = bank.name
+                      .replace("Exam Bank ", "Exam ")
+                      .replace("Special Bank", "Special")
+                      .replace("All Questions Bank", "All Questions");
+
                     return (
                       <label
-                        className={`bank-radio-card ${
-                          selectedBank === "bank_c" ? "active" : ""
-                        } ${isLocked ? "bank-locked" : ""}`}
+                        key={bank.key}
+                        className={`bank-radio-card ${selectedBank === bank.key ? "active" : ""} ${isLocked ? "bank-locked" : ""}`}
                         onClick={(e) => {
                           if (isLocked) {
                             e.preventDefault();
-                            handleBankSelect("bank_c", "Exam C (spoto-101-150)");
+                            handleBankSelect(bank.key, bank.name);
                           }
                         }}
                       >
                         <input
                           type="radio"
                           name="examBank"
-                          value="bank_c"
-                          checked={selectedBank === "bank_c"}
-                          onChange={() => handleBankSelect("bank_c", "Exam C (spoto-101-150)")}
+                          value={bank.key}
+                          checked={selectedBank === bank.key}
+                          onChange={() => handleBankSelect(bank.key, bank.name)}
                         />
                         <span className="radio-circle"></span>
-                        <span className="bank-name">Exam C</span>
-                        <span className="bank-meta">50 Qs (101–150)</span>
-                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
+                        <span className="bank-name">{displayName}</span>
+                        <span className="bank-meta">{metaText}</span>
+                        {isLocked && <span className="bank-lock-badge">🔒 LOCKED</span>}
                       </label>
                     );
-                  })()}
-
-                  {/* Bank D: Pro/Unlimited */}
-                  {(() => {
-                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_d");
-                    return (
-                      <label
-                        className={`bank-radio-card ${
-                          selectedBank === "bank_d" ? "active" : ""
-                        } ${isLocked ? "bank-locked" : ""}`}
-                        onClick={(e) => {
-                          if (isLocked) {
-                            e.preventDefault();
-                            handleBankSelect("bank_d", "Exam D (spoto-151-207)");
-                          }
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="examBank"
-                          value="bank_d"
-                          checked={selectedBank === "bank_d"}
-                          onChange={() => handleBankSelect("bank_d", "Exam D (spoto-151-207)")}
-                        />
-                        <span className="radio-circle"></span>
-                        <span className="bank-name">Exam D</span>
-                        <span className="bank-meta">57 Qs (151–207)</span>
-                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
-                      </label>
-                    );
-                  })()}
-
-                  {/* Drag & Drop Special: Pro/Unlimited */}
-                  {(() => {
-                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_dragdrop");
-                    return (
-                      <label
-                        className={`bank-radio-card ${
-                          selectedBank === "bank_dragdrop" ? "active" : ""
-                        } ${isLocked ? "bank-locked" : ""}`}
-                        onClick={(e) => {
-                          if (isLocked) {
-                            e.preventDefault();
-                            handleBankSelect("bank_dragdrop", "Drag & Drop Special");
-                          }
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="examBank"
-                          value="bank_dragdrop"
-                          checked={selectedBank === "bank_dragdrop"}
-                          onChange={() => handleBankSelect("bank_dragdrop", "Drag & Drop Special")}
-                        />
-                        <span className="radio-circle"></span>
-                        <span className="bank-name">Drag & Drop Special</span>
-                        <span className="bank-meta">{allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length} Qs (D&D)</span>
-                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
-                      </label>
-                    );
-                  })()}
-
-                  {/* All Questions: Pro/Unlimited */}
-                  {(() => {
-                    const isLocked = !isPlanAllowedForBank(currentUser, "bank_all");
-                    return (
-                      <label
-                        className={`bank-radio-card ${
-                          selectedBank === "bank_all" ? "active" : ""
-                        } ${isLocked ? "bank-locked" : ""}`}
-                        onClick={(e) => {
-                          if (isLocked) {
-                            e.preventDefault();
-                            handleBankSelect("bank_all", "All Available Questions");
-                          }
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="examBank"
-                          value="bank_all"
-                          checked={selectedBank === "bank_all"}
-                          onChange={() => handleBankSelect("bank_all", "All Available Questions")}
-                        />
-                        <span className="radio-circle"></span>
-                        <span className="bank-name">All Questions</span>
-                        <span className="bank-meta">{totalQuestionsCount} Qs</span>
-                        {isLocked && <span className="bank-lock-badge">🔒 PRO</span>}
-                      </label>
-                    );
-                  })()}
-
+                  })}
                 </div>
 
                 <div className="exam-mode-section">

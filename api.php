@@ -50,22 +50,51 @@ try {
         duration_days INT DEFAULT 30,
         description TEXT,
         features JSON,
+        bank_permissions JSON,
         is_active BOOLEAN DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     try { $pdo->exec("ALTER TABLE plans CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE plans ADD COLUMN bank_permissions JSON"); } catch (Exception $e) {}
+
+    $defaultFreePerms = json_encode([
+        'bank_a' => ['enabled' => true, 'max_questions' => 50],
+        'bank_b' => ['enabled' => true, 'max_questions' => 50],
+        'bank_c' => ['enabled' => false, 'max_questions' => 0],
+        'bank_d' => ['enabled' => false, 'max_questions' => 0],
+        'bank_dragdrop' => ['enabled' => false, 'max_questions' => 0],
+        'bank_all' => ['enabled' => false, 'max_questions' => 0],
+        'allow_simulation' => false
+    ]);
+    $defaultPaidPerms = json_encode([
+        'bank_a' => ['enabled' => true, 'max_questions' => 50],
+        'bank_b' => ['enabled' => true, 'max_questions' => 50],
+        'bank_c' => ['enabled' => true, 'max_questions' => 50],
+        'bank_d' => ['enabled' => true, 'max_questions' => 57],
+        'bank_dragdrop' => ['enabled' => true, 'max_questions' => 21],
+        'bank_all' => ['enabled' => true, 'max_questions' => 228],
+        'allow_simulation' => true
+    ]);
 
     $planCount = (int)$pdo->query("SELECT COUNT(*) FROM plans")->fetchColumn();
     if ($planCount === 0) {
-        $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, is_active) VALUES
-            ('plan_free', 'Free Study Pass', 0.00, 'lifetime', 3650, 'Standard access to practice questions and basic review.', ?, 1),
-            ('plan_pro', 'CCNA Pro Pass', 19.99, 'monthly', 30, 'Full access to all 228 questions, timed simulations, and AI review report.', ?, 1),
-            ('plan_unlimited', 'CCNA Unlimited Pass', 49.99, 'lifetime', 3650, 'Unlimited lifetime access to all banks, instant feedback, and notes sync.', ?, 1)
+        $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active) VALUES
+            ('plan_free', 'Free Study Pass', 0.00, 'lifetime', 3650, 'Standard access to practice questions and basic review.', ?, ?, 1),
+            ('plan_pro', 'CCNA Pro Pass', 19.99, 'monthly', 30, 'Full access to all 228 questions, timed simulations, and AI review report.', ?, ?, 1),
+            ('plan_unlimited', 'CCNA Unlimited Pass', 49.99, 'lifetime', 3650, 'Unlimited lifetime access to all banks, instant feedback, and notes sync.', ?, ?, 1)
         ")->execute([
             json_encode(['Exam A (1-50)', 'Exam B (51-100)', 'Basic Question Review', 'Score History']),
+            $defaultFreePerms,
             json_encode(['All Exam Banks (A, B, C, D, D&D)', 'Official 90-min Simulations', 'AI Fix Report Generation', 'Real-time Explanations', 'Sync Notes to Cloud']),
-            json_encode(['Lifetime Access & Updates', 'All 228 Exam Questions', 'Unlimited Retakes & Flagged Mode', 'Instant Explanations', 'Priority Support'])
+            $defaultPaidPerms,
+            json_encode(['Lifetime Access & Updates', 'All 228 Exam Questions', 'Unlimited Retakes & Flagged Mode', 'Instant Explanations', 'Priority Support']),
+            $defaultPaidPerms
         ]);
+    } else {
+        try {
+            $pdo->prepare("UPDATE plans SET bank_permissions = ? WHERE id = 'plan_free' AND (bank_permissions IS NULL OR bank_permissions = '' OR bank_permissions = 'null')")->execute([$defaultFreePerms]);
+            $pdo->prepare("UPDATE plans SET bank_permissions = ? WHERE id != 'plan_free' AND (bank_permissions IS NULL OR bank_permissions = '' OR bank_permissions = 'null')")->execute([$defaultPaidPerms]);
+        } catch (Exception $e) {}
     }
 
     $checkCandidate = $pdo->query("SELECT id FROM users WHERE email = 'candidate@ccna.com'")->fetch();
@@ -118,6 +147,44 @@ function verifyToken($token, $secret) {
     if (!$data || !isset($data['id'])) return false;
     if (isset($data['exp']) && $data['exp'] < time()) return false;
     return $data;
+}
+
+function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = '') {
+    if ($userRole === 'admin' || strtolower($userEmail) === 'candidate@ccna.com') {
+        return [
+            'bank_a' => ['enabled' => true, 'max_questions' => 50],
+            'bank_b' => ['enabled' => true, 'max_questions' => 50],
+            'bank_c' => ['enabled' => true, 'max_questions' => 50],
+            'bank_d' => ['enabled' => true, 'max_questions' => 57],
+            'bank_dragdrop' => ['enabled' => true, 'max_questions' => 21],
+            'bank_all' => ['enabled' => true, 'max_questions' => 228],
+            'allow_simulation' => true
+        ];
+    }
+    $pId = $planId ?: 'plan_free';
+    if ($pId === 'free') $pId = 'plan_free';
+    else if ($pId === 'pro') $pId = 'plan_pro';
+    else if ($pId === 'unlimited') $pId = 'plan_unlimited';
+
+    try {
+        $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE id = ?");
+        $stmt->execute([$pId]);
+        $perms = $stmt->fetchColumn();
+        if ($perms) {
+            $decoded = json_decode($perms, true);
+            if (is_array($decoded) && !empty($decoded)) return $decoded;
+        }
+    } catch (Exception $e) {}
+
+    return [
+        'bank_a' => ['enabled' => true, 'max_questions' => 50],
+        'bank_b' => ['enabled' => true, 'max_questions' => 50],
+        'bank_c' => ['enabled' => false, 'max_questions' => 0],
+        'bank_d' => ['enabled' => false, 'max_questions' => 0],
+        'bank_dragdrop' => ['enabled' => false, 'max_questions' => 0],
+        'bank_all' => ['enabled' => false, 'max_questions' => 0],
+        'allow_simulation' => false
+    ];
 }
 
 function getEmailTemplate($title, $greetingName, $leadText, $otpCode, $expiryText = "Valid for 15 minutes.", $isWarning = false) {
@@ -340,7 +407,7 @@ if (preg_match('#^/api/auth/verify-email#', $basePath) && $method === 'POST') {
             "success" => true,
             "message" => "Email verified successfully!",
             "token" => $token,
-            "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "isVerified" => true]
+            "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
         ]);
         exit;
     }
@@ -437,7 +504,7 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
         "success" => true,
         "message" => "Login successful!",
         "token" => $token,
-        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "isVerified" => true]
+        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
     ]);
     exit;
 }
@@ -455,7 +522,7 @@ if (preg_match('#^/api/auth/me#', $basePath)) {
             $stmt->execute([$decoded['id']]);
             $u = $stmt->fetch();
             if ($u) {
-                echo json_encode(["user" => ["id" => $u['id'], "name" => $u['name'], "email" => $u['email'], "role" => $u['role'] ?? 'user', "plan" => $u['plan'] ?? 'free', "isVerified" => (bool)$u['is_verified'], "createdAt" => $u['created_at']]]);
+                echo json_encode(["user" => ["id" => $u['id'], "name" => $u['name'], "email" => $u['email'], "role" => $u['role'] ?? 'user', "plan" => $u['plan'] ?? 'free', "isVerified" => (bool)$u['is_verified'], "createdAt" => $u['created_at'], "planPermissions" => getUserPlanPermissions($pdo, $u['plan'] ?? 'free', $u['role'] ?? 'user', $u['email'] ?? '')]]);
                 exit;
             }
         }
@@ -804,9 +871,10 @@ if (preg_match('#^/api/notes#', $basePath)) {
 
 // 12.5 Public Plans & User Upgrade API
 if (preg_match('#^/api/plans$#', $basePath) && $method === 'GET') {
-    $plans = $pdo->query("SELECT id, name, price, billing_cycle, duration_days, description, features, is_active FROM plans WHERE is_active = 1 ORDER BY price ASC")->fetchAll();
+    $plans = $pdo->query("SELECT id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active FROM plans WHERE is_active = 1 ORDER BY price ASC")->fetchAll();
     $formatted = array_map(function($p) {
         $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
+        $p['bank_permissions'] = json_decode($p['bank_permissions'] ?? '{}', true) ?? [];
         $p['price'] = (float)$p['price'];
         $p['duration_days'] = (int)$p['duration_days'];
         return $p;
@@ -855,7 +923,8 @@ if (preg_match('#^/api/user/upgrade-plan$#', $basePath) && $method === 'POST') {
             "email" => $updatedUser['email'],
             "role" => $updatedUser['role'] ?? 'user',
             "plan" => $updatedUser['plan'] ?? 'free',
-            "isVerified" => (bool)$updatedUser['is_verified']
+            "isVerified" => (bool)$updatedUser['is_verified'],
+            "planPermissions" => getUserPlanPermissions($pdo, $updatedUser['plan'] ?? 'free', $updatedUser['role'] ?? 'user', $updatedUser['email'] ?? '')
         ],
         "token" => $newToken
     ]);
@@ -1052,6 +1121,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             FROM plans p ORDER BY p.price ASC")->fetchAll();
         $formatted = array_map(function($p) {
             $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
+            $p['bank_permissions'] = json_decode($p['bank_permissions'] ?? '{}', true) ?? [];
             $p['price'] = (float)$p['price'];
             $p['duration_days'] = (int)$p['duration_days'];
             $p['is_active'] = (bool)$p['is_active'];
@@ -1067,11 +1137,29 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $id = trim($body['id'] ?? ('plan_' . time()));
         $name = trim($body['name'] ?? '');
         $price = (float)($body['price'] ?? 0);
-        $billingCycle = $body['billingCycle'] ?? 'monthly';
-        $durationDays = (int)($body['durationDays'] ?? 30);
+        $billingCycle = $body['billingCycle'] ?? $body['billing_cycle'] ?? 'monthly';
+        $durationDays = (int)($body['durationDays'] ?? $body['duration_days'] ?? 30);
         $description = trim($body['description'] ?? '');
         $features = json_encode($body['features'] ?? []);
-        $isActive = !empty($body['isActive']) ? 1 : 1;
+        
+        $rawPerms = $body['bankPermissions'] ?? $body['bank_permissions'] ?? null;
+        if (is_array($rawPerms)) {
+            $bankPermissions = json_encode($rawPerms);
+        } else if (is_string($rawPerms) && $rawPerms !== '') {
+            $bankPermissions = $rawPerms;
+        } else {
+            $bankPermissions = json_encode([
+                'bank_a' => ['enabled' => true, 'max_questions' => 50],
+                'bank_b' => ['enabled' => true, 'max_questions' => 50],
+                'bank_c' => ['enabled' => false, 'max_questions' => 0],
+                'bank_d' => ['enabled' => false, 'max_questions' => 0],
+                'bank_dragdrop' => ['enabled' => false, 'max_questions' => 0],
+                'bank_all' => ['enabled' => false, 'max_questions' => 0],
+                'allow_simulation' => false
+            ]);
+        }
+
+        $isActive = isset($body['isActive']) ? ($body['isActive'] ? 1 : 0) : (isset($body['is_active']) ? ($body['is_active'] ? 1 : 0) : 1);
 
         if (!$name) {
             http_response_code(400);
@@ -1079,10 +1167,10 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             exit;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), billing_cycle=VALUES(billing_cycle), duration_days=VALUES(duration_days), description=VALUES(description), features=VALUES(features), is_active=VALUES(is_active)");
-        $stmt->execute([$id, $name, $price, $billingCycle, $durationDays, $description, $features, $isActive]);
+        $stmt = $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), billing_cycle=VALUES(billing_cycle), duration_days=VALUES(duration_days), description=VALUES(description), features=VALUES(features), bank_permissions=VALUES(bank_permissions), is_active=VALUES(is_active)");
+        $stmt->execute([$id, $name, $price, $billingCycle, $durationDays, $description, $features, $bankPermissions, $isActive]);
 
         echo json_encode(["success" => true, "message" => "Plan saved successfully."]);
         exit;

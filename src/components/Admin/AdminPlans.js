@@ -1,5 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { adminFetch } from '../../utils/adminApi';
+import { EXAM_BANKS } from '../../utils/planPermissions';
+
+const DEFAULT_BANK_PERMS = {
+  bank_a: { enabled: true, max_questions: 50 },
+  bank_b: { enabled: true, max_questions: 50 },
+  bank_c: { enabled: false, max_questions: 0 },
+  bank_d: { enabled: false, max_questions: 0 },
+  bank_dragdrop: { enabled: false, max_questions: 0 },
+  bank_all: { enabled: false, max_questions: 0 },
+  allow_simulation: false
+};
+
+const ALL_ALLOWED_PERMS = {
+  bank_a: { enabled: true, max_questions: 50 },
+  bank_b: { enabled: true, max_questions: 50 },
+  bank_c: { enabled: true, max_questions: 50 },
+  bank_d: { enabled: true, max_questions: 57 },
+  bank_dragdrop: { enabled: true, max_questions: 21 },
+  bank_all: { enabled: true, max_questions: 228 },
+  allow_simulation: true
+};
 
 function AdminPlans() {
   const [plans, setPlans] = useState([]);
@@ -41,7 +62,7 @@ function AdminPlans() {
       });
       const data = await res.json();
       if (res.ok) {
-        setActionFeedback({ type: 'success', message: 'Plan saved successfully!' });
+        setActionFeedback({ type: 'success', message: 'Plan saved successfully with dynamic bank permissions!' });
         setEditingPlan(null);
         setIsCreateOpen(false);
         fetchPlans();
@@ -86,6 +107,82 @@ function AdminPlans() {
     setEditingPlan({ ...editingPlan, features: updated });
   };
 
+  const handleBankToggle = (bankKey, enabled) => {
+    const currentPerms = editingPlan.bankPermissions || {};
+    const defaultBank = EXAM_BANKS.find(b => b.key === bankKey);
+    const existingBank = currentPerms[bankKey] || { enabled: false, max_questions: 0 };
+
+    setEditingPlan({
+      ...editingPlan,
+      bankPermissions: {
+        ...currentPerms,
+        [bankKey]: {
+          ...existingBank,
+          enabled,
+          max_questions: enabled ? (existingBank.max_questions || defaultBank?.defaultMax || 50) : 0
+        }
+      }
+    });
+  };
+
+  const handleBankLimitChange = (bankKey, limit) => {
+    const currentPerms = editingPlan.bankPermissions || {};
+    const existingBank = currentPerms[bankKey] || { enabled: true, max_questions: 50 };
+    const num = parseInt(limit, 10);
+    const val = isNaN(num) ? 0 : Math.max(0, num);
+
+    setEditingPlan({
+      ...editingPlan,
+      bankPermissions: {
+        ...currentPerms,
+        [bankKey]: {
+          ...existingBank,
+          max_questions: val
+        }
+      }
+    });
+  };
+
+  const handleSimulationToggle = (allow) => {
+    const currentPerms = editingPlan.bankPermissions || {};
+    setEditingPlan({
+      ...editingPlan,
+      bankPermissions: {
+        ...currentPerms,
+        allow_simulation: allow
+      }
+    });
+  };
+
+  const openCreateModal = () => {
+    setEditingPlan({
+      id: 'plan_' + Date.now(),
+      name: '',
+      price: 9.99,
+      billingCycle: 'monthly',
+      durationDays: 30,
+      description: '',
+      features: ['Access to practice exams'],
+      bankPermissions: { ...ALL_ALLOWED_PERMS },
+      isActive: true
+    });
+    setIsCreateOpen(true);
+  };
+
+  const openEditModal = (p) => {
+    const existingPerms = p.bank_permissions && typeof p.bank_permissions === 'object' && Object.keys(p.bank_permissions).length > 0
+      ? p.bank_permissions
+      : (p.id === 'plan_free' ? { ...DEFAULT_BANK_PERMS } : { ...ALL_ALLOWED_PERMS });
+
+    setEditingPlan({
+      ...p,
+      billingCycle: p.billing_cycle || 'monthly',
+      durationDays: p.duration_days || 30,
+      bankPermissions: { ...existingPerms }
+    });
+    setIsCreateOpen(true);
+  };
+
   return (
     <div className="admin-plans-view">
       {actionFeedback && (
@@ -121,26 +218,14 @@ function AdminPlans() {
               <span>💳</span> Access Plans & Subscriptions
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
-              Configure pricing tiers, question bank allocations, and feature access permissions.
+              Configure pricing tiers, dynamic exam bank access, and question count limits per plan.
             </p>
           </div>
 
           <button
             type="button"
             className="btn-admin-primary"
-            onClick={() => {
-              setEditingPlan({
-                id: 'plan_' + Date.now(),
-                name: '',
-                price: 9.99,
-                billingCycle: 'monthly',
-                durationDays: 30,
-                description: '',
-                features: ['Access to practice exams'],
-                isActive: true
-              });
-              setIsCreateOpen(true);
-            }}
+            onClick={openCreateModal}
           >
             + Create New Plan
           </button>
@@ -156,6 +241,7 @@ function AdminPlans() {
         <div className="admin-plans-grid">
           {plans.map((p) => {
             const isFree = p.price === 0;
+            const perms = p.bank_permissions || {};
             return (
               <div key={p.id} className={`admin-plan-card ${!isFree ? 'featured' : ''}`}>
                 <div className="admin-plan-badge">
@@ -170,6 +256,31 @@ function AdminPlans() {
 
                 <div className="admin-plan-desc">{p.description}</div>
 
+                {/* DYNAMIC BANK PERMISSIONS SUMMARY */}
+                <div className="admin-plan-perms-summary">
+                  {EXAM_BANKS.map((b) => {
+                    const conf = perms[b.key];
+                    const isAllowed = conf && conf.enabled;
+                    if (!isAllowed) {
+                      return (
+                        <span key={b.key} className="admin-perm-tag tag-locked">
+                          🔒 {b.name.replace(/Exam Bank |Bank /, '').replace(/ \(\d+-\d+\)/, '')} Locked
+                        </span>
+                      );
+                    }
+                    const maxQ = conf.max_questions;
+                    const countLabel = maxQ && maxQ > 0 && maxQ < b.totalQuestions ? `${maxQ}/${b.totalQuestions} Qs` : `All ${b.totalQuestions} Qs`;
+                    return (
+                      <span key={b.key} className="admin-perm-tag tag-allowed">
+                        ✓ {b.name.replace(/Exam Bank |Bank /, '').replace(/ \(\d+-\d+\)/, '')} ({countLabel})
+                      </span>
+                    );
+                  })}
+                  <span className={`admin-perm-tag ${perms.allow_simulation !== false ? 'tag-allowed' : 'tag-locked'}`}>
+                    ⏱️ Simulation: {perms.allow_simulation !== false ? 'Allowed' : 'Locked'}
+                  </span>
+                </div>
+
                 <ul className="admin-plan-features">
                   {p.features && p.features.map((f, i) => (
                     <li key={i}>{f}</li>
@@ -181,10 +292,7 @@ function AdminPlans() {
                     type="button"
                     className="btn-admin-secondary"
                     style={{ flex: 1 }}
-                    onClick={() => {
-                      setEditingPlan(p);
-                      setIsCreateOpen(true);
-                    }}
+                    onClick={() => openEditModal(p)}
                   >
                     ✏️ Edit Plan
                   </button>
@@ -207,7 +315,7 @@ function AdminPlans() {
       {/* EDIT / CREATE PLAN MODAL */}
       {isCreateOpen && editingPlan && (
         <div className="admin-modal-backdrop" onClick={() => setIsCreateOpen(false)}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="admin-modal-card" style={{ maxWidth: '680px' }} onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
               <h4 className="admin-modal-title">
                 {editingPlan.id.startsWith('plan_') && !plans.find(p => p.id === editingPlan.id) ? 'Create Plan' : `Edit Plan: ${editingPlan.name}`}
@@ -270,13 +378,116 @@ function AdminPlans() {
                   />
                 </div>
 
+                {/* DYNAMIC EXAM BANK ACCESS & QUESTION LIMITS */}
                 <div className="admin-form-group">
-                  <label className="admin-form-label">Features Checklist</label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label className="admin-form-label" style={{ margin: 0, color: '#38bdf8' }}>
+                      🎯 Exam Bank Access & Question Limits
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      Configure which banks and how many questions are accessible
+                    </span>
+                  </div>
+
+                  <div className="admin-bank-perms-container">
+                    {EXAM_BANKS.map((b) => {
+                      const bankConf = (editingPlan.bankPermissions && editingPlan.bankPermissions[b.key]) || {
+                        enabled: false,
+                        max_questions: 0
+                      };
+                      const isEnabled = Boolean(bankConf.enabled);
+                      const currentMax = bankConf.max_questions || 0;
+
+                      return (
+                        <div key={b.key} className={`admin-bank-perm-row ${!isEnabled ? 'disabled' : ''}`}>
+                          <div className="admin-bank-perm-left">
+                            <input
+                              type="checkbox"
+                              id={`perm_${b.key}`}
+                              className="admin-bank-perm-checkbox"
+                              checked={isEnabled}
+                              onChange={(e) => handleBankToggle(b.key, e.target.checked)}
+                            />
+                            <label htmlFor={`perm_${b.key}`} style={{ cursor: 'pointer', margin: 0 }}>
+                              <span className="admin-bank-perm-name">{b.name}</span>
+                            </label>
+                            <span className="admin-bank-perm-badge">{b.totalQuestions} Total Qs</span>
+                          </div>
+
+                          <div className="admin-bank-perm-right">
+                            {isEnabled ? (
+                              <>
+                                <span className="admin-bank-limit-label">Questions Allowed:</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={b.totalQuestions}
+                                  className="admin-bank-limit-input"
+                                  value={currentMax === 0 ? b.totalQuestions : currentMax}
+                                  onChange={(e) => handleBankLimitChange(b.key, e.target.value)}
+                                  title="Number of questions candidates can attempt from this bank (0 or total = all)"
+                                />
+                                <button
+                                  type="button"
+                                  className="admin-preset-btn"
+                                  onClick={() => handleBankLimitChange(b.key, 10)}
+                                >
+                                  10 Qs
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-preset-btn"
+                                  onClick={() => handleBankLimitChange(b.key, 25)}
+                                >
+                                  25 Qs
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-preset-btn"
+                                  onClick={() => handleBankLimitChange(b.key, b.totalQuestions)}
+                                >
+                                  All ({b.totalQuestions})
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#f87171', fontWeight: 600 }}>
+                                🔒 Locked for this Plan
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Simulation Mode Permission */}
+                    <div className="admin-sim-perm-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          id="perm_allow_sim"
+                          className="admin-bank-perm-checkbox"
+                          checked={editingPlan.bankPermissions?.allow_simulation !== false}
+                          onChange={(e) => handleSimulationToggle(e.target.checked)}
+                        />
+                        <label htmlFor="perm_allow_sim" style={{ cursor: 'pointer', margin: 0, color: '#f8fafc', fontWeight: 700, fontSize: '13px' }}>
+                          ⏱️ Allow 90-Minute Timed Simulation Mode
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {editingPlan.bankPermissions?.allow_simulation !== false ? 'Enabled' : 'Restricted (Locked)'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Features Checklist */}
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Marketing Features Checklist</label>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                     <input
                       type="text"
                       className="admin-form-input"
-                      placeholder="Add feature e.g. Access to Exam Bank D"
+                      placeholder="Add feature bullet e.g. Access to Exam Bank D"
                       value={featureInput}
                       onChange={(e) => setFeatureInput(e.target.value)}
                       onKeyDown={(e) => {
