@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import ExamSettingsModal from "./ExamSettingsModal";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
+import FinishScreen from "./FinishScreen";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import {
   isPlanAllowedForBank,
@@ -49,6 +50,7 @@ function ExamDashboard({
 }) {
   const [selectedBank, setSelectedBank] = useState("bank_a");
   const [examMode, setExamMode] = useState("study");
+  const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -644,15 +646,13 @@ function ExamDashboard({
           <section className="dashboard-section past-exams-block">
             <div className="section-header-flex">
               <h2 className="section-green-heading">Review your past exams</h2>
-              {pastExams.length > 3 && (
-                <button
-                  type="button"
-                  className="link-view-more"
-                  onClick={() => onNavigate("history")}
-                >
-                  View Full History ({pastExams.length})...
-                </button>
-              )}
+              <button
+                type="button"
+                className="link-view-more"
+                onClick={() => onNavigate("history")}
+              >
+                View Full History ({pastExams.length}) ➜
+              </button>
             </div>
 
             <div className="past-exams-list">
@@ -673,7 +673,12 @@ function ExamDashboard({
                   : 0;
 
                 return (
-                  <div key={exam.id || `past_${idx}`} className="past-exam-preview-card">
+                  <div
+                    key={exam.id || `past_${idx}`}
+                    className="past-exam-preview-card is-clickable"
+                    onClick={() => setSelectedReportExam(exam)}
+                    title="Click card to view detailed Score Report"
+                  >
                     <div className="past-exam-header">
                       <div>
                         <span className="past-exam-sub">
@@ -725,11 +730,25 @@ function ExamDashboard({
                     </div>
 
                     <div className="past-exam-footer-actions">
+                      <button
+                        type="button"
+                        className="btn-history-action btn-history-score-report"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedReportExam(exam);
+                        }}
+                      >
+                        📊 Score Report
+                      </button>
+
                       {onReviewExam && (
                         <button
                           type="button"
                           className="btn-history-action btn-history-review"
-                          onClick={() => onReviewExam(exam)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReviewExam(exam);
+                          }}
                         >
                           🔍 Review Exam (Read-Only)
                         </button>
@@ -739,7 +758,10 @@ function ExamDashboard({
                         <button
                           type="button"
                           className="btn-history-action btn-history-retake-all"
-                          onClick={() => (onRetakeAll || onRetakeExam)(exam)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            (onRetakeAll || onRetakeExam)(exam);
+                          }}
                         >
                           ↺ Retake All Questions
                         </button>
@@ -749,7 +771,10 @@ function ExamDashboard({
                         <button
                           type="button"
                           className="btn-history-action btn-history-retake-flagged"
-                          onClick={() => onRetakeFlagged(exam)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRetakeFlagged(exam);
+                          }}
                         >
                           ⚑ Retake Flagged Only ({flaggedCount})
                         </button>
@@ -759,19 +784,14 @@ function ExamDashboard({
                         <button
                           type="button"
                           className="btn-history-action btn-history-retake-incorrect"
-                          onClick={() => onRetakeIncorrect(exam)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRetakeIncorrect(exam);
+                          }}
                         >
                           ✕ Retake Incorrect Only ({incorrectCount})
                         </button>
                       )}
-
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-view-all"
-                        onClick={() => onNavigate("history")}
-                      >
-                        View All History ➜
-                      </button>
                     </div>
                   </div>
                 );
@@ -801,6 +821,62 @@ function ExamDashboard({
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* DETAILED SCORE REPORT MODAL (SAME CARD AS END OF EXAM) */}
+      {selectedReportExam && (
+        <div
+          className="score-report-modal-backdrop"
+          onClick={() => setSelectedReportExam(null)}
+        >
+          <div
+            className="score-report-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FinishScreen
+              points={selectedReportExam.score}
+              maxPossiblePoints={
+                selectedReportExam.maxScore ||
+                (selectedReportExam.questions?.length
+                  ? selectedReportExam.questions.reduce((a, b) => a + (b.points || 1), 0)
+                  : 1000)
+              }
+              candidateName={selectedReportExam.candidateName || candidateName}
+              numQuestions={
+                selectedReportExam.totalQuestions ||
+                (selectedReportExam.questions ? selectedReportExam.questions.length : 0)
+              }
+              answers={selectedReportExam.answers || []}
+              questions={selectedReportExam.questions || []}
+              flaggedQuestions={selectedReportExam.flaggedQuestions || []}
+              incorrectQuestions={selectedReportExam.incorrectQuestions}
+              examMode={selectedReportExam.examMode || "study"}
+              selectedBankName={cleanBankTitle(selectedReportExam.bankName || "CCNA Exam")}
+              onReviewExam={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                if (onReviewExam) onReviewExam(target);
+              }}
+              onRetakeAll={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                if (onRetakeAll || onRetakeExam) (onRetakeAll || onRetakeExam)(target);
+              }}
+              onRetakeFlagged={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                if (onRetakeFlagged) onRetakeFlagged(target);
+              }}
+              onRetakeIncorrect={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                if (onRetakeIncorrect) onRetakeIncorrect(target);
+              }}
+              onClose={() => setSelectedReportExam(null)}
+              backButtonLabel="← Back to Dashboard"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

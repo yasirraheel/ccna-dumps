@@ -6756,3 +6756,96 @@ body {
   color: #fbbf24;
 }
 
+/* ==========================================================================
+   SCORE REPORT MODAL (SAME VIEW AS END OF EXAM) & HISTORY CARD HOVER
+   ========================================================================== */
+
+.btn-history-score-report {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1.5px solid rgba(16, 185, 129, 0.45);
+}
+
+.btn-history-score-report:hover {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.history-full-card.is-clickable,
+.past-exam-preview-card.is-clickable {
+  cursor: pointer;
+}
+
+.history-full-card.is-clickable:hover {
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+.past-exam-preview-card.is-clickable:hover {
+  border-color: rgba(56, 189, 248, 0.5) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35) !important;
+}
+
+.report-header-right-group {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.btn-report-close-modal {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 3.8rem;
+  height: 3.8rem;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.btn-report-close-modal:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ffffff;
+  transform: scale(1.06);
+}
+
+.score-report-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 1.6rem;
+  overflow-y: auto;
+  animation: fadeIn 0.18s ease;
+}
+
+.score-report-modal-dialog {
+  width: 100%;
+  max-width: 760px;
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.score-report-modal-dialog .finish-screen-container {
+  padding: 0;
+  min-height: auto;
+  width: 100%;
+}
+

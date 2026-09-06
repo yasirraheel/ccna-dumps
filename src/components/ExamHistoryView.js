@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
+import FinishScreen from "./FinishScreen";
 
 function ExamHistoryView({
   pastExams = [],
@@ -16,6 +17,7 @@ function ExamHistoryView({
   onOpenAuth,
   onLogout,
 }) {
+  const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
@@ -130,7 +132,9 @@ function ExamHistoryView({
               return (
                 <div
                   key={exam.id || idx}
-                  className={`history-full-card ${isPassed ? "pass-border" : "fail-border"}`}
+                  className={`history-full-card is-clickable ${isPassed ? "pass-border" : "fail-border"}`}
+                  onClick={() => setSelectedReportExam(exam)}
+                  title="Click card to view detailed Score Report"
                 >
                   {/* TOP HEADER BAR */}
                   <div className="history-card-top-bar">
@@ -153,7 +157,10 @@ function ExamHistoryView({
                         <button
                           type="button"
                           className="btn-history-delete-pill"
-                          onClick={() => handleDeleteItemClick(exam)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteItemClick(exam);
+                          }}
                           title="Delete this exam record"
                         >
                           🗑️ Delete
@@ -214,8 +221,22 @@ function ExamHistoryView({
                     <div className="history-full-actions-bar">
                       <button
                         type="button"
+                        className="btn-history-action btn-history-score-report"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedReportExam(exam);
+                        }}
+                      >
+                        📊 Score Report
+                      </button>
+
+                      <button
+                        type="button"
                         className="btn-history-action btn-history-review"
-                        onClick={() => onReviewExam(exam)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReviewExam(exam);
+                        }}
                       >
                         🔍 Review Exam (Read-Only)
                       </button>
@@ -223,7 +244,10 @@ function ExamHistoryView({
                       <button
                         type="button"
                         className="btn-history-action btn-history-retake-all"
-                        onClick={() => onRetakeAll(exam)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRetakeAll(exam);
+                        }}
                       >
                         ↺ Retake All Questions
                       </button>
@@ -234,7 +258,10 @@ function ExamHistoryView({
                           flaggedCount === 0 ? "disabled" : ""
                         }`}
                         disabled={flaggedCount === 0}
-                        onClick={() => flaggedCount > 0 && onRetakeFlagged(exam)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (flaggedCount > 0) onRetakeFlagged(exam);
+                        }}
                         title={flaggedCount > 0 ? `Retake ${flaggedCount} marked questions` : "No marked questions"}
                       >
                         ⚑ Retake Flagged Only {flaggedCount > 0 ? `(${flaggedCount})` : ""}
@@ -243,7 +270,10 @@ function ExamHistoryView({
                       <button
                         type="button"
                         className="btn-history-action btn-history-retake-incorrect"
-                        onClick={() => onRetakeIncorrect(exam)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRetakeIncorrect(exam);
+                        }}
                       >
                         ✕ Retake Incorrect Only
                       </button>
@@ -255,6 +285,62 @@ function ExamHistoryView({
           </div>
         )}
       </div>
+
+      {/* DETAILED SCORE REPORT MODAL (SAME CARD AS END OF EXAM) */}
+      {selectedReportExam && (
+        <div
+          className="score-report-modal-backdrop"
+          onClick={() => setSelectedReportExam(null)}
+        >
+          <div
+            className="score-report-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FinishScreen
+              points={selectedReportExam.score}
+              maxPossiblePoints={
+                selectedReportExam.maxScore ||
+                (selectedReportExam.questions?.length
+                  ? selectedReportExam.questions.reduce((a, b) => a + (b.points || 1), 0)
+                  : 1000)
+              }
+              candidateName={selectedReportExam.candidateName || candidateName}
+              numQuestions={
+                selectedReportExam.totalQuestions ||
+                (selectedReportExam.questions ? selectedReportExam.questions.length : 0)
+              }
+              answers={selectedReportExam.answers || []}
+              questions={selectedReportExam.questions || []}
+              flaggedQuestions={selectedReportExam.flaggedQuestions || []}
+              incorrectQuestions={selectedReportExam.incorrectQuestions}
+              examMode={selectedReportExam.examMode || "study"}
+              selectedBankName={cleanBankTitle(selectedReportExam.bankName || "CCNA Exam")}
+              onReviewExam={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                onReviewExam(target);
+              }}
+              onRetakeAll={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                onRetakeAll(target);
+              }}
+              onRetakeFlagged={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                onRetakeFlagged(target);
+              }}
+              onRetakeIncorrect={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                onRetakeIncorrect(target);
+              }}
+              onClose={() => setSelectedReportExam(null)}
+              backButtonLabel="← Back to Exam History"
+            />
+          </div>
+        </div>
+      )}
 
       {/* CONFIRMATION MODAL */}
       <CustomConfirmModal

@@ -8,15 +8,18 @@ function FinishScreen({
   candidateName,
   dispatch,
   numQuestions,
-  answers,
-  questions,
+  answers = [],
+  questions = [],
   flaggedQuestions = [],
+  incorrectQuestions = null,
   examMode,
   selectedBankName,
   onReviewExam,
   onRetakeAll,
   onRetakeFlagged,
   onRetakeIncorrect,
+  onClose,
+  backButtonLabel,
 }) {
   const [isRetakeMenuOpen, setIsRetakeMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -36,17 +39,25 @@ function FinishScreen({
   const ciscoScaleScore = Math.round((percentage / 100) * 1000); // 0 - 1000 scale
   const isPassed = percentage >= 82.5;
 
-  const incorrectIndices = getIncorrectQuestionIndices(questions, answers);
+  const incorrectIndices =
+    Array.isArray(incorrectQuestions)
+      ? incorrectQuestions
+      : getIncorrectQuestionIndices(questions, answers);
   const incorrectCount = incorrectIndices.length;
   let answeredCount = 0;
-  questions.forEach((_, idx) => {
-    const ans = answers ? answers[idx] : null;
-    if (ans !== null && ans !== undefined) {
-      answeredCount++;
-    }
-  });
-  const correctCount = Math.max(0, questions.length - incorrectCount);
-  const flaggedCount = flaggedQuestions.length;
+  if (questions && questions.length > 0) {
+    questions.forEach((_, idx) => {
+      const ans = answers ? answers[idx] : null;
+      if (ans !== null && ans !== undefined) {
+        answeredCount++;
+      }
+    });
+  } else if (Array.isArray(answers)) {
+    answeredCount = answers.filter((a) => a !== null && a !== undefined).length;
+  }
+  const totalCount = numQuestions || (questions ? questions.length : 0);
+  const correctCount = Math.max(0, totalCount - incorrectCount);
+  const flaggedCount = flaggedQuestions ? flaggedQuestions.length : 0;
 
   return (
     <div className="finish-screen-container">
@@ -56,8 +67,21 @@ function FinishScreen({
             <span className="report-sub">Final Score: ExSim-Max for Cisco 200-301 CCNA</span>
             <h2 className="report-main-title">{selectedBankName || "CCNA Examination"}</h2>
           </div>
-          <div className={`report-status-badge ${isPassed ? "badge-pass" : "badge-fail"}`}>
-            {isPassed ? "PASS ✓" : "FAIL ✕"}
+          <div className="report-header-right-group">
+            <div className={`report-status-badge ${isPassed ? "badge-pass" : "badge-fail"}`}>
+              {isPassed ? "PASS ✓" : "FAIL ✕"}
+            </div>
+            {onClose && (
+              <button
+                type="button"
+                className="btn-report-close-modal"
+                onClick={onClose}
+                aria-label="Close"
+                title="Close Score Report"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
@@ -210,7 +234,7 @@ function FinishScreen({
             onClick={() => {
               if (onReviewExam) {
                 onReviewExam();
-              } else {
+              } else if (dispatch) {
                 dispatch({ type: "reviewExam", payload: 0 });
               }
             }}
@@ -221,9 +245,15 @@ function FinishScreen({
           <button
             type="button"
             className="btn-report-restart"
-            onClick={() => dispatch({ type: "restart" })}
+            onClick={() => {
+              if (onClose) {
+                onClose();
+              } else if (dispatch) {
+                dispatch({ type: "restart" });
+              }
+            }}
           >
-            ⌂ Back to Exam Selection
+            {onClose ? (backButtonLabel || "← Back to History") : "⌂ Back to Exam Selection"}
           </button>
         </div>
       </div>
