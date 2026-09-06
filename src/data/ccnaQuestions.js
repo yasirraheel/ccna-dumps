@@ -1683,15 +1683,15 @@ export const ccnaQuestions = [
   {
     "id": 98,
     "questionNo": "Question #63",
-    "question": "Refer to the exhibit. Which problem is indicated by the interface counter output? (Choose one answer)",
+    "question": "Refer to the exhibit. Inter-VLAN routing is configured on SW1. Client A is running Linux as an OS in VLAN 10 with a default gateway IP 10.0.0.1 but cannot ping client B in VLAN 20 running Windows. What action must be taken to verify that client A has the correct IP settings? (Choose one answer)",
     "options": [
-      "A. duplex mismatch",
-      "B. speed mismatch",
-      "C. encapsulation failure",
-      "D. cable length exceeds standard"
+      "A. Run the ipconfig command on client A and ensure that the IP address is within the host range of 10.0.0.1 - 10.255.254.",
+      "B. Run the ifconfig command on client A to confirm that the subnet mask is set to 255.255.128.0.",
+      "C. Run the ifconfig command on client A to confirm that its IP and subnet mask fall within 255.255.0.0.",
+      "D. Run the ipconfig command on client A to confirm that the correct 10.0.0.1 default gateway is used."
     ],
     "correctOption": [
-      0
+      2
     ],
     "points": 10,
     "cliSnippet": null,
