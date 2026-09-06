@@ -33,8 +33,8 @@ function FinishScreen({
 
   const percentage =
     maxPossiblePoints > 0 ? (points / maxPossiblePoints) * 100 : 0;
-  const ciscoScaleScore = Math.round(300 + (percentage / 100) * 700); // 300 - 1000 scale
-  const isPassed = ciscoScaleScore >= 825 || percentage >= 82.5;
+  const ciscoScaleScore = Math.round((percentage / 100) * 1000); // 0 - 1000 scale
+  const isPassed = percentage >= 82.5;
 
   const incorrectIndices = getIncorrectQuestionIndices(questions, answers);
   const incorrectCount = incorrectIndices.length;
@@ -72,7 +72,9 @@ function FinishScreen({
         <div className="report-metrics-grid">
           <div className="metric-box">
             <span className="metric-label">Your Scaled Score</span>
-            <span className="metric-value highlight">{ciscoScaleScore}</span>
+            <span className={`metric-value ${isPassed ? "highlight text-green" : "text-danger"}`}>
+              {ciscoScaleScore}
+            </span>
             <span className="metric-meta">out of 1000 ({points} Points)</span>
           </div>
 
