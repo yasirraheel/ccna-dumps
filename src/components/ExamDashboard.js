@@ -758,59 +758,51 @@ function ExamDashboard({
                           <div className="card-actions-dropdown-menu" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              className="card-dropdown-item"
+                              className="card-dropdown-item item-score-report"
                               onClick={() => {
                                 setOpenActionMenuId(null);
                                 setSelectedReportExam(exam);
                               }}
                             >
                               <span className="dropdown-item-icon">📊</span>
-                              <div className="dropdown-item-text">
-                                <strong>View Score Report</strong>
-                                <span className="dropdown-item-sub">Full pass/fail report & scaled score</span>
-                              </div>
+                              <span className="dropdown-item-label">View Score Report</span>
                             </button>
 
                             {onReviewExam && (
                               <button
                                 type="button"
-                                className="card-dropdown-item"
+                                className="card-dropdown-item item-review"
                                 onClick={() => {
                                   setOpenActionMenuId(null);
                                   onReviewExam(exam);
                                 }}
                               >
                                 <span className="dropdown-item-icon">🔍</span>
-                                <div className="dropdown-item-text">
-                                <strong>Review Exam (Read-Only)</strong>
-                                <span className="dropdown-item-sub">Inspect questions with explanations</span>
-                              </div>
-                            </button>
+                                <span className="dropdown-item-label">Review Exam (Read-Only)</span>
+                              </button>
                             )}
 
                             {(onRetakeAll || onRetakeExam) && (
                               <button
                                 type="button"
-                                className="card-dropdown-item"
+                                className="card-dropdown-item item-retake-all"
                                 onClick={() => {
                                   setOpenActionMenuId(null);
                                   (onRetakeAll || onRetakeExam)(exam);
                                 }}
                               >
                                 <span className="dropdown-item-icon">↺</span>
-                                <div className="dropdown-item-text">
-                                  <strong>Retake All Questions</strong>
-                                  <span className="dropdown-item-sub">
-                                    Restart all {exam.totalQuestions || (exam.questions ? exam.questions.length : 0)} questions
-                                  </span>
-                                </div>
+                                <span className="dropdown-item-label">Retake All Questions</span>
+                                <span className="dropdown-item-badge badge-all">
+                                  {exam.totalQuestions || (exam.questions ? exam.questions.length : 0)} Qs
+                                </span>
                               </button>
                             )}
 
                             {onRetakeFlagged && (
                               <button
                                 type="button"
-                                className={`card-dropdown-item ${flaggedCount === 0 ? "disabled" : ""}`}
+                                className={`card-dropdown-item item-retake-flagged ${flaggedCount === 0 ? "disabled" : ""}`}
                                 disabled={flaggedCount === 0}
                                 onClick={() => {
                                   if (flaggedCount === 0) return;
@@ -819,20 +811,25 @@ function ExamDashboard({
                                 }}
                               >
                                 <span className="dropdown-item-icon">⚑</span>
-                                <div className="dropdown-item-text">
-                                  <strong>Retake Marked Questions</strong>
-                                  <span className="dropdown-item-sub">
-                                    {flaggedCount > 0 ? `${flaggedCount} marked for review` : "No marked questions"}
-                                  </span>
-                                </div>
+                                <span className="dropdown-item-label">Retake Marked Only</span>
+                                <span className="dropdown-item-badge badge-flagged">
+                                  {flaggedCount} Qs
+                                </span>
                               </button>
                             )}
 
                             {onRetakeIncorrect && (
                               <button
                                 type="button"
-                                className={`card-dropdown-item ${nonCorrectCount === 0 ? "disabled" : ""}`}
+                                className={`card-dropdown-item item-retake-incorrect ${nonCorrectCount === 0 ? "disabled" : ""}`}
                                 disabled={nonCorrectCount === 0}
+                                title={
+                                  nonCorrectCount > 0
+                                    ? unansweredCount > 0
+                                      ? `${incorrectCount} incorrect, ${unansweredCount} missed`
+                                      : `${incorrectCount} answered incorrectly`
+                                    : "All answers correct!"
+                                }
                                 onClick={() => {
                                   if (nonCorrectCount === 0) return;
                                   setOpenActionMenuId(null);
@@ -840,20 +837,12 @@ function ExamDashboard({
                                 }}
                               >
                                 <span className="dropdown-item-icon">✕</span>
-                                <div className="dropdown-item-text">
-                                  <strong>
-                                    {unansweredCount > 0
-                                      ? `Retake Incorrect & Missed (${nonCorrectCount})`
-                                      : `Retake Incorrect Only (${incorrectCount})`}
-                                  </strong>
-                                  <span className="dropdown-item-sub">
-                                    {nonCorrectCount > 0
-                                      ? unansweredCount > 0
-                                        ? `${incorrectCount} incorrect, ${unansweredCount} missed`
-                                        : `${incorrectCount} answered incorrectly`
-                                      : "All questions were correct!"}
-                                  </span>
-                                </div>
+                                <span className="dropdown-item-label">
+                                  {unansweredCount > 0 ? "Retake Incorrect & Missed" : "Retake Incorrect Only"}
+                                </span>
+                                <span className="dropdown-item-badge badge-incorrect">
+                                  {nonCorrectCount} Qs
+                                </span>
                               </button>
                             )}
                           </div>
