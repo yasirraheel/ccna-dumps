@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
 
@@ -21,6 +21,12 @@ function ResumeExamsView({
     type: "danger",
     onConfirm: () => {},
   });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
 
   const formatRelativeTime = (timestamp, fallbackSessionId) => {
     let effective = timestamp;

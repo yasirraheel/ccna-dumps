@@ -540,6 +540,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState(getViewFromUrl);
 
   const handleNavigate = (view) => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
     setCurrentView(view);
     let targetUrl = "/";
     if (view === "admin") {
@@ -574,6 +577,17 @@ export default function App() {
       }
     }
   };
+
+  // Always reset scroll position to top whenever currentView switches
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const rootEl = document.querySelector(".cisco-simulator-root");
+    if (rootEl) rootEl.scrollTop = 0;
+    const appContainer = document.querySelector(".simulator-app-container");
+    if (appContainer) appContainer.scrollTop = 0;
+  }, [currentView]);
 
   useEffect(() => {
     const handlePopState = () => {
