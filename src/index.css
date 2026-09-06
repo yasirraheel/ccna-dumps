@@ -6885,7 +6885,9 @@ body {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  min-width: 270px;
+  min-width: 320px;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 32px));
   background: #0f172a;
   border: 1.5px solid rgba(255, 255, 255, 0.16);
   border-radius: 0.9rem;
@@ -6896,12 +6898,13 @@ body {
   flex-direction: column;
   gap: 0.3rem;
   animation: fadeIn 0.15s ease-out;
+  box-sizing: border-box;
 }
 
 .card-dropdown-item {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
+  gap: 1rem;
   padding: 0.75rem 1rem;
   background: transparent;
   border: 1px solid transparent;
@@ -6913,6 +6916,7 @@ body {
   width: 100%;
   font-family: inherit;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .card-dropdown-item .dropdown-item-icon {
@@ -6922,21 +6926,30 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 2rem;
+  flex-shrink: 0;
 }
 
 .card-dropdown-item .dropdown-item-label {
   font-size: 1.3rem;
   font-weight: 600;
   white-space: nowrap;
+  flex: 1 1 auto;
 }
 
 .card-dropdown-item .dropdown-item-badge {
   margin-left: auto;
   font-size: 1.15rem;
   font-weight: 700;
-  padding: 0.2rem 0.65rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  line-height: 1.2;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  word-break: keep-all !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 /* 1. SCORE REPORT - EMERALD GREEN */
@@ -7029,4 +7042,44 @@ body {
   filter: grayscale(0.85);
   pointer-events: none;
 }
+
+/* MOBILE RESPONSIVENESS FOR ACTIONS DROPDOWN */
+@media (max-width: 640px) {
+  .past-exam-footer-actions,
+  .history-full-actions-bar {
+    position: relative !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.8rem !important;
+  }
+
+  .card-actions-dropdown-container {
+    position: static !important;
+  }
+
+  .card-actions-dropdown-menu {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    top: calc(100% + 6px) !important;
+    box-sizing: border-box !important;
+  }
+
+  .card-dropdown-item {
+    padding: 0.75rem 0.85rem;
+    gap: 0.75rem;
+  }
+
+  .card-dropdown-item .dropdown-item-label {
+    font-size: 1.2rem;
+  }
+
+  .card-dropdown-item .dropdown-item-badge {
+    font-size: 1.05rem;
+    padding: 0.2rem 0.6rem;
+  }
+}
+
 
