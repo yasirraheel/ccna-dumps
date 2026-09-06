@@ -291,7 +291,7 @@ function ExamHistoryView({
                               <span className="dropdown-item-icon">↺</span>
                               <span className="dropdown-item-label">Retake All Questions</span>
                               <span className="dropdown-item-badge badge-all">
-                                {exam.totalQuestions || (exam.questions ? exam.questions.length : 0)} Qs
+                                {exam.totalQuestions || (exam.questions ? exam.questions.length : 0)}&nbsp;Qs
                               </span>
                             </button>
 
@@ -308,7 +308,7 @@ function ExamHistoryView({
                               <span className="dropdown-item-icon">⚑</span>
                               <span className="dropdown-item-label">Retake Marked Only</span>
                               <span className="dropdown-item-badge badge-flagged">
-                                {flaggedCount} Qs
+                                {flaggedCount}&nbsp;Qs
                               </span>
                             </button>
 
@@ -334,7 +334,7 @@ function ExamHistoryView({
                                 {unansweredCount > 0 ? "Retake Incorrect & Missed" : "Retake Incorrect Only"}
                               </span>
                               <span className="dropdown-item-badge badge-incorrect">
-                                {nonCorrectCount} Qs
+                                {nonCorrectCount}&nbsp;Qs
                               </span>
                             </button>
                           </div>
