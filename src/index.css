@@ -7117,8 +7117,13 @@ body {
   .past-exam-preview-card,
   .history-full-card {
     padding: 1.6rem 1.4rem !important;
-    overflow-x: hidden;
   }
+}
+
+.past-exam-preview-card.has-open-dropdown,
+.history-full-card.has-open-dropdown {
+  z-index: 1000 !important;
+  position: relative !important;
 }
 
 /* ==========================================================================

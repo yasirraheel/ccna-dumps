@@ -673,10 +673,12 @@ function ExamDashboard({
                 const incorrectCount = examStats ? examStats.incorrect : 0;
                 const unansweredCount = examStats ? examStats.unanswered : 0;
 
+                const isOpen = openActionMenuId === (exam.id || idx);
                 return (
                   <div
                     key={exam.id || `past_${idx}`}
-                    className="past-exam-preview-card is-clickable"
+                    className={`past-exam-preview-card is-clickable ${isOpen ? "has-open-dropdown" : ""}`}
+                    style={isOpen ? { zIndex: 1000, position: "relative" } : undefined}
                     onClick={() => setSelectedReportExam(exam)}
                     title="Click card to view detailed Score Report"
                   >

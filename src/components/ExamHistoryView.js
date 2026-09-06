@@ -141,10 +141,12 @@ function ExamHistoryView({
               const incorrectCount = examStats ? examStats.incorrect : 0;
               const unansweredCount = examStats ? examStats.unanswered : 0;
 
+              const isOpen = openActionMenuId === (exam.id || idx);
               return (
                 <div
                   key={exam.id || idx}
-                  className={`history-full-card is-clickable ${isPassed ? "pass-border" : "fail-border"}`}
+                  className={`history-full-card is-clickable ${isPassed ? "pass-border" : "fail-border"} ${isOpen ? "has-open-dropdown" : ""}`}
+                  style={isOpen ? { zIndex: 1000, position: "relative" } : undefined}
                   onClick={() => setSelectedReportExam(exam)}
                   title="Click card to view detailed Score Report"
                 >
