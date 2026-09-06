@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminFetch } from '../../utils/adminApi';
 import CustomConfirmModal from '../CustomConfirmModal';
+import { normalizePlan } from '../../utils/planPermissions';
 
 function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const [users, setUsers] = useState([]);
@@ -8,6 +9,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [planFilter, setPlanFilter] = useState('');
   const [editingUser, setEditingUser] = useState(null);
   const [actionFeedback, setActionFeedback] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
@@ -20,13 +22,82 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
     onConfirm: null,
   });
 
+  const [availablePlans, setAvailablePlans] = useState(() => {
+    try {
+      const cached = localStorage.getItem('ccna_cached_plans');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const fetchAvailablePlans = async () => {
+    try {
+      const res = await adminFetch('/api/admin/plans');
+      const data = await res.json();
+      if (data && data.plans && Array.isArray(data.plans)) {
+        setAvailablePlans(data.plans);
+        try {
+          localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
+        } catch {}
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      const publicRes = await fetch('/api/plans');
+      const publicData = await publicRes.json();
+      if (publicData && publicData.plans && Array.isArray(publicData.plans)) {
+        setAvailablePlans(publicData.plans);
+        try {
+          localStorage.setItem('ccna_cached_plans', JSON.stringify(publicData.plans));
+        } catch {}
+      }
+    } catch (err) {
+      console.warn('Could not load dynamic plans in AdminUsers:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAvailablePlans();
+  }, []);
+
+  const getEffectivePlanValue = (rawPlan) => {
+    if (!rawPlan) return availablePlans[0]?.id || 'plan_free';
+    const match = availablePlans.find(
+      (p) =>
+        p.id === rawPlan ||
+        p.id === `plan_${rawPlan}` ||
+        p.id?.replace(/^plan_/, '') === String(rawPlan).replace(/^plan_/, '') ||
+        p.name?.toLowerCase() === String(rawPlan).toLowerCase()
+    );
+    return match ? match.id : rawPlan;
+  };
+
+  const getPlanDisplayName = (rawPlan) => {
+    if (!rawPlan) return 'Free';
+    const match = availablePlans.find(
+      (p) =>
+        p.id === rawPlan ||
+        p.id === `plan_${rawPlan}` ||
+        p.id?.replace(/^plan_/, '') === String(rawPlan).replace(/^plan_/, '') ||
+        p.name?.toLowerCase() === String(rawPlan).toLowerCase()
+    );
+    if (match && match.name) return match.name;
+    const clean = String(rawPlan).replace(/^plan_/, '');
+    if (clean === 'free') return 'Free';
+    if (clean === 'pro') return 'Intermediate';
+    if (clean === 'unlimited') return 'Advance';
+    return clean.toUpperCase();
+  };
+
   // New User Form State
   const [newUserData, setNewUserData] = useState({
     name: '',
     email: '',
     password: 'Password123!',
     role: 'user',
-    plan: 'free',
+    plan: 'plan_free',
     isVerified: true
   });
 
@@ -37,6 +108,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
       if (search) query.append('search', search);
       if (roleFilter) query.append('role', roleFilter);
       if (statusFilter) query.append('status', statusFilter);
+      if (planFilter) query.append('plan', planFilter);
 
       const res = await adminFetch(`/api/admin/users?${query.toString()}`);
       const data = await res.json();
@@ -55,7 +127,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
       fetchUsers();
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, roleFilter, statusFilter]);
+  }, [search, roleFilter, statusFilter, planFilter]);
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
@@ -218,6 +290,19 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
               <option value="unverified">Pending Verification</option>
             </select>
 
+            <select
+              className="admin-select"
+              value={planFilter}
+              onChange={(e) => setPlanFilter(e.target.value)}
+            >
+              <option value="">All Plans</option>
+              {availablePlans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+
             <button
               type="button"
               className="btn-admin-primary"
@@ -291,8 +376,14 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
                       </span>
                     </td>
                     <td>
-                      <span className="badge-pill badge-pro">
-                        {u.plan ? u.plan.toUpperCase() : 'FREE'}
+                      <span className={`badge-pill ${
+                        normalizePlan(u.plan) === 'unlimited'
+                          ? 'badge-unlimited'
+                          : normalizePlan(u.plan) === 'pro'
+                          ? 'badge-pro'
+                          : 'badge-free'
+                      }`}>
+                        {getPlanDisplayName(u.plan)}
                       </span>
                     </td>
                     <td>
@@ -398,12 +489,22 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
                     <label className="admin-form-label">Access Plan</label>
                     <select
                       className="admin-select"
-                      value={editingUser.plan || 'free'}
+                      value={getEffectivePlanValue(editingUser.plan)}
                       onChange={(e) => setEditingUser({ ...editingUser, plan: e.target.value })}
                     >
-                      <option value="free">Free Study Pass</option>
-                      <option value="pro">CCNA Pro Pass</option>
-                      <option value="unlimited">CCNA Unlimited Pass</option>
+                      {availablePlans.length > 0 ? (
+                        availablePlans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="plan_free">Free</option>
+                          <option value="plan_pro">Intermediate</option>
+                          <option value="plan_unlimited">Advance</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
@@ -517,12 +618,22 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
                     <label className="admin-form-label">Assigned Plan</label>
                     <select
                       className="admin-select"
-                      value={newUserData.plan}
+                      value={getEffectivePlanValue(newUserData.plan)}
                       onChange={(e) => setNewUserData({ ...newUserData, plan: e.target.value })}
                     >
-                      <option value="free">Free Study Pass</option>
-                      <option value="pro">CCNA Pro Pass</option>
-                      <option value="unlimited">CCNA Unlimited Pass</option>
+                      {availablePlans.length > 0 ? (
+                        availablePlans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="plan_free">Free</option>
+                          <option value="plan_pro">Intermediate</option>
+                          <option value="plan_unlimited">Advance</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>

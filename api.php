@@ -1093,6 +1093,14 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         } else if ($status === 'unverified') {
             $sql .= " AND u.is_verified = 0";
         }
+        $plan = trim($_GET['plan'] ?? '');
+        if ($plan) {
+            $shortPlan = str_replace('plan_', '', $plan);
+            $fullPlan = strpos($plan, 'plan_') === 0 ? $plan : 'plan_' . $plan;
+            $sql .= " AND (u.plan = ? OR u.plan = ?)";
+            $params[] = $shortPlan;
+            $params[] = $fullPlan;
+        }
 
         $sql .= " ORDER BY u.created_at DESC";
         $stmt = $pdo->prepare($sql);
@@ -1186,7 +1194,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
     // 13.6 Plans List: GET /api/admin/plans
     if (preg_match('#^/api/admin/plans$#', $basePath) && $method === 'GET') {
         $plans = $pdo->query("SELECT p.*,
-            (SELECT COUNT(*) FROM users u WHERE (u.plan COLLATE utf8mb4_general_ci = p.id COLLATE utf8mb4_general_ci) OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL))) as subscribers_count
+            (SELECT COUNT(*) FROM users u WHERE (u.plan COLLATE utf8mb4_general_ci = p.id COLLATE utf8mb4_general_ci) OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL)) OR (u.plan COLLATE utf8mb4_general_ci = REPLACE(p.id, 'plan_', '') COLLATE utf8mb4_general_ci)) as subscribers_count
             FROM plans p ORDER BY p.price ASC")->fetchAll();
         $formatted = array_map(function($p) {
             $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
