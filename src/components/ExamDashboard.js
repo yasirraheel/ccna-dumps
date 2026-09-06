@@ -516,11 +516,13 @@ function ExamDashboard({
 
                     const stats = bankAnalysis?.bankStatsMap?.[bank.key];
                     const isAttentionNeeded = Boolean(currentUser && stats?.needsIntervention);
+                    const isStrong = Boolean(currentUser && !isAttentionNeeded && stats?.strengthTier === "strong" && stats?.attemptsCount > 0);
+                    const isModerate = Boolean(currentUser && !isAttentionNeeded && stats?.strengthTier === "moderate" && stats?.attemptsCount > 0);
 
                     return (
                       <label
                         key={bank.key}
-                        className={`bank-radio-card ${selectedBank === bank.key ? "active" : ""} ${isLocked ? "bank-locked" : ""} ${isAttentionNeeded ? "bank-attention-highlight" : ""}`}
+                        className={`bank-radio-card ${selectedBank === bank.key ? "active" : ""} ${isLocked ? "bank-locked" : ""} ${isAttentionNeeded ? "bank-attention-highlight" : ""} ${isStrong ? "bank-strong-highlight" : ""} ${isModerate ? "bank-moderate-highlight" : ""}`}
                         onClick={(e) => {
                           if (isLocked) {
                             e.preventDefault();

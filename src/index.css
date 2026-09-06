@@ -673,6 +673,14 @@ body {
   border-left: 3.5px solid #f87171 !important;
 }
 
+.bank-radio-card.bank-strong-highlight {
+  border-left: 3.5px solid #10b981 !important;
+}
+
+.bank-radio-card.bank-moderate-highlight {
+  border-left: 3.5px solid #f59e0b !important;
+}
+
 .bank-card-main-line {
   display: flex;
   align-items: center;
