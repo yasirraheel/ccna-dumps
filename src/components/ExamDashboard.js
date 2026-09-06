@@ -11,7 +11,7 @@ import {
   getPlanDisplayInfo,
   EXAM_BANKS
 } from "../utils/planPermissions";
-import { getIncorrectQuestionIndices } from "../utils/examScoring";
+import { getExamQuestionStats } from "../utils/examScoring";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -51,7 +51,14 @@ function ExamDashboard({
   const [selectedBank, setSelectedBank] = useState("bank_a");
   const [examMode, setExamMode] = useState("study");
   const [selectedReportExam, setSelectedReportExam] = useState(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleDocClick = () => setOpenActionMenuId(null);
+    document.addEventListener("click", handleDocClick);
+    return () => document.removeEventListener("click", handleDocClick);
+  }, []);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
@@ -660,17 +667,11 @@ function ExamDashboard({
                 const flaggedCount = exam.flaggedQuestions
                   ? exam.flaggedQuestions.length
                   : 0;
-
-                const incorrectIndices =
-                  exam.incorrectQuestions !== undefined
-                    ? exam.incorrectQuestions
-                    : getIncorrectQuestionIndices(
-                        exam.questions,
-                        exam.answers
-                      );
-                const incorrectCount = Array.isArray(incorrectIndices)
-                  ? incorrectIndices.length
-                  : 0;
+                const hasQuestions = exam.questions && exam.questions.length > 0;
+                const examStats = hasQuestions ? getExamQuestionStats(exam.questions, exam.answers) : null;
+                const nonCorrectCount = examStats ? examStats.nonCorrectIndices.length : 0;
+                const incorrectCount = examStats ? examStats.incorrect : 0;
+                const unansweredCount = examStats ? examStats.unanswered : 0;
 
                 return (
                   <div
@@ -729,7 +730,7 @@ function ExamDashboard({
                       </div>
                     </div>
 
-                    <div className="past-exam-footer-actions">
+                    <div className="past-exam-footer-actions" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         className="btn-history-action btn-history-score-report"
@@ -741,57 +742,123 @@ function ExamDashboard({
                         📊 Score Report
                       </button>
 
-                      {onReviewExam && (
+                      <div className="card-actions-dropdown-container">
                         <button
                           type="button"
-                          className="btn-history-action btn-history-review"
+                          className="btn-history-action btn-history-actions-toggle"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onReviewExam(exam);
+                            setOpenActionMenuId(openActionMenuId === (exam.id || idx) ? null : (exam.id || idx));
                           }}
                         >
-                          🔍 Review Exam (Read-Only)
+                          ⚡ Actions ▾
                         </button>
-                      )}
 
-                      {(onRetakeAll || onRetakeExam) && (
-                        <button
-                          type="button"
-                          className="btn-history-action btn-history-retake-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            (onRetakeAll || onRetakeExam)(exam);
-                          }}
-                        >
-                          ↺ Retake All Questions
-                        </button>
-                      )}
+                        {openActionMenuId === (exam.id || idx) && (
+                          <div className="card-actions-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="card-dropdown-item"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                setSelectedReportExam(exam);
+                              }}
+                            >
+                              <span className="dropdown-item-icon">📊</span>
+                              <div className="dropdown-item-text">
+                                <strong>View Score Report</strong>
+                                <span className="dropdown-item-sub">Full pass/fail report & scaled score</span>
+                              </div>
+                            </button>
 
-                      {flaggedCount > 0 && onRetakeFlagged && (
-                        <button
-                          type="button"
-                          className="btn-history-action btn-history-retake-flagged"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRetakeFlagged(exam);
-                          }}
-                        >
-                          ⚑ Retake Flagged Only ({flaggedCount})
-                        </button>
-                      )}
+                            {onReviewExam && (
+                              <button
+                                type="button"
+                                className="card-dropdown-item"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  onReviewExam(exam);
+                                }}
+                              >
+                                <span className="dropdown-item-icon">🔍</span>
+                                <div className="dropdown-item-text">
+                                <strong>Review Exam (Read-Only)</strong>
+                                <span className="dropdown-item-sub">Inspect questions with explanations</span>
+                              </div>
+                            </button>
+                            )}
 
-                      {incorrectCount > 0 && onRetakeIncorrect && (
-                        <button
-                          type="button"
-                          className="btn-history-action btn-history-retake-incorrect"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRetakeIncorrect(exam);
-                          }}
-                        >
-                          ✕ Retake Incorrect Only ({incorrectCount})
-                        </button>
-                      )}
+                            {(onRetakeAll || onRetakeExam) && (
+                              <button
+                                type="button"
+                                className="card-dropdown-item"
+                                onClick={() => {
+                                  setOpenActionMenuId(null);
+                                  (onRetakeAll || onRetakeExam)(exam);
+                                }}
+                              >
+                                <span className="dropdown-item-icon">↺</span>
+                                <div className="dropdown-item-text">
+                                  <strong>Retake All Questions</strong>
+                                  <span className="dropdown-item-sub">
+                                    Restart all {exam.totalQuestions || (exam.questions ? exam.questions.length : 0)} questions
+                                  </span>
+                                </div>
+                              </button>
+                            )}
+
+                            {onRetakeFlagged && (
+                              <button
+                                type="button"
+                                className={`card-dropdown-item ${flaggedCount === 0 ? "disabled" : ""}`}
+                                disabled={flaggedCount === 0}
+                                onClick={() => {
+                                  if (flaggedCount === 0) return;
+                                  setOpenActionMenuId(null);
+                                  onRetakeFlagged(exam);
+                                }}
+                              >
+                                <span className="dropdown-item-icon">⚑</span>
+                                <div className="dropdown-item-text">
+                                  <strong>Retake Marked Questions</strong>
+                                  <span className="dropdown-item-sub">
+                                    {flaggedCount > 0 ? `${flaggedCount} marked for review` : "No marked questions"}
+                                  </span>
+                                </div>
+                              </button>
+                            )}
+
+                            {onRetakeIncorrect && (
+                              <button
+                                type="button"
+                                className={`card-dropdown-item ${nonCorrectCount === 0 ? "disabled" : ""}`}
+                                disabled={nonCorrectCount === 0}
+                                onClick={() => {
+                                  if (nonCorrectCount === 0) return;
+                                  setOpenActionMenuId(null);
+                                  onRetakeIncorrect(exam);
+                                }}
+                              >
+                                <span className="dropdown-item-icon">✕</span>
+                                <div className="dropdown-item-text">
+                                  <strong>
+                                    {unansweredCount > 0
+                                      ? `Retake Incorrect & Missed (${nonCorrectCount})`
+                                      : `Retake Incorrect Only (${incorrectCount})`}
+                                  </strong>
+                                  <span className="dropdown-item-sub">
+                                    {nonCorrectCount > 0
+                                      ? unansweredCount > 0
+                                        ? `${incorrectCount} incorrect, ${unansweredCount} missed`
+                                        : `${incorrectCount} answered incorrectly`
+                                      : "All questions were correct!"}
+                                  </span>
+                                </div>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

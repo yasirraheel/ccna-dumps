@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { getIncorrectQuestionIndices } from "../utils/examScoring";
+import { getExamQuestionStats } from "../utils/examScoring";
 
 function FinishScreen({
   points,
@@ -39,24 +39,22 @@ function FinishScreen({
   const ciscoScaleScore = Math.round((percentage / 100) * 1000); // 0 - 1000 scale
   const isPassed = percentage >= 82.5;
 
-  const incorrectIndices =
-    Array.isArray(incorrectQuestions)
-      ? incorrectQuestions
-      : getIncorrectQuestionIndices(questions, answers);
-  const incorrectCount = incorrectIndices.length;
-  let answeredCount = 0;
-  if (questions && questions.length > 0) {
-    questions.forEach((_, idx) => {
-      const ans = answers ? answers[idx] : null;
-      if (ans !== null && ans !== undefined) {
-        answeredCount++;
-      }
-    });
-  } else if (Array.isArray(answers)) {
-    answeredCount = answers.filter((a) => a !== null && a !== undefined).length;
-  }
-  const totalCount = numQuestions || (questions ? questions.length : 0);
-  const correctCount = Math.max(0, totalCount - incorrectCount);
+  const stats = (questions && questions.length > 0)
+    ? getExamQuestionStats(questions, answers)
+    : {
+        total: numQuestions || 0,
+        answered: Array.isArray(answers) ? answers.filter((a) => a !== null && a !== undefined).length : 0,
+        correct: Math.max(0, (numQuestions || 0) - (Array.isArray(incorrectQuestions) ? incorrectQuestions.length : 0)),
+        incorrect: Array.isArray(incorrectQuestions) ? incorrectQuestions.length : 0,
+        unanswered: 0,
+        nonCorrectIndices: Array.isArray(incorrectQuestions) ? incorrectQuestions : [],
+      };
+
+  const totalCount = numQuestions || stats.total || (questions ? questions.length : 0);
+  const correctCount = stats.correct;
+  const incorrectCount = stats.incorrect; // answered, but wrong
+  const unansweredCount = stats.unanswered; // skipped / missed
+  const nonCorrectCount = stats.nonCorrectIndices.length; // total non-correct
   const flaggedCount = flaggedQuestions ? flaggedQuestions.length : 0;
 
   return (
@@ -118,8 +116,10 @@ function FinishScreen({
 
           <div className="metric-box">
             <span className="metric-label">Questions Summary</span>
-            <span className="metric-value">{correctCount} / {numQuestions}</span>
-            <span className="metric-meta">{answeredCount} Answered, {incorrectCount} Missed, {flaggedCount} Marked</span>
+            <span className="metric-value">{correctCount} / {totalCount}</span>
+            <span className="metric-meta">
+              {correctCount} Correct, {incorrectCount} Incorrect{unansweredCount > 0 ? `, ${unansweredCount} Missed` : ""}{flaggedCount > 0 ? `, ${flaggedCount} Marked` : ""}
+            </span>
           </div>
         </div>
 
@@ -210,18 +210,28 @@ function FinishScreen({
 
                 <button
                   type="button"
-                  className={`retake-dropdown-item ${incorrectCount === 0 ? "disabled" : ""}`}
-                  disabled={incorrectCount === 0}
+                  className={`retake-dropdown-item ${nonCorrectCount === 0 ? "disabled" : ""}`}
+                  disabled={nonCorrectCount === 0}
                   onClick={() => {
-                    if (incorrectCount === 0) return;
+                    if (nonCorrectCount === 0) return;
                     setIsRetakeMenuOpen(false);
                     if (onRetakeIncorrect) onRetakeIncorrect();
                   }}
                 >
                   <span className="item-icon">✕</span>
                   <div className="item-text-wrap">
-                    <strong>Retake Incorrect Questions</strong>
-                    <span className="item-sub">{incorrectCount > 0 ? `${incorrectCount} incorrect/missed` : "All answers correct!"}</span>
+                    <strong>
+                      {unansweredCount > 0
+                        ? `Retake Incorrect & Missed (${nonCorrectCount})`
+                        : `Retake Incorrect Only (${incorrectCount})`}
+                    </strong>
+                    <span className="item-sub">
+                      {nonCorrectCount > 0
+                        ? unansweredCount > 0
+                          ? `${incorrectCount} incorrect, ${unansweredCount} missed`
+                          : `${incorrectCount} answered incorrectly`
+                        : "All answers correct!"}
+                    </span>
                   </div>
                 </button>
               </div>

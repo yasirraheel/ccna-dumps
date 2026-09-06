@@ -91,3 +91,86 @@ export function getIncorrectQuestionIndices(questions, answers) {
   }
   return incorrectIndices;
 }
+
+/**
+ * Detailed breakdown separating:
+ * - correct: Answered correctly
+ * - incorrect: Answered, but wrong
+ * - unanswered: Never answered (missed / skipped)
+ */
+export function getExamQuestionStats(questions, answers) {
+  if (!questions || !Array.isArray(questions)) {
+    return {
+      total: 0,
+      answered: 0,
+      correct: 0,
+      incorrect: 0,
+      unanswered: 0,
+      incorrectIndices: [],
+      unansweredIndices: [],
+      nonCorrectIndices: [],
+    };
+  }
+
+  const incorrectIndices = [];
+  const unansweredIndices = [];
+  let correctCount = 0;
+
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const ans = answers ? answers[i] : null;
+
+    if (ans === null || ans === undefined) {
+      unansweredIndices.push(i);
+      continue;
+    }
+
+    const rawCorrect = q.correctOptions || q.correctOption;
+    const correctArr = Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect];
+    let isCorrect = false;
+
+    if (q.type === "drag_drop" || q.dragDropData) {
+      isCorrect = Boolean(ans?.confirmed && ans?.isCorrect);
+    } else if (correctArr.length > 1) {
+      const userSelections = Array.isArray(ans)
+        ? ans
+        : Array.isArray(ans?.selections)
+        ? ans.selections
+        : typeof ans === "number"
+        ? [ans]
+        : [];
+      isCorrect =
+        userSelections.length === correctArr.length &&
+        userSelections.every((idx) => correctArr.includes(idx));
+    } else {
+      const chosenOpt =
+        typeof ans === "number"
+          ? ans
+          : Array.isArray(ans)
+          ? ans[0]
+          : ans?.selections?.[0];
+      isCorrect = chosenOpt !== undefined && correctArr.includes(chosenOpt);
+    }
+
+    if (isCorrect) {
+      correctCount++;
+    } else {
+      incorrectIndices.push(i);
+    }
+  }
+
+  const nonCorrectIndices = [...incorrectIndices, ...unansweredIndices];
+  const total = questions.length;
+  const answered = total - unansweredIndices.length;
+
+  return {
+    total,
+    answered,
+    correct: correctCount,
+    incorrect: incorrectIndices.length,
+    unanswered: unansweredIndices.length,
+    incorrectIndices,
+    unansweredIndices,
+    nonCorrectIndices,
+  };
+}

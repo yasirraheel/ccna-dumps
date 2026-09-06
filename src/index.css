@@ -6849,3 +6849,102 @@ body {
   width: 100%;
 }
 
+/* ==========================================================================
+   CARD ACTIONS DROPDOWN MENU
+   ========================================================================== */
+
+.card-actions-dropdown-container {
+  position: relative;
+  display: inline-flex;
+}
+
+.btn-history-actions-toggle {
+  background: #1e293b;
+  color: #f1f5f9;
+  border: 1.5px solid #475569;
+  font-size: 1.35rem;
+  font-weight: 600;
+  padding: 0.8rem 1.4rem;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-history-actions-toggle:hover {
+  background: #334155;
+  border-color: #64748b;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.card-actions-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 290px;
+  background: #111522;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 0.6rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.card-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 1.2rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  width: 100%;
+  font-family: inherit;
+  color: #e2e8f0;
+}
+
+.card-dropdown-item:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.card-dropdown-item.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.card-dropdown-item .dropdown-item-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  min-width: 2.2rem;
+  text-align: center;
+}
+
+.card-dropdown-item .dropdown-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.card-dropdown-item .dropdown-item-text strong {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.card-dropdown-item .dropdown-item-text .dropdown-item-sub {
+  font-size: 1.15rem;
+  color: #94a3b8;
+}
+

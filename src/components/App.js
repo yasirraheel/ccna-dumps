@@ -14,7 +14,7 @@ import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
-import { calculateTotalPoints, getIncorrectQuestionIndices } from "../utils/examScoring";
+import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
@@ -1254,8 +1254,8 @@ export default function App() {
     if (!requireAuth()) return;
     const baseList = examRecord?.questions?.length ? examRecord.questions : questions;
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
-    const incorrectIdxs = getIncorrectQuestionIndices(baseList, ansList);
-    let incorrectList = baseList.filter((_, idx) => incorrectIdxs.includes(idx));
+    const stats = getExamQuestionStats(baseList, ansList);
+    let incorrectList = baseList.filter((_, idx) => stats.nonCorrectIndices.includes(idx));
 
     if (incorrectList.length === 0) {
       setAlertDialog({
@@ -1281,13 +1281,14 @@ export default function App() {
     }
 
     setFlaggedQuestions([]);
+    const titleLabel = stats.unanswered > 0 ? "Incorrect & Missed" : "Incorrect Only";
     dispatch({
       type: "startExam",
       payload: {
         questions: incorrectList,
         examMode: mode,
         settings: stngs,
-        bankName: `${bank} (Incorrect Only - ${incorrectList.length} Qs)`,
+        bankName: `${bank} (${titleLabel} - ${incorrectList.length} Qs)`,
       },
     });
     handleNavigate("exam");

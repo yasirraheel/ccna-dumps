@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
 import FinishScreen from "./FinishScreen";
+import { getExamQuestionStats } from "../utils/examScoring";
 
 function ExamHistoryView({
   pastExams = [],
@@ -18,6 +19,13 @@ function ExamHistoryView({
   onLogout,
 }) {
   const [selectedReportExam, setSelectedReportExam] = useState(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleDocClick = () => setOpenActionMenuId(null);
+    document.addEventListener("click", handleDocClick);
+    return () => document.removeEventListener("click", handleDocClick);
+  }, []);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
@@ -128,6 +136,10 @@ function ExamHistoryView({
               const hasQuestions = exam.questions && exam.questions.length > 0;
               const pctNum = parseFloat(exam.percentage) || 0;
               const isPassed = exam.passed;
+              const examStats = hasQuestions ? getExamQuestionStats(exam.questions, exam.answers) : null;
+              const nonCorrectCount = examStats ? examStats.nonCorrectIndices.length : 0;
+              const incorrectCount = examStats ? examStats.incorrect : 0;
+              const unansweredCount = examStats ? examStats.unanswered : 0;
 
               return (
                 <div
@@ -218,7 +230,7 @@ function ExamHistoryView({
 
                   {/* ACTIONS BAR */}
                   {hasQuestions && (
-                    <div className="history-full-actions-bar">
+                    <div className="history-full-actions-bar" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         className="btn-history-action btn-history-score-report"
@@ -230,53 +242,115 @@ function ExamHistoryView({
                         📊 Score Report
                       </button>
 
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-review"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onReviewExam(exam);
-                        }}
-                      >
-                        🔍 Review Exam (Read-Only)
-                      </button>
+                      <div className="card-actions-dropdown-container">
+                        <button
+                          type="button"
+                          className="btn-history-action btn-history-actions-toggle"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenActionMenuId(openActionMenuId === (exam.id || idx) ? null : (exam.id || idx));
+                          }}
+                        >
+                          ⚡ Actions ▾
+                        </button>
 
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-retake-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRetakeAll(exam);
-                        }}
-                      >
-                        ↺ Retake All Questions
-                      </button>
+                        {openActionMenuId === (exam.id || idx) && (
+                          <div className="card-actions-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="card-dropdown-item"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                setSelectedReportExam(exam);
+                              }}
+                            >
+                              <span className="dropdown-item-icon">📊</span>
+                              <div className="dropdown-item-text">
+                                <strong>View Score Report</strong>
+                                <span className="dropdown-item-sub">Full pass/fail report & scaled score</span>
+                              </div>
+                            </button>
 
-                      <button
-                        type="button"
-                        className={`btn-history-action btn-history-retake-flagged ${
-                          flaggedCount === 0 ? "disabled" : ""
-                        }`}
-                        disabled={flaggedCount === 0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (flaggedCount > 0) onRetakeFlagged(exam);
-                        }}
-                        title={flaggedCount > 0 ? `Retake ${flaggedCount} marked questions` : "No marked questions"}
-                      >
-                        ⚑ Retake Flagged Only {flaggedCount > 0 ? `(${flaggedCount})` : ""}
-                      </button>
+                            <button
+                              type="button"
+                              className="card-dropdown-item"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onReviewExam(exam);
+                              }}
+                            >
+                              <span className="dropdown-item-icon">🔍</span>
+                              <div className="dropdown-item-text">
+                                <strong>Review Exam (Read-Only)</strong>
+                                <span className="dropdown-item-sub">Inspect questions with explanations</span>
+                              </div>
+                            </button>
 
-                      <button
-                        type="button"
-                        className="btn-history-action btn-history-retake-incorrect"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRetakeIncorrect(exam);
-                        }}
-                      >
-                        ✕ Retake Incorrect Only
-                      </button>
+                            <button
+                              type="button"
+                              className="card-dropdown-item"
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                onRetakeAll(exam);
+                              }}
+                            >
+                              <span className="dropdown-item-icon">↺</span>
+                              <div className="dropdown-item-text">
+                                <strong>Retake All Questions</strong>
+                                <span className="dropdown-item-sub">
+                                  Restart all {exam.totalQuestions || (exam.questions ? exam.questions.length : 0)} questions
+                                </span>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`card-dropdown-item ${flaggedCount === 0 ? "disabled" : ""}`}
+                              disabled={flaggedCount === 0}
+                              onClick={() => {
+                                if (flaggedCount === 0) return;
+                                setOpenActionMenuId(null);
+                                onRetakeFlagged(exam);
+                              }}
+                            >
+                              <span className="dropdown-item-icon">⚑</span>
+                              <div className="dropdown-item-text">
+                                <strong>Retake Marked Questions</strong>
+                                <span className="dropdown-item-sub">
+                                  {flaggedCount > 0 ? `${flaggedCount} marked for review` : "No marked questions"}
+                                </span>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`card-dropdown-item ${nonCorrectCount === 0 ? "disabled" : ""}`}
+                              disabled={nonCorrectCount === 0}
+                              onClick={() => {
+                                if (nonCorrectCount === 0) return;
+                                setOpenActionMenuId(null);
+                                onRetakeIncorrect(exam);
+                              }}
+                            >
+                              <span className="dropdown-item-icon">✕</span>
+                              <div className="dropdown-item-text">
+                                <strong>
+                                  {unansweredCount > 0
+                                    ? `Retake Incorrect & Missed (${nonCorrectCount})`
+                                    : `Retake Incorrect Only (${incorrectCount})`}
+                                </strong>
+                                <span className="dropdown-item-sub">
+                                  {nonCorrectCount > 0
+                                    ? unansweredCount > 0
+                                      ? `${incorrectCount} incorrect, ${unansweredCount} missed`
+                                      : `${incorrectCount} answered incorrectly`
+                                    : "All questions were correct!"}
+                                </span>
+                              </div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
