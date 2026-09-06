@@ -15,6 +15,7 @@ import CustomConfirmModal from "./CustomConfirmModal";
 import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
+import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
@@ -116,6 +117,7 @@ function getInitialExamState() {
       timerMode: "not_timed",
     },
     selectedBankName: "Full CCNA Exam",
+    selectedBankKey: "bank_all",
     activeSessionId: null,
     startedAt: null,
     revealedQuestions: [],
@@ -149,7 +151,7 @@ function reducer(state, action) {
       };
 
     case "startExam": {
-      const { questions, examMode, settings, bankName } = action.payload;
+      const { questions, examMode, settings, bankName, bankKey } = action.payload;
       const initialAnswers = new Array(questions.length).fill(null);
 
       let timerSeconds = null;
@@ -174,6 +176,7 @@ function reducer(state, action) {
         examMode,
         settings,
         selectedBankName: bankName,
+        selectedBankKey: bankKey || matchExamToBankKey({ bankName }),
         index: 0,
         answer: null,
         answers: initialAnswers,
@@ -488,6 +491,7 @@ export default function App() {
       examMode,
       settings,
       selectedBankName,
+      selectedBankKey,
       activeSessionId,
       startedAt,
       revealedQuestions,
@@ -882,7 +886,9 @@ export default function App() {
         examMode,
         settings,
         selectedBankName,
+        selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
         bankName: selectedBankName,
+        bankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
         flaggedQuestions,
         candidateName: currentUser?.name || candidateName,
         revealedQuestions: revealedQuestions || [],
@@ -935,6 +941,7 @@ export default function App() {
     examMode,
     settings,
     selectedBankName,
+    selectedBankKey,
     flaggedQuestions,
     candidateName,
     currentUser,
@@ -979,6 +986,7 @@ export default function App() {
         userEmail: currentUser?.email || null,
         candidateName: currentUser?.name || candidateName || "Candidate",
         bankName: selectedBankName,
+        bankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
         score: points,
         maxScore: maxPossiblePoints,
         percentage,
@@ -1044,6 +1052,7 @@ export default function App() {
     candidateName,
     currentUser,
     selectedBankName,
+    selectedBankKey,
     activeSessionId,
     answers,
     flaggedQuestions,

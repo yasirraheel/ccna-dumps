@@ -12,6 +12,7 @@ import {
   EXAM_BANKS
 } from "../utils/planPermissions";
 import { getExamQuestionStats } from "../utils/examScoring";
+import { getAllBanksAnalysis } from "../utils/bankStrengthAlgorithm";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -264,6 +265,7 @@ function ExamDashboard({
       examMode,
       settings: effectiveSettings,
       bankName: bankTitle,
+      bankKey: selectedBank,
     });
   };
 
@@ -310,6 +312,10 @@ function ExamDashboard({
     : [];
 
   const latestThreeExams = sortedPastExams.slice(0, 3);
+
+  const bankAnalysis = React.useMemo(() => {
+    return getAllBanksAnalysis(pastExams, currentUser, EXAM_BANKS);
+  }, [pastExams, currentUser]);
 
   return (
     <div className="boson-dashboard-wrapper">
@@ -473,9 +479,19 @@ function ExamDashboard({
               {/* LEFT PANEL: Bank Selector */}
               <div className="dashboard-left-panel">
                 <div className="panel-header">
-                  <h3 className="panel-title">
-                    Exam Bank <span className="info-circle">ⓘ</span>
-                  </h3>
+                  <div className="panel-header-title-row">
+                    <h3 className="panel-title">
+                      Exam Bank <span className="info-circle" title="Select a bank to practice. Performance stats and bank mastery strength are tracked per bank.">ⓘ</span>
+                    </h3>
+                    {currentUser && bankAnalysis?.weakestBank && bankAnalysis.weakestBank.needsIntervention && (
+                      <span
+                        className="bank-attention-alert-badge"
+                        title={`Recommended focus: ${bankAnalysis.weakestBank.bankDisplayName} has ${bankAnalysis.weakestBank.strengthScore}% strength with ${bankAnalysis.weakestBank.failCount} failed attempt(s).`}
+                      >
+                        ⚠️ Focus: {bankAnalysis.weakestBank.bankDisplayName} ({bankAnalysis.weakestBank.strengthScore}%)
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="bank-options-list">
@@ -498,10 +514,13 @@ function ExamDashboard({
                       .replace("Special Bank", "Special")
                       .replace("All Questions Bank", "All Questions");
 
+                    const stats = bankAnalysis?.bankStatsMap?.[bank.key];
+                    const isAttentionNeeded = Boolean(currentUser && stats?.needsIntervention);
+
                     return (
                       <label
                         key={bank.key}
-                        className={`bank-radio-card ${selectedBank === bank.key ? "active" : ""} ${isLocked ? "bank-locked" : ""}`}
+                        className={`bank-radio-card ${selectedBank === bank.key ? "active" : ""} ${isLocked ? "bank-locked" : ""} ${isAttentionNeeded ? "bank-attention-highlight" : ""}`}
                         onClick={(e) => {
                           if (isLocked) {
                             e.preventDefault();
@@ -509,17 +528,73 @@ function ExamDashboard({
                           }
                         }}
                       >
-                        <input
-                          type="radio"
-                          name="examBank"
-                          value={bank.key}
-                          checked={selectedBank === bank.key}
-                          onChange={() => handleBankSelect(bank.key, bank.name)}
-                        />
-                        <span className="radio-circle"></span>
-                        <span className="bank-name">{displayName}</span>
-                        <span className="bank-meta">{metaText}</span>
-                        {isLocked && <span className="bank-lock-badge">🔒 LOCKED</span>}
+                        <div className="bank-card-main-line">
+                          <input
+                            type="radio"
+                            name="examBank"
+                            value={bank.key}
+                            checked={selectedBank === bank.key}
+                            onChange={() => handleBankSelect(bank.key, bank.name)}
+                          />
+                          <span className="radio-circle"></span>
+                          <span className="bank-name">{displayName}</span>
+                          <div className="bank-card-right-group">
+                            <span className="bank-meta">{metaText}</span>
+                            {isLocked && <span className="bank-lock-badge">🔒 LOCKED</span>}
+                          </div>
+                        </div>
+
+                        {/* STATS STRIP FOR LOGGED IN CANDIDATE */}
+                        {currentUser ? (
+                          <div className="bank-card-stats-area">
+                            {stats && stats.attemptsCount > 0 ? (
+                              <>
+                                <div className="bank-stats-subline">
+                                  <div className="bank-attempts-pill-group">
+                                    <span className="bank-stat-chip attempts-chip" title={`${stats.attemptsCount} total completed exam attempt(s)`}>
+                                      {stats.attemptsCount} {stats.attemptsCount === 1 ? "Attempt" : "Attempts"}
+                                    </span>
+                                    <span className="bank-stat-chip pass-chip" title={`${stats.passCount} attempt(s) passed (≥ 82.5%)`}>
+                                      <span className="chip-indicator pass-dot"></span>
+                                      {stats.passCount} Pass
+                                    </span>
+                                    <span className="bank-stat-chip fail-chip" title={`${stats.failCount} attempt(s) failed (< 82.5%)`}>
+                                      <span className="chip-indicator fail-dot"></span>
+                                      {stats.failCount} Fail
+                                    </span>
+                                  </div>
+
+                                  <div className="bank-strength-pill-group">
+                                    <span
+                                      className={`bank-strength-badge ${stats.strengthTierClass}`}
+                                      title={stats.interventionMessage}
+                                    >
+                                      <span className="strength-dot"></span>
+                                      <span className="strength-percent">{stats.strengthScore}%</span>
+                                      <span className="strength-text">{stats.strengthLabel}</span>
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="bank-mini-meter-track" title={`Mastery Strength: ${stats.strengthScore}% — ${stats.interventionMessage}`}>
+                                  <div
+                                    className={`bank-mini-meter-bar ${stats.strengthTierClass}`}
+                                    style={{ width: `${Math.min(100, Math.max(3, stats.strengthScore))}%` }}
+                                  />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="bank-stats-subline unattempted-line">
+                                <span className="bank-unattempted-badge">0 Attempts</span>
+                                <span className="bank-unattempted-hint">
+                                  {isLocked
+                                    ? "Locked on current pass"
+                                    : "Untested • Complete an exam to evaluate mastery"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
                       </label>
                     );
                   })}
