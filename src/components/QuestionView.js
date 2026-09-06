@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import DragDropQuestion from "./DragDropQuestion";
 import QuestionPaletteModal from "./QuestionPaletteModal";
 import CustomConfirmModal from "./CustomConfirmModal";
@@ -99,6 +99,34 @@ function QuestionView({
       return {};
     }
   });
+
+  // Filter notes strictly to questions belonging to the currently active exam bank
+  const currentBankNotes = useMemo(() => {
+    if (!Array.isArray(questions) || questions.length === 0) return {};
+    const bankNotes = {};
+    const bankQIds = new Set(
+      questions
+        .map((q) => (q?.id !== undefined && q?.id !== null ? String(q.id) : null))
+        .filter(Boolean)
+    );
+    const bankQNos = new Set(
+      questions
+        .map((q) => (q?.questionNo ? String(q.questionNo) : null))
+        .filter(Boolean)
+    );
+
+    Object.entries(questionComments).forEach(([key, text]) => {
+      if (!text || !text.trim()) return;
+      const strKey = String(key);
+      if (bankQIds.has(strKey) || bankQNos.has(strKey)) {
+        bankNotes[key] = text;
+      }
+    });
+
+    return bankNotes;
+  }, [questions, questionComments]);
+
+  const currentBankNotesCount = Object.keys(currentBankNotes).length;
 
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -347,12 +375,12 @@ function QuestionView({
           <button
             type="button"
             className={`btn-top-notes-summary ${
-              Object.keys(questionComments).length > 0 ? "has-notes" : ""
+              currentBankNotesCount > 0 ? "has-notes" : ""
             }`}
             onClick={() => setIsAllNotesModalOpen(true)}
-            title="View all question notes and copy fix report for AI"
+            title="View question notes in this exam bank"
           >
-            <span>💬 Notes ({Object.keys(questionComments).length})</span>
+            <span>💬 Notes ({currentBankNotesCount})</span>
           </button>
         </div>
 
@@ -886,7 +914,7 @@ function QuestionView({
           answers={answers}
           questions={questions}
           flaggedQuestions={flaggedQuestions}
-          comments={questionComments}
+          comments={currentBankNotes}
           onSelectQuestion={onGoToQuestion}
           onClose={() => setShowPaletteModal(false)}
         />
@@ -895,7 +923,7 @@ function QuestionView({
       {/* QUESTION NOTES & EXPORT MODAL */}
       {isAllNotesModalOpen && (
         <QuestionNotesModal
-          comments={questionComments}
+          comments={currentBankNotes}
           allQuestions={questions}
           onSelectQuestion={(targetIdx) => onGoToQuestion(targetIdx)}
           onDeleteComment={(qId) => handleDeleteComment(qId)}
@@ -1019,7 +1047,7 @@ function QuestionView({
       <MobileBottomBar
         isExamActive={true}
         onOpenNotes={() => setIsNoteBoxOpen(true)}
-        notesCount={Object.keys(questionComments).length}
+        notesCount={currentBankNotesCount}
         onOpenReviewMatrix={() => setShowPaletteModal(true)}
         onGradeExam={handleGradeClick}
         isReviewMode={isReviewMode}

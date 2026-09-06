@@ -37,7 +37,9 @@ function QuestionPaletteModal({
   );
 
   const flaggedCount = flaggedQuestions.length;
-  const notesCount = Object.keys(comments).filter((k) => comments[k] && comments[k].trim()).length;
+  const notesCount = Array.from({ length: numQuestions }, (_, i) => i).filter(
+    (idx) => getStatus(idx).hasNote
+  ).length;
   const answeredCount = answers.filter(
     (a) => a !== null && a !== undefined && (typeof a === "number" || a?.confirmed || a?.selections?.length > 0)
   ).length;

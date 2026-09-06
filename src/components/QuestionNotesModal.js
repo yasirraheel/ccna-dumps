@@ -14,7 +14,7 @@ function QuestionNotesModal({
     .map(([qId, text]) => {
       const numId = Number(qId);
       const qIndex = allQuestions.findIndex(
-        (q) => q.id === numId || String(q.id) === String(qId)
+        (q) => q.id === numId || String(q.id) === String(qId) || q.questionNo === qId
       );
       const qObj = qIndex >= 0 ? allQuestions[qIndex] : null;
       return {
@@ -24,14 +24,15 @@ function QuestionNotesModal({
         prompt: qObj?.question || "",
         comment: text,
       };
-    });
+    })
+    .filter((item) => item.index >= 0);
 
   const handleCopyAll = () => {
     if (commentedList.length === 0) return;
     const reportLines = [
       "# 📝 CCNA Exam Questions - User Feedback & Fix List",
       "",
-      `Total questions flagged with notes: ${commentedList.length}`,
+      `Total questions in this bank flagged with notes: ${commentedList.length}`,
       "",
     ];
 
