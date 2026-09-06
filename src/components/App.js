@@ -19,43 +19,127 @@ import { calculateTotalPoints, getIncorrectQuestionIndices } from "../utils/exam
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
 const HISTORY_STORAGE_KEY = "ccna_past_exams_list";
+const ACTIVE_RUNNING_SESSION_KEY = "ccna_active_running_session";
+const ACTIVE_RUNNING_SESSION_ID_KEY = "ccna_active_running_session_id";
 
-const initialState = {
-  allQuestions: ccnaQuestions || [],
-  questions: ccnaQuestions || [],
-  status: ccnaQuestions?.length > 0 ? "ready" : "loading",
-  index: 0,
-  answer: null,
-  answers: [],
-  points: 0,
-  highscore: 0,
-  secondsRemaining: null,
-  examMode: "study",
-  settings: {
-    randomizeQuestions: false,
-    randomizeAnswers: false,
-    showScoreLive: true,
-    showRequiredAnswersCount: true,
-    includeShowAnswerBtn: true,
-    showAnswersInline: true,
-    timerMode: "not_timed",
-  },
-  selectedBankName: "Full CCNA Exam",
-  activeSessionId: null,
-  startedAt: null,
-  revealedQuestions: [],
-  isReviewMode: false,
-  isPaused: false,
-};
+function getInitialExamState() {
+  const path = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
+  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const isExamUrl = path === "/exam" || path.startsWith("/exam") || search?.get("view") === "exam";
+
+  let activeSession = null;
+  try {
+    const directStored = localStorage.getItem(ACTIVE_RUNNING_SESSION_KEY);
+    if (directStored) {
+      activeSession = JSON.parse(directStored);
+    }
+    if (!activeSession) {
+      const activeId = localStorage.getItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+      const listStored = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      if (listStored) {
+        const list = JSON.parse(listStored);
+        if (Array.isArray(list) && list.length > 0) {
+          activeSession = (activeId ? list.find((s) => s.id === activeId) : null) || (isExamUrl ? list[0] : null);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Initial active session parse error:", e);
+  }
+
+  if (activeSession && (isExamUrl || localStorage.getItem(ACTIVE_RUNNING_SESSION_ID_KEY))) {
+    if (activeSession.questions && Array.isArray(activeSession.questions) && activeSession.questions.length > 0) {
+      const validIndex =
+        typeof activeSession.index === "number" &&
+        activeSession.index >= 0 &&
+        activeSession.index < activeSession.questions.length
+          ? activeSession.index
+          : 0;
+
+      return {
+        allQuestions: ccnaQuestions || [],
+        questions: activeSession.questions,
+        status: "active",
+        index: validIndex,
+        answer:
+          activeSession.answer !== undefined
+            ? activeSession.answer
+            : (activeSession.answers?.[validIndex] ?? null),
+        answers:
+          activeSession.answers ||
+          new Array(activeSession.questions.length).fill(null),
+        points: typeof activeSession.points === "number" ? activeSession.points : 0,
+        highscore: 0,
+        secondsRemaining:
+          activeSession.secondsRemaining !== undefined
+            ? activeSession.secondsRemaining
+            : null,
+        examMode: activeSession.examMode || "study",
+        settings: activeSession.settings || {
+          randomizeQuestions: false,
+          randomizeAnswers: false,
+          showScoreLive: true,
+          showRequiredAnswersCount: true,
+          includeShowAnswerBtn: true,
+          showAnswersInline: true,
+          timerMode: "not_timed",
+        },
+        selectedBankName:
+          activeSession.selectedBankName || activeSession.bankName || "Exam",
+        activeSessionId: activeSession.id || `session_${Date.now()}`,
+        startedAt: activeSession.startedAt || Date.now(),
+        revealedQuestions: activeSession.revealedQuestions || [],
+        isReviewMode: Boolean(activeSession.isReviewMode),
+        isPaused: Boolean(activeSession.isPaused),
+      };
+    }
+  }
+
+  return {
+    allQuestions: ccnaQuestions || [],
+    questions: ccnaQuestions || [],
+    status: ccnaQuestions?.length > 0 ? "ready" : "loading",
+    index: 0,
+    answer: null,
+    answers: [],
+    points: 0,
+    highscore: 0,
+    secondsRemaining: null,
+    examMode: "study",
+    settings: {
+      randomizeQuestions: false,
+      randomizeAnswers: false,
+      showScoreLive: true,
+      showRequiredAnswersCount: true,
+      includeShowAnswerBtn: true,
+      showAnswersInline: true,
+      timerMode: "not_timed",
+    },
+    selectedBankName: "Full CCNA Exam",
+    activeSessionId: null,
+    startedAt: null,
+    revealedQuestions: [],
+    isReviewMode: false,
+    isPaused: false,
+  };
+}
+
+const initialState = getInitialExamState();
 
 function reducer(state, action) {
   switch (action.type) {
     case "dataReceived":
+      if (state.status === "active") {
+        return {
+          ...state,
+          allQuestions: action.payload,
+        };
+      }
       return {
         ...state,
         allQuestions: action.payload,
         questions: action.payload,
-        status: "ready",
+        status: state.status === "loading" ? "ready" : state.status,
       };
 
     case "dataFailed":
@@ -78,6 +162,11 @@ function reducer(state, action) {
         timerSeconds = questions.length * 60;
 
       const startTime = Date.now();
+      const newSessionId = `session_${startTime}`;
+      try {
+        localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, newSessionId);
+      } catch {}
+
       return {
         ...state,
         questions,
@@ -90,7 +179,7 @@ function reducer(state, action) {
         answers: initialAnswers,
         points: 0,
         secondsRemaining: timerSeconds,
-        activeSessionId: `session_${startTime}`,
+        activeSessionId: newSessionId,
         startedAt: startTime,
         revealedQuestions: [],
         isReviewMode: false,
@@ -126,6 +215,11 @@ function reducer(state, action) {
         initialStartTime = state.startedAt || Date.now();
       }
 
+      const finalSessionId = activeSessionId || `session_${initialStartTime}`;
+      try {
+        localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, finalSessionId);
+      } catch {}
+
       return {
         ...state,
         questions,
@@ -139,7 +233,7 @@ function reducer(state, action) {
         settings: settings || initialState.settings,
         selectedBankName: selectedBankName || "Resumed CCNA Exam",
         status: "active",
-        activeSessionId: activeSessionId || `session_${initialStartTime}`,
+        activeSessionId: finalSessionId,
         startedAt: initialStartTime,
         revealedQuestions: revealedQuestions || [],
         isReviewMode: Boolean(isReviewMode),
@@ -325,6 +419,10 @@ function reducer(state, action) {
     }
 
     case "finish": {
+      try {
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+      } catch {}
       const finalPoints = calculateTotalPoints(state.questions, state.answers);
       return {
         ...state,
@@ -336,7 +434,11 @@ function reducer(state, action) {
       };
     }
 
-    case "restart":
+    case "restart": {
+      try {
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+      } catch {}
       return {
         ...initialState,
         allQuestions: state.allQuestions,
@@ -344,11 +446,18 @@ function reducer(state, action) {
         status: "ready",
         isPaused: false,
       };
+    }
 
     case "tick": {
       if (state.isPaused) return state;
       const nextSeconds = state.secondsRemaining - 1;
       const isTimeUp = nextSeconds <= 0;
+      if (isTimeUp) {
+        try {
+          localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+          localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+        } catch {}
+      }
       return {
         ...state,
         secondsRemaining: isTimeUp ? 0 : nextSeconds,
@@ -397,6 +506,9 @@ export default function App() {
     if (path === "/admin" || path.startsWith("/admin/") || viewParam === "admin" || hash.startsWith("admin")) {
       return "admin";
     }
+    if (path === "/exam" || path === "/exam/" || viewParam === "exam" || hash === "exam") {
+      return "exam";
+    }
     if (path === "/history" || viewParam === "history" || hash === "history") {
       return "history";
     }
@@ -428,6 +540,8 @@ export default function App() {
     let targetUrl = "/";
     if (view === "admin") {
       targetUrl = "/admin";
+    } else if (view === "exam") {
+      targetUrl = "/exam";
     } else if (view === "history") {
       targetUrl = "/history";
     } else if (view === "resume-exams") {
@@ -459,11 +573,45 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentView(getViewFromUrl());
+      const nextView = getViewFromUrl();
+      if (nextView !== "exam" && status === "active" && !isReviewMode) {
+        try {
+          localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+          localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+        } catch {}
+        dispatch({ type: "restart" });
+      }
+      setCurrentView(nextView);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [status, isReviewMode]);
+
+  // Sync browser URL with active exam route (/exam)
+  useEffect(() => {
+    if (status === "active" && !isReviewMode) {
+      if (window.location.pathname !== "/exam") {
+        window.history.pushState({ view: "exam" }, "", "/exam");
+      }
+      if (currentView !== "exam") {
+        setCurrentView("exam");
+      }
+    } else if (status === "finished") {
+      if (window.location.pathname === "/exam") {
+        window.history.replaceState({ view: "dashboard" }, "", "/");
+      }
+      if (currentView === "exam") {
+        setCurrentView("dashboard");
+      }
+    }
+  }, [status, isReviewMode, currentView]);
+
+  // If user opens /exam directly but there is no active session running, smoothly redirect to dashboard
+  useEffect(() => {
+    if (currentView === "exam" && status !== "active") {
+      handleNavigate("dashboard");
+    }
+  }, [currentView, status]);
   
   // User Authentication State
   const [currentUser, setCurrentUser] = useState(() => {
@@ -531,7 +679,16 @@ export default function App() {
     return localStorage.getItem("ccna_candidate_name") || "Candidate";
   });
 
-  const [flaggedQuestions, setFlaggedQuestions] = useState([]);
+  const [flaggedQuestions, setFlaggedQuestions] = useState(() => {
+    try {
+      const direct = localStorage.getItem(ACTIVE_RUNNING_SESSION_KEY);
+      if (direct) {
+        const s = JSON.parse(direct);
+        if (Array.isArray(s?.flaggedQuestions)) return s.flaggedQuestions;
+      }
+    } catch {}
+    return [];
+  });
   const hasSavedRef = useRef(false);
 
   // Validate session on launch
@@ -732,6 +889,7 @@ export default function App() {
         startedAt: initialStartTime,
         savedAt: Date.now(),
         updatedAt: Date.now(),
+        isPaused: Boolean(isPaused),
       };
 
       setSavedSessions((prev) => {
@@ -750,6 +908,8 @@ export default function App() {
         }
         try {
           localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem(ACTIVE_RUNNING_SESSION_KEY, JSON.stringify(finalSession));
+          localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, finalSession.id);
         } catch (e) {
           console.warn("Sessions save error:", e);
         }
@@ -782,6 +942,7 @@ export default function App() {
     startedAt,
     revealedQuestions,
     isReviewMode,
+    isPaused,
   ]);
 
   // 3. When exam finishes: record into pastExams history and remove from active savedSessions
@@ -845,6 +1006,10 @@ export default function App() {
       });
 
       // Remove completed session from active sessions
+      try {
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+      } catch (e) {}
       if (activeSessionId) {
         setSavedSessions((prev) => {
           const updated = prev.filter((s) => s.id !== activeSessionId);
@@ -913,6 +1078,7 @@ export default function App() {
   const handleStartExam = (config) => {
     if (!requireAuth()) return;
     dispatch({ type: "startExam", payload: config });
+    handleNavigate("exam");
   };
 
   const handleResumeSession = (session) => {
@@ -947,6 +1113,7 @@ export default function App() {
         startedAt: initialStartTime,
       },
     });
+    handleNavigate("exam");
   };
 
   const handleDeleteSession = (sessionId) => {
@@ -1038,6 +1205,7 @@ export default function App() {
         bankName: `${bank} (Retake)`,
       },
     });
+    handleNavigate("exam");
   };
 
   const handleRetakeFlaggedOnly = (examRecord) => {
@@ -1079,6 +1247,7 @@ export default function App() {
         bankName: `${bank} (Flagged Only - ${flaggedList.length} Qs)`,
       },
     });
+    handleNavigate("exam");
   };
 
   const handleRetakeIncorrectOnly = (examRecord) => {
@@ -1121,6 +1290,7 @@ export default function App() {
         bankName: `${bank} (Incorrect Only - ${incorrectList.length} Qs)`,
       },
     });
+    handleNavigate("exam");
   };
 
   const numQuestions = questions.length;
@@ -1306,6 +1476,10 @@ export default function App() {
             onFinishExam={() => dispatch({ type: "finish" })}
             onExitReview={() => dispatch({ type: "exitReview" })}
             onExitToDashboard={() => {
+              try {
+                localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+                localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+              } catch (e) {}
               dispatch({ type: "restart" });
               handleNavigate("dashboard");
             }}
