@@ -35,7 +35,7 @@ html {
   background-color: var(--bg-main);
   color: var(--color-text-main);
   -webkit-text-size-adjust: 100%;
-  overflow-x: hidden !important;
+  overflow-x: clip;
   width: 100% !important;
   max-width: 100% !important;
 }
@@ -46,7 +46,7 @@ body {
   color: var(--color-text-main);
   font-size: 1.6rem;
   line-height: 1.5;
-  overflow-x: hidden !important;
+  overflow-x: clip;
   width: 100% !important;
   max-width: 100% !important;
   position: relative;
@@ -60,7 +60,7 @@ body {
   background-color: var(--bg-main);
   width: 100% !important;
   max-width: 100% !important;
-  overflow-x: hidden !important;
+  overflow-x: clip;
   position: relative;
 }
 
@@ -79,7 +79,7 @@ body {
   .simulator-app-container {
     padding: 1rem 1.2rem 8rem 1.2rem !important;
     max-width: 100% !important;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 }
 
@@ -1903,12 +1903,6 @@ body {
   }
 }
 
-.boson-top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.6rem;
-}
 
 .btn-boson-back {
   background: transparent;
@@ -5568,13 +5562,39 @@ body {
    STICKY HEADER FOR EXAM VIEW
    ========================================================================== */
 .boson-top-bar {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
-  z-index: 100;
-  background: var(--color-bg, #0f172a);
-  padding: 0.8rem 1.2rem;
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  margin-bottom: 0;
+  z-index: 150;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -2.2rem -3rem 1.8rem -3rem;
+  padding: 1.2rem 2.4rem;
+  background: rgba(26, 31, 40, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-left-radius: 1.4rem;
+  border-top-right-radius: 1.4rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (max-width: 900px) {
+  .boson-top-bar {
+    margin: -1.8rem -2rem 1.6rem -2rem;
+    padding: 1rem 1.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .boson-top-bar {
+    margin: -1.4rem -1.2rem 1.2rem -1.2rem;
+    padding: 0.8rem 1rem;
+    border-top-left-radius: 0.8rem;
+    border-top-right-radius: 0.8rem;
+  }
 }
 
 .top-bar-right-group {
