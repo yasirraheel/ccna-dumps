@@ -162,6 +162,20 @@ function cleanBankName($name) {
     return trim($cleaned);
 }
 
+function enrichQuestionArray(&$questions) {
+    if (!is_array($questions)) return;
+    foreach ($questions as &$q) {
+        if (!is_array($q)) continue;
+        if (!empty($q['originalSourceImage'])) continue;
+        if (!empty($q['questionNo']) && preg_match('/Question\s*#(\d+)/i', $q['questionNo'], $m)) {
+            $num = (int)$m[1];
+            if ($num >= 1 && $num <= 207) {
+                $q['originalSourceImage'] = "original_sources/{$num}.webp";
+            }
+        }
+    }
+}
+
 function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = '') {
     if ($userRole === 'admin' || strtolower($userEmail) === 'candidate@ccna.com') {
         return [
@@ -730,7 +744,11 @@ if (preg_match('#^/api/history#', $basePath)) {
                 'totalQuestions' => (int)$r['total_questions'],
                 'timeSpentSeconds' => (int)$r['time_spent_seconds'],
                 'date' => (float)$r['exam_date'],
-                'questions' => json_decode($r['questions'] ?? '[]', true),
+                'questions' => (function($json) {
+                    $qs = json_decode($json ?? '[]', true);
+                    enrichQuestionArray($qs);
+                    return $qs;
+                })($r['questions']),
                 'answers' => json_decode($r['answers'] ?? '[]', true),
                 'flaggedQuestions' => json_decode($r['flagged_questions'] ?? '[]', true),
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),
@@ -880,7 +898,11 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'points' => (int)$r['points'],
                 'secondsRemaining' => (int)$r['seconds_remaining'],
                 'timeSpentSeconds' => (int)$r['time_spent_seconds'],
-                'questions' => json_decode($r['questions'] ?? '[]', true),
+                'questions' => (function($json) {
+                    $qs = json_decode($json ?? '[]', true);
+                    enrichQuestionArray($qs);
+                    return $qs;
+                })($r['questions']),
                 'answers' => json_decode($r['answers'] ?? '[]', true),
                 'flaggedQuestions' => json_decode($r['flagged_questions'] ?? '[]', true),
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),

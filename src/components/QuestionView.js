@@ -4,6 +4,7 @@ import QuestionPaletteModal from "./QuestionPaletteModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import QuestionNotesModal from "./QuestionNotesModal";
 import MobileBottomBar from "./MobileBottomBar";
+import { resolveOriginalSourceImage } from "../utils/questionSourceHelper";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -425,7 +426,9 @@ function QuestionView({
   };
 
   const exhibitSrc = getExhibitUrl(question.exhibitImage);
-  const originalSourceSrc = getExhibitUrl(question.originalSourceImage);
+  const resolvedOriginalSource =
+    question.originalSourceImage || resolveOriginalSourceImage(question);
+  const originalSourceSrc = getExhibitUrl(resolvedOriginalSource);
 
   const isRevealed = Boolean(revealedQuestions?.includes(seqNumber - 1));
   const maxAllowed = isMulti ? correctOptions.length : 1;
@@ -644,7 +647,7 @@ function QuestionView({
 
           <div className="boson-sub-right-actions">
             {/* VIEW ORIGINAL SOURCE BUTTON */}
-            {question.originalSourceImage && (
+            {resolvedOriginalSource && (
               <button
                 type="button"
                 className={`btn-boson-source-toggle ${showOriginalSource ? "is-active" : ""}`}
@@ -867,7 +870,7 @@ function QuestionView({
         )}
 
         {/* ORIGINAL SOURCE DUMP VIEWER WITH INLINE ZOOM & PAN */}
-        {showOriginalSource && question.originalSourceImage && (
+        {showOriginalSource && resolvedOriginalSource && (
           <div className="boson-original-source-card">
             <div className="original-source-header">
               <div className="original-source-header-left">
@@ -957,7 +960,7 @@ function QuestionView({
                 />
               ) : (
                 <div className="source-error-wrap">
-                  <p>Original source image: {question.originalSourceImage}</p>
+                  <p>Original source image: {resolvedOriginalSource}</p>
                 </div>
               )}
             </div>

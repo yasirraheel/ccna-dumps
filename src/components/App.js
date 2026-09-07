@@ -16,6 +16,7 @@ import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
+import { enrichQuestionsList } from "../utils/questionSourceHelper";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
@@ -59,7 +60,7 @@ function getInitialExamState() {
 
       return {
         allQuestions: ccnaQuestions || [],
-        questions: activeSession.questions,
+        questions: enrichQuestionsList(activeSession.questions),
         status: "active",
         index: validIndex,
         answer:
@@ -772,6 +773,7 @@ export default function App() {
     }
     return {
       ...s,
+      questions: enrichQuestionsList(s.questions),
       startedAt,
       savedAt: s.savedAt || s.updatedAt || s.updated_at || Date.now(),
       selectedBankName: s.selectedBankName || s.bankName || "Exam A",
@@ -793,7 +795,13 @@ export default function App() {
   const [pastExams, setPastExams] = useState(() => {
     try {
       const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed)
+        ? parsed.map((item) => ({
+            ...item,
+            questions: enrichQuestionsList(item.questions),
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -830,9 +838,13 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (data.history && Array.isArray(data.history)) {
-          setPastExams(data.history);
+          const enrichedHistory = data.history.map((item) => ({
+            ...item,
+            questions: enrichQuestionsList(item.questions),
+          }));
+          setPastExams(enrichedHistory);
           try {
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(data.history));
+            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(enrichedHistory));
           } catch {}
         }
       })
@@ -1100,7 +1112,11 @@ export default function App() {
 
   const handleStartExam = (config) => {
     if (!requireAuth()) return;
-    dispatch({ type: "startExam", payload: config });
+    const safeConfig = {
+      ...config,
+      questions: enrichQuestionsList(config?.questions),
+    };
+    dispatch({ type: "startExam", payload: safeConfig });
     handleNavigate("exam");
   };
 
@@ -1119,10 +1135,12 @@ export default function App() {
       initialStartTime = session.savedAt || session.updatedAt || session.updated_at || Date.now();
     }
 
+    const safeQuestions = enrichQuestionsList(session.questions);
+
     dispatch({
       type: "resumeExam",
       payload: {
-        questions: session.questions,
+        questions: safeQuestions,
         index: session.index || 0,
         answer: session.answer || null,
         answers: session.answers || [],
@@ -1179,7 +1197,8 @@ export default function App() {
 
   const handleReviewCompletedExam = (examRecord) => {
     if (!requireAuth()) return;
-    const qList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const qList = enrichQuestionsList(rawList);
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
     const flags = examRecord?.flaggedQuestions || flaggedQuestions;
     const allRevealed = qList.map((_, i) => i);
@@ -1206,7 +1225,8 @@ export default function App() {
 
   const handleRetakeAllQuestions = (examRecord) => {
     if (!requireAuth()) return;
-    let qList = examRecord?.questions?.length ? [...examRecord.questions] : [...questions];
+    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    let qList = enrichQuestionsList(rawList);
     const bank = examRecord?.bankName || selectedBankName;
     const mode = examRecord?.examMode || examMode;
     const stngs = examRecord?.settings || settings;
@@ -1233,7 +1253,8 @@ export default function App() {
 
   const handleRetakeFlaggedOnly = (examRecord) => {
     if (!requireAuth()) return;
-    const baseList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const baseList = enrichQuestionsList(rawList);
     const flags = examRecord?.flaggedQuestions || flaggedQuestions || [];
     let flaggedList = baseList.filter((_, idx) => flags.includes(idx));
 
@@ -1275,7 +1296,8 @@ export default function App() {
 
   const handleRetakeIncorrectOnly = (examRecord) => {
     if (!requireAuth()) return;
-    const baseList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const baseList = enrichQuestionsList(rawList);
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
     const stats = getExamQuestionStats(baseList, ansList);
     let incorrectList = baseList.filter((_, idx) => stats.nonCorrectIndices.includes(idx));
