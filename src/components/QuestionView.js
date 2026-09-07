@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import DragDropQuestion from "./DragDropQuestion";
 import QuestionPaletteModal from "./QuestionPaletteModal";
 import CustomConfirmModal from "./CustomConfirmModal";
@@ -84,7 +84,11 @@ function QuestionView({
   isPaused = false,
   onTogglePause,
 }) {
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [exhibitZoom, setExhibitZoom] = useState(1);
+  const [exhibitPan, setExhibitPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
   const [imgError, setImgError] = useState(false);
   const [showPaletteModal, setShowPaletteModal] = useState(false);
   const [isNoteBoxOpen, setIsNoteBoxOpen] = useState(false);
@@ -142,20 +146,95 @@ function QuestionView({
   const existingComment = questionComments[questionKey] || questionComments[String(question?.id)] || "";
 
   useEffect(() => {
-    setIsZoomed(false);
     setImgError(false);
     setCurrentNoteText(existingComment);
     setIsNoteBoxOpen(false);
+    setExhibitZoom(1);
+    setExhibitPan({ x: 0, y: 0 });
+    setIsPanning(false);
   }, [question?.id, seqNumber, existingComment]);
 
   useEffect(() => {
     if (isPaused) {
-      setIsZoomed(false);
       setIsNoteBoxOpen(false);
       setShowPaletteModal(false);
       setIsAllNotesModalOpen(false);
+      setIsPanning(false);
     }
   }, [isPaused]);
+
+  // Inline Zoom & Pan handlers for Exhibit
+  const handleZoomIn = (e) => {
+    e?.stopPropagation();
+    setExhibitZoom((prev) => Math.min(3.5, +(prev + 0.3).toFixed(1)));
+  };
+
+  const handleZoomOut = (e) => {
+    e?.stopPropagation();
+    setExhibitZoom((prev) => {
+      const next = Math.max(1, +(prev - 0.3).toFixed(1));
+      if (next === 1) setExhibitPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleResetZoom = (e) => {
+    e?.stopPropagation();
+    setExhibitZoom(1);
+    setExhibitPan({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e) => {
+    if (exhibitZoom <= 1) return;
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: exhibitPan.x,
+      panY: exhibitPan.y,
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isPanning || exhibitZoom <= 1) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    setExhibitPan({
+      x: panStartRef.current.panX + dx,
+      y: panStartRef.current.panY + dy,
+    });
+  };
+
+  const handleMouseUpOrLeave = () => {
+    if (isPanning) {
+      setIsPanning(false);
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    if (exhibitZoom <= 1 || e.touches.length !== 1) return;
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      panX: exhibitPan.x,
+      panY: exhibitPan.y,
+    };
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isPanning || exhibitZoom <= 1 || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - panStartRef.current.x;
+    const dy = e.touches[0].clientY - panStartRef.current.y;
+    setExhibitPan({
+      x: panStartRef.current.panX + dx,
+      y: panStartRef.current.panY + dy,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsPanning(false);
+  };
 
   const handleSaveComment = (textToSave) => {
     const trimmed = textToSave ? textToSave.trim() : "";
@@ -681,30 +760,86 @@ function QuestionView({
           </div>
         )}
 
-        {/* EXHIBIT IMAGE */}
+        {/* EXHIBIT IMAGE WITH INLINE ZOOM & PAN */}
         {question.exhibitImage && (
           <div className="boson-exhibit-card">
             <div className="exhibit-header">
-              <span className="exhibit-tag">📸 Exhibit Diagram</span>
-              <button
-                type="button"
-                className="exhibit-zoom-btn"
-                onClick={() => setIsZoomed(!isZoomed)}
-              >
-                {isZoomed ? "🔍 Shrink" : "🔍 Enlarge Exhibit"}
-              </button>
+              <div className="exhibit-header-left">
+                <span className="exhibit-tag">📸 Exhibit Diagram</span>
+                {exhibitZoom > 1 && (
+                  <span className="exhibit-drag-hint">
+                    ↔ Drag image to explore
+                  </span>
+                )}
+              </div>
+
+              {/* + / - / RESET ZOOM CONTROLS */}
+              <div className="exhibit-zoom-controls">
+                <button
+                  type="button"
+                  className="exhibit-ctrl-btn"
+                  onClick={handleZoomOut}
+                  disabled={exhibitZoom <= 1}
+                  title="Zoom Out (-)"
+                  aria-label="Zoom Out"
+                >
+                  −
+                </button>
+                <span className="exhibit-zoom-level">
+                  {Math.round(exhibitZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="exhibit-ctrl-btn"
+                  onClick={handleZoomIn}
+                  disabled={exhibitZoom >= 3.5}
+                  title="Zoom In (+)"
+                  aria-label="Zoom In"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className={`exhibit-ctrl-btn reset ${exhibitZoom > 1 ? "active" : ""}`}
+                  onClick={handleResetZoom}
+                  title="Reset Zoom & Pan"
+                  aria-label="Reset Zoom"
+                >
+                  ⟲ Reset
+                </button>
+              </div>
             </div>
 
             <div
-              className="exhibit-img-frame"
-              onClick={() => setIsZoomed(true)}
-              style={{ cursor: "zoom-in" }}
+              className={`exhibit-img-frame ${exhibitZoom > 1 ? "is-zoomed" : ""} ${isPanning ? "is-panning" : ""}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUpOrLeave}
+              onMouseLeave={handleMouseUpOrLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={{
+                cursor: exhibitZoom > 1 ? (isPanning ? "grabbing" : "grab") : "default",
+                touchAction: exhibitZoom > 1 ? "none" : "auto",
+                overflow: "hidden",
+                position: "relative",
+              }}
             >
               {!imgError ? (
                 <img
                   src={exhibitSrc}
                   alt={`Exhibit for ${question.questionNo || "question"}`}
                   className="boson-exhibit-img"
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
+                  style={{
+                    transform: `translate(${exhibitPan.x}px, ${exhibitPan.y}px) scale(${exhibitZoom})`,
+                    transformOrigin: "center center",
+                    transition: isPanning ? "none" : "transform 0.15s ease-out",
+                    userSelect: "none",
+                    pointerEvents: "auto",
+                  }}
                   onError={(e) => {
                     const clean = (question.exhibitImage || "").replace(/^\/+/, "");
                     if (e.target.src.includes(clean)) {
@@ -931,43 +1066,7 @@ function QuestionView({
         />
       )}
 
-      {/* LIGHTBOX FOR EXHIBIT */}
-      {isZoomed && (
-        <div
-          className="exhibit-modal-backdrop"
-          onClick={() => setIsZoomed(false)}
-        >
-          <div
-            className="exhibit-modal-content"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="exhibit-modal-header">
-              <div className="exhibit-modal-title-wrap">
-                <span className="exhibit-modal-badge">📸 Exhibit</span>
-                <h3 className="exhibit-modal-title">
-                  {question.questionNo || `Question ${seqNumber}`}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className="exhibit-modal-close-btn"
-                onClick={() => setIsZoomed(false)}
-                aria-label="Close exhibit"
-                title="Close exhibit"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="exhibit-modal-img-wrap">
-              <img
-                src={exhibitSrc}
-                alt="Enlarged Exhibit"
-                className="exhibit-modal-image"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* EXAM PAUSED BLUR OVERLAY & RESUME MODAL */}
       {isPaused && (

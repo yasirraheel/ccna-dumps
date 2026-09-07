@@ -2266,10 +2266,96 @@ body {
   gap: 0.8rem;
 }
 
+.exhibit-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .exhibit-tag {
   color: var(--color-green);
   font-weight: 700;
   font-size: 1.35rem;
+}
+
+.exhibit-drag-hint {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px dashed rgba(56, 189, 248, 0.35);
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.exhibit-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.exhibit-ctrl-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f1f5f9;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 0.6rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+  user-select: none;
+}
+
+.exhibit-ctrl-btn:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  color: #4ade80;
+  transform: translateY(-1px);
+}
+
+.exhibit-ctrl-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.exhibit-ctrl-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.exhibit-ctrl-btn.reset {
+  width: auto;
+  padding: 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  gap: 0.4rem;
+}
+
+.exhibit-ctrl-btn.reset.active {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.exhibit-ctrl-btn.reset.active:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+}
+
+.exhibit-zoom-level {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  min-width: 4.6rem;
+  text-align: center;
+  user-select: none;
 }
 
 .exhibit-zoom-btn {
@@ -2286,18 +2372,33 @@ body {
 .exhibit-img-frame {
   display: flex;
   justify-content: center;
-  background-color: #000000;
+  align-items: center;
+  background-color: #0b0f17;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.6rem;
   overflow: hidden;
   padding: 0.8rem;
   max-width: 100%;
+  min-height: 24rem;
+  position: relative;
+  user-select: none;
+}
+
+.exhibit-img-frame.is-zoomed {
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
 }
 
 .boson-exhibit-img {
   max-width: 100%;
   height: auto;
-  max-height: 48rem;
+  max-height: 52rem;
   object-fit: contain;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
 }
 
 .boson-options-list {

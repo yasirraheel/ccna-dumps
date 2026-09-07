@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $envFile = dirname(__DIR__) . '/.env';
 $env = [];
 if (file_exists($envFile)) {
@@ -30,6 +30,18 @@ try {
     $stmt = $pdo->prepare("UPDATE questions SET question = ?, options = ?, correct_option = ? WHERE id = 98 OR question_no = ?");
     $stmt->execute([$q, $opts, $corr, "Question #63"]);
     echo "Synced Question #63 in MySQL. Rows affected: " . $stmt->rowCount() . "\n";
+
+    $q189 = "Refer to the exhibit. Which configuration is needed to configure a WLAN with WPA2 only and with a password that is 63 characters long? (Choose one answer)";
+    $opts189 = json_encode([
+        "A. Enable PSK and FT PSK and then disable WPA Policy.",
+        "B. Enable PSK using Hex format and then disable WPA Policy.",
+        "C. Disable WPA Encryption and then enable FT PSK.",
+        "D. Disable WPA Policy and WPA Encryption and then enable PSK using ASCII."
+    ]);
+    $corr189 = json_encode([1]);
+    $stmt189 = $pdo->prepare("UPDATE questions SET question = ?, options = ?, correct_option = ? WHERE id = 134 OR question_no = ?");
+    $stmt189->execute([$q189, $opts189, $corr189, "Question #189"]);
+    echo "Synced Question #189 in MySQL. Rows affected: " . $stmt189->rowCount() . "\n";
 } catch (Exception $e) {
     echo "Error updating MySQL: " . $e->getMessage() . "\n";
 }

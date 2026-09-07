@@ -2297,12 +2297,12 @@ export const ccnaQuestions = [
   {
     "id": 134,
     "questionNo": "Question #189",
-    "question": "Refer to the exhibit. Which route will be installed in the routing table for destination 172.16.1.0/24? (Choose one answer)",
+    "question": "Refer to the exhibit. Which configuration is needed to configure a WLAN with WPA2 only and with a password that is 63 characters long? (Choose one answer)",
     "options": [
-      "A. OSPF route with AD 110",
-      "B. Static route with AD 1",
-      "C. RIP route with AD 120",
-      "D. EIGRP route with AD 90"
+      "A. Enable PSK and FT PSK and then disable WPA Policy.",
+      "B. Enable PSK using Hex format and then disable WPA Policy.",
+      "C. Disable WPA Encryption and then enable FT PSK.",
+      "D. Disable WPA Policy and WPA Encryption and then enable PSK using ASCII."
     ],
     "correctOption": [
       1
