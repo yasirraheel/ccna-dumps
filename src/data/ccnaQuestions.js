@@ -2166,7 +2166,7 @@ export const ccnaQuestions = [
       "D. router D"
     ],
     "correctOption": [
-      2
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2322,12 +2322,12 @@ export const ccnaQuestions = [
   {
     "id": 128,
     "questionNo": "Question #179",
-    "question": "Which type of wireless frame is used to request association with an access point? (Choose one answer)",
+    "question": "What is a characteristic of encryption in wireless networks? (Choose one answer)",
     "options": [
-      "A. Control frame",
-      "B. Management frame",
-      "C. Data frame",
-      "D. Beacon frame"
+      "A. identifies an access point on a WLAN",
+      "B. encodes plain text into cipher text",
+      "C. eliminates network piggybacking",
+      "D. uses ciphers to authenticate"
     ],
     "correctOption": [
       1
