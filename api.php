@@ -628,7 +628,8 @@ if (preg_match('#^/api/questions#', $basePath)) {
             'dragDropData' => $dragDrop,
             'points' => (int)($r['points'] ?? 10),
             'cliSnippet' => $r['cli_snippet'],
-            'exhibitImage' => $r['exhibit_image']
+            'exhibitImage' => $r['exhibit_image'],
+            'originalSourceImage' => $r['original_source_image'] ?? null
         ];
     }, $rows);
     echo json_encode(["questions" => $formatted]);

@@ -89,6 +89,13 @@ function QuestionView({
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
+  const [showOriginalSource, setShowOriginalSource] = useState(false);
+  const [sourceZoom, setSourceZoom] = useState(1);
+  const [sourcePan, setSourcePan] = useState({ x: 0, y: 0 });
+  const [isPanningSource, setIsPanningSource] = useState(false);
+  const panSourceStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const [sourceImgError, setSourceImgError] = useState(false);
+
   const [imgError, setImgError] = useState(false);
   const [showPaletteModal, setShowPaletteModal] = useState(false);
   const [isNoteBoxOpen, setIsNoteBoxOpen] = useState(false);
@@ -147,6 +154,11 @@ function QuestionView({
 
   useEffect(() => {
     setImgError(false);
+    setSourceImgError(false);
+    setShowOriginalSource(false);
+    setSourceZoom(1);
+    setSourcePan({ x: 0, y: 0 });
+    setIsPanningSource(false);
     setCurrentNoteText(existingComment);
     setIsNoteBoxOpen(false);
     setExhibitZoom(1);
@@ -160,6 +172,7 @@ function QuestionView({
       setShowPaletteModal(false);
       setIsAllNotesModalOpen(false);
       setIsPanning(false);
+      setIsPanningSource(false);
     }
   }, [isPaused]);
 
@@ -234,6 +247,79 @@ function QuestionView({
 
   const handleTouchEnd = () => {
     setIsPanning(false);
+  };
+
+  // Inline Zoom & Pan handlers for Original Source Dump
+  const handleSourceZoomIn = (e) => {
+    e?.stopPropagation();
+    setSourceZoom((prev) => Math.min(3.5, +(prev + 0.3).toFixed(1)));
+  };
+
+  const handleSourceZoomOut = (e) => {
+    e?.stopPropagation();
+    setSourceZoom((prev) => {
+      const next = Math.max(1, +(prev - 0.3).toFixed(1));
+      if (next === 1) setSourcePan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleSourceResetZoom = (e) => {
+    e?.stopPropagation();
+    setSourceZoom(1);
+    setSourcePan({ x: 0, y: 0 });
+  };
+
+  const handleSourceMouseDown = (e) => {
+    if (sourceZoom <= 1) return;
+    setIsPanningSource(true);
+    panSourceStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      panX: sourcePan.x,
+      panY: sourcePan.y,
+    };
+  };
+
+  const handleSourceMouseMove = (e) => {
+    if (!isPanningSource || sourceZoom <= 1) return;
+    const dx = e.clientX - panSourceStartRef.current.x;
+    const dy = e.clientY - panSourceStartRef.current.y;
+    setSourcePan({
+      x: panSourceStartRef.current.panX + dx,
+      y: panSourceStartRef.current.panY + dy,
+    });
+  };
+
+  const handleSourceMouseUpOrLeave = () => {
+    if (isPanningSource) setIsPanningSource(false);
+  };
+
+  const handleSourceTouchStart = (e) => {
+    if (sourceZoom <= 1 || !e.touches || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    setIsPanningSource(true);
+    panSourceStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      panX: sourcePan.x,
+      panY: sourcePan.y,
+    };
+  };
+
+  const handleSourceTouchMove = (e) => {
+    if (!isPanningSource || sourceZoom <= 1 || !e.touches || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - panSourceStartRef.current.x;
+    const dy = touch.clientY - panSourceStartRef.current.y;
+    setSourcePan({
+      x: panSourceStartRef.current.panX + dx,
+      y: panSourceStartRef.current.panY + dy,
+    });
+  };
+
+  const handleSourceTouchEnd = () => {
+    if (isPanningSource) setIsPanningSource(false);
   };
 
   const handleSaveComment = (textToSave) => {
@@ -339,6 +425,7 @@ function QuestionView({
   };
 
   const exhibitSrc = getExhibitUrl(question.exhibitImage);
+  const originalSourceSrc = getExhibitUrl(question.originalSourceImage);
 
   const isRevealed = Boolean(revealedQuestions?.includes(seqNumber - 1));
   const maxAllowed = isMulti ? correctOptions.length : 1;
@@ -556,6 +643,35 @@ function QuestionView({
           </div>
 
           <div className="boson-sub-right-actions">
+            {/* VIEW ORIGINAL SOURCE BUTTON */}
+            {question.originalSourceImage && (
+              <button
+                type="button"
+                className={`btn-boson-source-toggle ${showOriginalSource ? "is-active" : ""}`}
+                onClick={() => setShowOriginalSource((prev) => !prev)}
+                title={showOriginalSource ? "Hide original exam dump source" : "View original question from exam dump PDF"}
+              >
+                <svg
+                  className="source-svg-icon"
+                  viewBox="0 0 24 24"
+                  width="15"
+                  height="15"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span>{showOriginalSource ? "Hide Source" : "Original Source"}</span>
+              </button>
+            )}
+
             {/* ADD / EDIT QUESTION NOTE BUTTON */}
             <button
               type="button"
@@ -747,6 +863,104 @@ function QuestionView({
               <strong>Your Note on this question:</strong> {existingComment}
             </div>
             <span className="note-banner-edit-hint">✎ Edit</span>
+          </div>
+        )}
+
+        {/* ORIGINAL SOURCE DUMP VIEWER WITH INLINE ZOOM & PAN */}
+        {showOriginalSource && question.originalSourceImage && (
+          <div className="boson-original-source-card">
+            <div className="original-source-header">
+              <div className="original-source-header-left">
+                <span className="original-source-tag">📄 Original Dump Source</span>
+                <span className="original-source-qno">{question.questionNo || `Question #${seqNumber}`}</span>
+                {sourceZoom > 1 && (
+                  <span className="source-drag-hint">↔ Drag image to explore</span>
+                )}
+              </div>
+
+              <div className="original-source-controls">
+                <button
+                  type="button"
+                  className="source-ctrl-btn"
+                  onClick={handleSourceZoomOut}
+                  disabled={sourceZoom <= 1}
+                  title="Zoom Out (-)"
+                  aria-label="Zoom Out"
+                >
+                  −
+                </button>
+                <span className="source-zoom-level">
+                  {Math.round(sourceZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="source-ctrl-btn"
+                  onClick={handleSourceZoomIn}
+                  disabled={sourceZoom >= 3.5}
+                  title="Zoom In (+)"
+                  aria-label="Zoom In"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className={`source-ctrl-btn reset ${sourceZoom > 1 ? "active" : ""}`}
+                  onClick={handleSourceResetZoom}
+                  title="Reset Zoom & Pan"
+                  aria-label="Reset Zoom"
+                >
+                  ⟲ Reset
+                </button>
+                <button
+                  type="button"
+                  className="source-ctrl-btn close-btn"
+                  onClick={() => setShowOriginalSource(false)}
+                  title="Close Original Source"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div
+              className={`original-source-img-frame ${sourceZoom > 1 ? "is-zoomed" : ""} ${isPanningSource ? "is-panning" : ""}`}
+              onMouseDown={handleSourceMouseDown}
+              onMouseMove={handleSourceMouseMove}
+              onMouseUp={handleSourceMouseUpOrLeave}
+              onMouseLeave={handleSourceMouseUpOrLeave}
+              onTouchStart={handleSourceTouchStart}
+              onTouchMove={handleSourceTouchMove}
+              onTouchEnd={handleSourceTouchEnd}
+              style={{
+                cursor: sourceZoom > 1 ? (isPanningSource ? "grabbing" : "grab") : "default",
+                touchAction: sourceZoom > 1 ? "none" : "auto",
+                overflow: "hidden",
+                position: "relative",
+              }}
+            >
+              {!sourceImgError ? (
+                <img
+                  src={originalSourceSrc}
+                  alt={`Original Dump Question for ${question.questionNo || "question"}`}
+                  className="boson-original-source-img"
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
+                  style={{
+                    transform: `translate(${sourcePan.x}px, ${sourcePan.y}px) scale(${sourceZoom})`,
+                    transformOrigin: "center center",
+                    transition: isPanningSource ? "none" : "transform 0.15s ease-out",
+                    userSelect: "none",
+                    pointerEvents: "auto",
+                  }}
+                  onError={() => setSourceImgError(true)}
+                />
+              ) : (
+                <div className="source-error-wrap">
+                  <p>Original source image: {question.originalSourceImage}</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

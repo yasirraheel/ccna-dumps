@@ -14,7 +14,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/22.webp"
   },
   {
     "id": 2,
@@ -31,7 +32,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/5.webp"
   },
   {
     "id": 3,
@@ -48,7 +50,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/48.webp"
   },
   {
     "id": 4,
@@ -65,7 +68,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/3.webp"
   },
   {
     "id": 5,
@@ -82,7 +86,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": "Router# show interfaces GigabitEthernet0/1\nGigabitEthernet0/1 is up, line protocol is up\n  Hardware is Gigabit Ethernet, address is 000c.29eb.1234 (bia 000c.29eb.1234)\n  Internet address is 10.1.1.1/24\n  MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\n     reliability 255/255, txload 1/255, rxload 1/255\n  Encapsulation ARPA, loopback not set\n  Keepalive set (10 sec)\n  Half-duplex, 100Mb/s, media type is RJ45\n  output flow-control is unsupported, input flow-control is unsupported\n  ARP type: ARPA, ARP Timeout 04:00:00\n  Last input 00:00:02, output 00:00:01, output hang never\n  Last clearing of \"show interface\" counters never\n  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0\n  Queueing strategy: fifo\n  Output queue: 0/40 (size/max)\n  5 minute input rate 1000 bits/sec, 2 packets/sec\n  5 minute output rate 2000 bits/sec, 3 packets/sec\n     145823 packets input, 10245892 bytes, 0 no buffer\n     Received 412 broadcasts (0 IP multicasts)\n     0 runts, 0 giants, 0 throttles\n     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n     0 watchdog, 0 multicast, 0 pause input\n     185291 packets output, 15478923 bytes, 0 underruns\n     0 output errors, 8421 collisions, 2 interface resets\n     8421 late collisions, 2415 deferred, 0 lost carrier, 0 no carrier",
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/10.webp"
   },
   {
     "id": 6,
@@ -99,7 +104,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/15.webp"
   },
   {
     "id": 7,
@@ -118,7 +124,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/49.webp"
   },
   {
     "id": 8,
@@ -135,7 +142,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/4.webp"
   },
   {
     "id": 9,
@@ -152,7 +160,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/13.webp"
   },
   {
     "id": 10,
@@ -169,7 +178,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/30.webp"
   },
   {
     "id": 11,
@@ -186,7 +196,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/32.webp"
   },
   {
     "id": 12,
@@ -203,7 +214,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/40.webp"
   },
   {
     "id": 13,
@@ -220,7 +232,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/47.webp"
   },
   {
     "id": 14,
@@ -237,7 +250,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/1.webp"
   },
   {
     "id": 15,
@@ -254,7 +268,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/11.webp"
   },
   {
     "id": 16,
@@ -271,7 +286,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/17.webp"
   },
   {
     "id": 17,
@@ -288,7 +304,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/14.webp"
   },
   {
     "id": 18,
@@ -305,7 +322,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/18.webp"
   },
   {
     "id": 19,
@@ -322,7 +340,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/19.webp"
   },
   {
     "id": 20,
@@ -339,7 +358,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/7.webp"
   },
   {
     "id": 21,
@@ -358,7 +378,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/21.png"
+    "exhibitImage": "exhibits/21.png",
+    "originalSourceImage": "original_sources/21.webp"
   },
   {
     "id": 22,
@@ -375,7 +396,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/36.webp"
   },
   {
     "id": 23,
@@ -392,7 +414,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/31.png"
+    "exhibitImage": "exhibits/31.png",
+    "originalSourceImage": "original_sources/31.webp"
   },
   {
     "id": 24,
@@ -409,7 +432,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/37.webp"
   },
   {
     "id": 25,
@@ -428,7 +452,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/45.webp"
   },
   {
     "id": 26,
@@ -445,7 +470,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/8.webp"
   },
   {
     "id": 27,
@@ -462,7 +488,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/12.webp"
   },
   {
     "id": 28,
@@ -479,7 +506,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/16.png"
+    "exhibitImage": "exhibits/16.png",
+    "originalSourceImage": "original_sources/16.webp"
   },
   {
     "id": 29,
@@ -496,7 +524,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/25.webp"
   },
   {
     "id": 30,
@@ -513,7 +542,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/38.webp"
   },
   {
     "id": 31,
@@ -530,7 +560,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/39.png"
+    "exhibitImage": "exhibits/39.png",
+    "originalSourceImage": "original_sources/39.webp"
   },
   {
     "id": 32,
@@ -547,7 +578,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/43.png"
+    "exhibitImage": "exhibits/43.png",
+    "originalSourceImage": "original_sources/43.webp"
   },
   {
     "id": 33,
@@ -566,7 +598,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/26.webp"
   },
   {
     "id": 34,
@@ -583,7 +616,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/42.webp"
   },
   {
     "id": 35,
@@ -600,7 +634,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/2.png"
+    "exhibitImage": "exhibits/2.png",
+    "originalSourceImage": "original_sources/2.webp"
   },
   {
     "id": 36,
@@ -617,7 +652,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/24.webp"
   },
   {
     "id": 37,
@@ -634,7 +670,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/23.png"
+    "exhibitImage": "exhibits/23.png",
+    "originalSourceImage": "original_sources/23.webp"
   },
   {
     "id": 38,
@@ -651,7 +688,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/41.png"
+    "exhibitImage": "exhibits/41.png",
+    "originalSourceImage": "original_sources/41.webp"
   },
   {
     "id": 39,
@@ -670,7 +708,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/46.png"
+    "exhibitImage": "exhibits/46.png",
+    "originalSourceImage": "original_sources/46.webp"
   },
   {
     "id": 40,
@@ -687,7 +726,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/6.png"
+    "exhibitImage": "exhibits/6.png",
+    "originalSourceImage": "original_sources/6.webp"
   },
   {
     "id": 41,
@@ -706,7 +746,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/27.png"
+    "exhibitImage": "exhibits/27.png",
+    "originalSourceImage": "original_sources/27.webp"
   },
   {
     "id": 42,
@@ -725,7 +766,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/33.webp"
   },
   {
     "id": 43,
@@ -742,7 +784,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/44.png"
+    "exhibitImage": "exhibits/44.png",
+    "originalSourceImage": "original_sources/44.webp"
   },
   {
     "id": 44,
@@ -759,7 +802,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/9.png"
+    "exhibitImage": "exhibits/9.png",
+    "originalSourceImage": "original_sources/9.webp"
   },
   {
     "id": 45,
@@ -776,7 +820,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/34.png"
+    "exhibitImage": "exhibits/34.png",
+    "originalSourceImage": "original_sources/34.webp"
   },
   {
     "id": 46,
@@ -793,7 +838,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/28.png"
+    "exhibitImage": "exhibits/28.png",
+    "originalSourceImage": "original_sources/28.webp"
   },
   {
     "id": 47,
@@ -810,7 +856,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/35.png"
+    "exhibitImage": "exhibits/35.png",
+    "originalSourceImage": "original_sources/35.webp"
   },
   {
     "id": 48,
@@ -829,7 +876,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/20.png"
+    "exhibitImage": "exhibits/20.png",
+    "originalSourceImage": "original_sources/20.webp"
   },
   {
     "id": 49,
@@ -846,7 +894,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/50.png"
+    "exhibitImage": "exhibits/50.png",
+    "originalSourceImage": "original_sources/50.webp"
   },
   {
     "id": 50,
@@ -863,7 +912,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/29.png"
+    "exhibitImage": "exhibits/29.png",
+    "originalSourceImage": "original_sources/29.webp"
   },
   {
     "id": 51,
@@ -880,7 +930,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/60.webp"
   },
   {
     "id": 52,
@@ -899,7 +950,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/73.webp"
   },
   {
     "id": 53,
@@ -916,7 +968,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/78.webp"
   },
   {
     "id": 54,
@@ -933,7 +986,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/95.webp"
   },
   {
     "id": 55,
@@ -950,7 +1004,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/96.webp"
   },
   {
     "id": 56,
@@ -967,7 +1022,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/99.webp"
   },
   {
     "id": 57,
@@ -984,7 +1040,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/51.webp"
   },
   {
     "id": 58,
@@ -1001,7 +1058,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/52.webp"
   },
   {
     "id": 59,
@@ -1018,7 +1076,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/53.webp"
   },
   {
     "id": 60,
@@ -1037,7 +1096,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/81.webp"
   },
   {
     "id": 61,
@@ -1056,7 +1116,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/92.webp"
   },
   {
     "id": 62,
@@ -1073,7 +1134,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/57.png"
+    "exhibitImage": "exhibits/57.png",
+    "originalSourceImage": "original_sources/57.webp"
   },
   {
     "id": 63,
@@ -1092,7 +1154,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/58.webp"
   },
   {
     "id": 64,
@@ -1109,7 +1172,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/64.webp"
   },
   {
     "id": 65,
@@ -1126,7 +1190,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/83.webp"
   },
   {
     "id": 66,
@@ -1143,7 +1208,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/100.webp"
   },
   {
     "id": 67,
@@ -1160,7 +1226,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/62.webp"
   },
   {
     "id": 68,
@@ -1177,7 +1244,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/66.webp"
   },
   {
     "id": 69,
@@ -1196,7 +1264,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/67.webp"
   },
   {
     "id": 70,
@@ -1213,7 +1282,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/74.webp"
   },
   {
     "id": 71,
@@ -1230,7 +1300,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/82.webp"
   },
   {
     "id": 72,
@@ -1247,7 +1318,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/86.webp"
   },
   {
     "id": 73,
@@ -1264,7 +1336,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/98.webp"
   },
   {
     "id": 74,
@@ -1281,7 +1354,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/65.webp"
   },
   {
     "id": 75,
@@ -1298,7 +1372,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/68.webp"
   },
   {
     "id": 76,
@@ -1315,7 +1390,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/75.webp"
   },
   {
     "id": 77,
@@ -1334,7 +1410,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/84.webp"
   },
   {
     "id": 78,
@@ -1351,7 +1428,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/90.webp"
   },
   {
     "id": 79,
@@ -1368,7 +1446,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/94.webp"
   },
   {
     "id": 80,
@@ -1385,7 +1464,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/69.webp"
   },
   {
     "id": 81,
@@ -1402,7 +1482,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/70.webp"
   },
   {
     "id": 82,
@@ -1419,7 +1500,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/88.webp"
   },
   {
     "id": 83,
@@ -1436,7 +1518,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/87.webp"
   },
   {
     "id": 84,
@@ -1453,7 +1536,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/91.webp"
   },
   {
     "id": 85,
@@ -1470,7 +1554,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/76.webp"
   },
   {
     "id": 86,
@@ -1487,7 +1572,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": "Router# show ip route\nGateway of last resort is 172.16.1.1 to network 0.0.0.0\n\n      10.0.0.0/8 is variably subnetted, 3 subnets, 3 masks\nO E2     10.0.0.0/8 [110/5] via 192.168.1.1, 00:15:23, Ethernet0\nO E2     10.0.0.0/16 [110/5] via 192.168.2.1, 00:15:23, Ethernet1\nO E2     10.0.0.0/24 [110/5] via 192.168.3.1, 00:15:23, Ethernet2\nS*    0.0.0.0/0 [1/0] via 172.16.1.1",
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/93.webp"
   },
   {
     "id": 87,
@@ -1504,7 +1590,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/85.png"
+    "exhibitImage": "exhibits/85.png",
+    "originalSourceImage": "original_sources/85.webp"
   },
   {
     "id": 88,
@@ -1521,7 +1608,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": "[\n  {\n    \"hostname\": \"Switch-1\",\n    \"ip_address\": \"192.168.1.10\",\n    \"vendor\": \"Cisco\",\n    \"role\": \"Access-Layer\",\n    \"interfaces\": [\n      \"GigabitEthernet0/1\",\n      \"GigabitEthernet0/2\"\n    ]\n  }\n]",
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/89.webp"
   },
   {
     "id": 89,
@@ -1540,7 +1628,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/55.webp"
   },
   {
     "id": 90,
@@ -1557,7 +1646,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/71.webp"
   },
   {
     "id": 91,
@@ -1574,7 +1664,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/61.png"
+    "exhibitImage": "exhibits/61.png",
+    "originalSourceImage": "original_sources/61.webp"
   },
   {
     "id": 92,
@@ -1591,7 +1682,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": "Router# show interfaces GigabitEthernet0/1\nGigabitEthernet0/1 is up, line protocol is up\n  Hardware is Gigabit Ethernet, address is 000c.29eb.1234 (bia 000c.29eb.1234)\n  Internet address is 10.1.1.1/24\n  MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\n     reliability 255/255, txload 1/255, rxload 1/255\n  Encapsulation ARPA, loopback not set\n  Keepalive set (10 sec)\n  Half-duplex, 100Mb/s, media type is RJ45\n  output flow-control is unsupported, input flow-control is unsupported\n  ARP type: ARPA, ARP Timeout 04:00:00\n  Last input 00:00:02, output 00:00:01, output hang never\n  Last clearing of \"show interface\" counters never\n  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0\n  Queueing strategy: fifo\n  Output queue: 0/40 (size/max)\n  5 minute input rate 1000 bits/sec, 2 packets/sec\n  5 minute output rate 2000 bits/sec, 3 packets/sec\n     145823 packets input, 10245892 bytes, 0 no buffer\n     Received 412 broadcasts (0 IP multicasts)\n     0 runts, 0 giants, 0 throttles\n     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n     0 watchdog, 0 multicast, 0 pause input\n     185291 packets output, 15478923 bytes, 0 underruns\n     0 output errors, 8421 collisions, 2 interface resets\n     8421 late collisions, 2415 deferred, 0 lost carrier, 0 no carrier",
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/80.webp"
   },
   {
     "id": 93,
@@ -1608,7 +1700,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/56.png"
+    "exhibitImage": "exhibits/56.png",
+    "originalSourceImage": "original_sources/56.webp"
   },
   {
     "id": 94,
@@ -1625,7 +1718,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/54.png"
+    "exhibitImage": "exhibits/54.png",
+    "originalSourceImage": "original_sources/54.webp"
   },
   {
     "id": 95,
@@ -1642,7 +1736,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/79.png"
+    "exhibitImage": "exhibits/79.png",
+    "originalSourceImage": "original_sources/79.webp"
   },
   {
     "id": 96,
@@ -1661,7 +1756,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/59.png"
+    "exhibitImage": "exhibits/59.png",
+    "originalSourceImage": "original_sources/59.webp"
   },
   {
     "id": 97,
@@ -1678,7 +1774,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/97.png"
+    "exhibitImage": "exhibits/97.png",
+    "originalSourceImage": "original_sources/97.webp"
   },
   {
     "id": 98,
@@ -1695,7 +1792,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/63.png"
+    "exhibitImage": "exhibits/63.png",
+    "originalSourceImage": "original_sources/63.webp"
   },
   {
     "id": 99,
@@ -1712,7 +1810,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/77.png"
+    "exhibitImage": "exhibits/77.png",
+    "originalSourceImage": "original_sources/77.webp"
   },
   {
     "id": 100,
@@ -1729,7 +1828,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/72.png"
+    "exhibitImage": "exhibits/72.png",
+    "originalSourceImage": "original_sources/72.webp"
   },
   {
     "id": 101,
@@ -1746,7 +1846,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/165.webp"
   },
   {
     "id": 102,
@@ -1763,7 +1864,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/166.webp"
   },
   {
     "id": 103,
@@ -1780,7 +1882,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/155.webp"
   },
   {
     "id": 104,
@@ -1797,7 +1900,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/172.webp"
   },
   {
     "id": 105,
@@ -1814,7 +1918,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/158.webp"
   },
   {
     "id": 106,
@@ -1831,7 +1936,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/164.webp"
   },
   {
     "id": 107,
@@ -1848,7 +1954,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/161.webp"
   },
   {
     "id": 108,
@@ -1865,7 +1972,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/160.webp"
   },
   {
     "id": 109,
@@ -1882,7 +1990,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/157.webp"
   },
   {
     "id": 110,
@@ -1899,7 +2008,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/153.webp"
   },
   {
     "id": 111,
@@ -1916,7 +2026,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/177.webp"
   },
   {
     "id": 112,
@@ -1933,7 +2044,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/176.png"
+    "exhibitImage": "exhibits/176.png",
+    "originalSourceImage": "original_sources/176.webp"
   },
   {
     "id": 113,
@@ -1950,7 +2062,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/174.png"
+    "exhibitImage": "exhibits/174.png",
+    "originalSourceImage": "original_sources/174.webp"
   },
   {
     "id": 114,
@@ -1967,7 +2080,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/170.webp"
   },
   {
     "id": 115,
@@ -1984,7 +2098,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/163.webp"
   },
   {
     "id": 116,
@@ -2001,7 +2116,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/156.webp"
   },
   {
     "id": 117,
@@ -2018,7 +2134,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/154.webp"
   },
   {
     "id": 118,
@@ -2035,7 +2152,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/152.webp"
   },
   {
     "id": 119,
@@ -2052,7 +2170,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/175.png"
+    "exhibitImage": "exhibits/175.png",
+    "originalSourceImage": "original_sources/175.webp"
   },
   {
     "id": 120,
@@ -2069,7 +2188,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/171.webp"
   },
   {
     "id": 121,
@@ -2086,7 +2206,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/168.webp"
   },
   {
     "id": 122,
@@ -2103,7 +2224,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/200.webp"
   },
   {
     "id": 123,
@@ -2120,7 +2242,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/173.png"
+    "exhibitImage": "exhibits/173.png",
+    "originalSourceImage": "original_sources/173.webp"
   },
   {
     "id": 124,
@@ -2139,7 +2262,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/162.webp"
   },
   {
     "id": 125,
@@ -2156,7 +2280,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/186.webp"
   },
   {
     "id": 126,
@@ -2173,7 +2298,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/185.webp"
   },
   {
     "id": 127,
@@ -2190,7 +2316,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/184.webp"
   },
   {
     "id": 128,
@@ -2207,7 +2334,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/179.webp"
   },
   {
     "id": 129,
@@ -2224,7 +2352,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/196.webp"
   },
   {
     "id": 130,
@@ -2241,7 +2370,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/195.webp"
   },
   {
     "id": 131,
@@ -2258,7 +2388,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/182.webp"
   },
   {
     "id": 132,
@@ -2275,7 +2406,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/194.webp"
   },
   {
     "id": 133,
@@ -2292,7 +2424,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/192.png"
+    "exhibitImage": "exhibits/192.png",
+    "originalSourceImage": "original_sources/192.webp"
   },
   {
     "id": 134,
@@ -2309,7 +2442,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/189.png"
+    "exhibitImage": "exhibits/189.png",
+    "originalSourceImage": "original_sources/189.webp"
   },
   {
     "id": 135,
@@ -2326,7 +2460,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/187.webp"
   },
   {
     "id": 136,
@@ -2343,7 +2478,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/198.webp"
   },
   {
     "id": 137,
@@ -2360,7 +2496,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/151.png"
+    "exhibitImage": "exhibits/151.png",
+    "originalSourceImage": "original_sources/151.webp"
   },
   {
     "id": 138,
@@ -2377,7 +2514,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/197.webp"
   },
   {
     "id": 139,
@@ -2394,7 +2532,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/180.png"
+    "exhibitImage": "exhibits/180.png",
+    "originalSourceImage": "original_sources/180.webp"
   },
   {
     "id": 140,
@@ -2411,7 +2550,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/159.png"
+    "exhibitImage": "exhibits/159.png",
+    "originalSourceImage": "original_sources/159.webp"
   },
   {
     "id": 141,
@@ -2428,7 +2568,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/167.png"
+    "exhibitImage": "exhibits/167.png",
+    "originalSourceImage": "original_sources/167.webp"
   },
   {
     "id": 142,
@@ -2445,7 +2586,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/191.png"
+    "exhibitImage": "exhibits/191.png",
+    "originalSourceImage": "original_sources/191.webp"
   },
   {
     "id": 143,
@@ -2462,7 +2604,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/178.png"
+    "exhibitImage": "exhibits/178.png",
+    "originalSourceImage": "original_sources/178.webp"
   },
   {
     "id": 144,
@@ -2479,7 +2622,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/188.png"
+    "exhibitImage": "exhibits/188.png",
+    "originalSourceImage": "original_sources/188.webp"
   },
   {
     "id": 145,
@@ -2496,7 +2640,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/183.png"
+    "exhibitImage": "exhibits/183.png",
+    "originalSourceImage": "original_sources/183.webp"
   },
   {
     "id": 146,
@@ -2515,7 +2660,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/169.png"
+    "exhibitImage": "exhibits/169.png",
+    "originalSourceImage": "original_sources/169.webp"
   },
   {
     "id": 147,
@@ -2532,7 +2678,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/199.png"
+    "exhibitImage": "exhibits/199.png",
+    "originalSourceImage": "original_sources/199.webp"
   },
   {
     "id": 148,
@@ -2549,7 +2696,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/190.png"
+    "exhibitImage": "exhibits/190.png",
+    "originalSourceImage": "original_sources/190.webp"
   },
   {
     "id": 149,
@@ -2566,7 +2714,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/193.png"
+    "exhibitImage": "exhibits/193.png",
+    "originalSourceImage": "original_sources/193.webp"
   },
   {
     "id": 150,
@@ -2583,7 +2732,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/181.webp"
   },
   {
     "id": 151,
@@ -2600,7 +2750,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/107.webp"
   },
   {
     "id": 152,
@@ -2617,7 +2768,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/122.webp"
   },
   {
     "id": 153,
@@ -2634,7 +2786,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/111.webp"
   },
   {
     "id": 154,
@@ -2651,7 +2804,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/127.webp"
   },
   {
     "id": 155,
@@ -2668,7 +2822,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/123.webp"
   },
   {
     "id": 156,
@@ -2685,7 +2840,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/131.webp"
   },
   {
     "id": 157,
@@ -2702,7 +2858,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/125.webp"
   },
   {
     "id": 158,
@@ -2719,7 +2876,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/120.webp"
   },
   {
     "id": 159,
@@ -2736,7 +2894,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/119.webp"
   },
   {
     "id": 160,
@@ -2753,7 +2912,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/118.webp"
   },
   {
     "id": 161,
@@ -2770,7 +2930,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/112.webp"
   },
   {
     "id": 162,
@@ -2789,7 +2950,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/109.webp"
   },
   {
     "id": 163,
@@ -2806,7 +2968,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/129.webp"
   },
   {
     "id": 164,
@@ -2823,7 +2986,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/117.webp"
   },
   {
     "id": 165,
@@ -2840,7 +3004,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/147.webp"
   },
   {
     "id": 166,
@@ -2857,7 +3022,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/144.png"
+    "exhibitImage": "exhibits/144.png",
+    "originalSourceImage": "original_sources/144.webp"
   },
   {
     "id": 167,
@@ -2874,7 +3040,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/126.webp"
   },
   {
     "id": 168,
@@ -2891,7 +3058,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/114.webp"
   },
   {
     "id": 169,
@@ -2908,7 +3076,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/113.webp"
   },
   {
     "id": 170,
@@ -2927,7 +3096,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/103.png"
+    "exhibitImage": "exhibits/103.png",
+    "originalSourceImage": "original_sources/103.webp"
   },
   {
     "id": 171,
@@ -2944,7 +3114,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/150.webp"
   },
   {
     "id": 172,
@@ -2961,7 +3132,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/146.webp"
   },
   {
     "id": 173,
@@ -2978,7 +3150,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/138.webp"
   },
   {
     "id": 174,
@@ -2995,7 +3168,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/134.webp"
   },
   {
     "id": 175,
@@ -3012,7 +3186,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/128.webp"
   },
   {
     "id": 176,
@@ -3029,7 +3204,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/105.png"
+    "exhibitImage": "exhibits/105.png",
+    "originalSourceImage": "original_sources/105.webp"
   },
   {
     "id": 177,
@@ -3046,7 +3222,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/149.webp"
   },
   {
     "id": 178,
@@ -3063,7 +3240,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/145.webp"
   },
   {
     "id": 179,
@@ -3082,7 +3260,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/133.png"
+    "exhibitImage": "exhibits/133.png",
+    "originalSourceImage": "original_sources/133.webp"
   },
   {
     "id": 180,
@@ -3099,7 +3278,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/132.png"
+    "exhibitImage": "exhibits/132.png",
+    "originalSourceImage": "original_sources/132.webp"
   },
   {
     "id": 181,
@@ -3116,7 +3296,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/104.png"
+    "exhibitImage": "exhibits/104.png",
+    "originalSourceImage": "original_sources/104.webp"
   },
   {
     "id": 182,
@@ -3133,7 +3314,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/102.png"
+    "exhibitImage": "exhibits/102.png",
+    "originalSourceImage": "original_sources/102.webp"
   },
   {
     "id": 183,
@@ -3150,7 +3332,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/148.webp"
   },
   {
     "id": 184,
@@ -3167,7 +3350,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/139.webp"
   },
   {
     "id": 185,
@@ -3184,7 +3368,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/135.webp"
   },
   {
     "id": 186,
@@ -3201,7 +3386,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/130.png"
+    "exhibitImage": "exhibits/130.png",
+    "originalSourceImage": "original_sources/130.webp"
   },
   {
     "id": 187,
@@ -3218,7 +3404,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/142.webp"
   },
   {
     "id": 188,
@@ -3235,7 +3422,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/106.png"
+    "exhibitImage": "exhibits/106.png",
+    "originalSourceImage": "original_sources/106.webp"
   },
   {
     "id": 189,
@@ -3252,7 +3440,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/124.webp"
   },
   {
     "id": 190,
@@ -3269,7 +3458,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/110.png"
+    "exhibitImage": "exhibits/110.png",
+    "originalSourceImage": "original_sources/110.webp"
   },
   {
     "id": 191,
@@ -3286,7 +3476,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/115.png"
+    "exhibitImage": "exhibits/115.png",
+    "originalSourceImage": "original_sources/115.webp"
   },
   {
     "id": 192,
@@ -3303,7 +3494,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": "Router# show interfaces GigabitEthernet0/1\nGigabitEthernet0/1 is up, line protocol is up\n  Hardware is Gigabit Ethernet, address is 000c.29eb.1234 (bia 000c.29eb.1234)\n  Internet address is 10.1.1.1/24\n  MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\n     reliability 255/255, txload 1/255, rxload 1/255\n  Encapsulation ARPA, loopback not set\n  Keepalive set (10 sec)\n  Half-duplex, 100Mb/s, media type is RJ45\n  output flow-control is unsupported, input flow-control is unsupported\n  ARP type: ARPA, ARP Timeout 04:00:00\n  Last input 00:00:02, output 00:00:01, output hang never\n  Last clearing of \"show interface\" counters never\n  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0\n  Queueing strategy: fifo\n  Output queue: 0/40 (size/max)\n  5 minute input rate 1000 bits/sec, 2 packets/sec\n  5 minute output rate 2000 bits/sec, 3 packets/sec\n     145823 packets input, 10245892 bytes, 0 no buffer\n     Received 412 broadcasts (0 IP multicasts)\n     0 runts, 0 giants, 0 throttles\n     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n     0 watchdog, 0 multicast, 0 pause input\n     185291 packets output, 15478923 bytes, 0 underruns\n     0 output errors, 8421 collisions, 2 interface resets\n     8421 late collisions, 2415 deferred, 0 lost carrier, 0 no carrier",
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/143.webp"
   },
   {
     "id": 193,
@@ -3320,7 +3512,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/101.png"
+    "exhibitImage": "exhibits/101.png",
+    "originalSourceImage": "original_sources/101.webp"
   },
   {
     "id": 194,
@@ -3337,7 +3530,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/108.png"
+    "exhibitImage": "exhibits/108.png",
+    "originalSourceImage": "original_sources/108.webp"
   },
   {
     "id": 195,
@@ -3354,7 +3548,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/121.webp"
   },
   {
     "id": 196,
@@ -3371,7 +3566,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/116.png"
+    "exhibitImage": "exhibits/116.png",
+    "originalSourceImage": "original_sources/116.webp"
   },
   {
     "id": 197,
@@ -3388,7 +3584,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/140.png"
+    "exhibitImage": "exhibits/140.png",
+    "originalSourceImage": "original_sources/140.webp"
   },
   {
     "id": 198,
@@ -3405,7 +3602,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/136.png"
+    "exhibitImage": "exhibits/136.png",
+    "originalSourceImage": "original_sources/136.webp"
   },
   {
     "id": 199,
@@ -3422,7 +3620,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/137.png"
+    "exhibitImage": "exhibits/137.png",
+    "originalSourceImage": "original_sources/137.webp"
   },
   {
     "id": 200,
@@ -3439,7 +3638,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/141.png"
+    "exhibitImage": "exhibits/141.png",
+    "originalSourceImage": "original_sources/141.webp"
   },
   {
     "id": 201,
@@ -3456,7 +3656,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/203.webp"
   },
   {
     "id": 202,
@@ -3473,7 +3674,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/204.webp"
   },
   {
     "id": 203,
@@ -3490,7 +3692,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/201.webp"
   },
   {
     "id": 204,
@@ -3509,7 +3712,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": "exhibits/206.png"
+    "exhibitImage": "exhibits/206.png",
+    "originalSourceImage": "original_sources/206.webp"
   },
   {
     "id": 205,
@@ -3526,7 +3730,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/207.webp"
   },
   {
     "id": 206,
@@ -3543,7 +3748,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/205.webp"
   },
   {
     "id": 207,
@@ -3560,7 +3766,8 @@ export const ccnaQuestions = [
     ],
     "points": 10,
     "cliSnippet": null,
-    "exhibitImage": null
+    "exhibitImage": null,
+    "originalSourceImage": "original_sources/202.webp"
   },
   {
     "id": 208,
@@ -3590,7 +3797,8 @@ export const ccnaQuestions = [
         "Controller-Based Networking 1": "deploys a consistent configuration across multiple devices",
         "Controller-Based Networking 2": "southbound APIs are used to apply configurations"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 209,
@@ -3623,7 +3831,8 @@ export const ccnaQuestions = [
         "UDP 1": "capable of sending multicast transmissions",
         "UDP 2": "transmits live and real-time data"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 210,
@@ -3649,7 +3858,8 @@ export const ccnaQuestions = [
         "Authorization": "determines access rights and permitted commands",
         "Accounting": "tracks user resource usage and session duration"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 211,
@@ -3679,7 +3889,8 @@ export const ccnaQuestions = [
         "Wireless LAN Controller 1": "uses templates to implement centralized QoS configuration",
         "Wireless LAN Controller 2": "supplies user connection data within a device group"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 212,
@@ -3708,7 +3919,8 @@ export const ccnaQuestions = [
         "Best Effort Queue": "standard Web browsing traffic",
         "Priority Queue (LLQ)": "VoIP voice traffic"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 213,
@@ -3737,7 +3949,8 @@ export const ccnaQuestions = [
         "Multi-mode Fiber 1": "used for high-throughput over short distances",
         "Multi-mode Fiber 2": "transmits signals using pulses of light"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 214,
@@ -3768,7 +3981,8 @@ export const ccnaQuestions = [
         "10.10.13.160": "255.255.255.248 (/29)",
         "10.10.13.252": "255.255.255.252 (/30)"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 215,
@@ -3798,7 +4012,8 @@ export const ccnaQuestions = [
         "Step 3": "switchport port-security mac-address sticky",
         "Step 4": "switchport port-security maximum 2"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 216,
@@ -3833,7 +4048,8 @@ export const ccnaQuestions = [
         "TACACS+ 2": "separates all three AAA operations (Authentication, Authorization, Accounting)",
         "TACACS+ 3": "uses TCP port 49"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 217,
@@ -3862,7 +4078,8 @@ export const ccnaQuestions = [
         "Single-mode Fiber 1": "has minimal light reflection as signal travels down the core",
         "Single-mode Fiber 2": "transmits signals using laser pulses of light"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 218,
@@ -3892,7 +4109,8 @@ export const ccnaQuestions = [
         "Authorization 1": "It restricts the CLI commands that a user is able to perform.",
         "Authorization 2": "It grants access to network assets, such as FTP servers."
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 219,
@@ -3924,7 +4142,8 @@ export const ccnaQuestions = [
         "Digital Certificates 1": "supports enterprise, third-party, and public PKI trust models",
         "Digital Certificates 2": "issuer may revoke the digital credential using CRL / OCSP"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 220,
@@ -3956,7 +4175,8 @@ export const ccnaQuestions = [
         "Step 4": "The local DNS server receives a reply containing the IP address from the domain DNS server.",
         "Step 5": "The local DNS server responds with the resolved IP address to the endpoint."
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 221,
@@ -3985,7 +4205,8 @@ export const ccnaQuestions = [
         "Extended ACL 1": "filters traffic based on source and destination IP addresses and Layer 4 ports",
         "Extended ACL 2": "placed as close to the source as possible"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 222,
@@ -4015,7 +4236,8 @@ export const ccnaQuestions = [
         "Third Command": "enable secret c1sc0@123",
         "Fourth Command": "exit"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 223,
@@ -4045,7 +4267,8 @@ export const ccnaQuestions = [
         "Authentication 1": "It uses a RADIUS server to allow initial user access.",
         "Authentication 2": "It verifies the user identity before granting access to the device."
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 224,
@@ -4080,7 +4303,8 @@ export const ccnaQuestions = [
         "UDP 2": "supports broadcast and multicast traffic",
         "UDP 3": "packets sent independently and received in no fixed order"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 225,
@@ -4107,7 +4331,8 @@ export const ccnaQuestions = [
         "Playbook Syntax": "uses playbooks written in YAML",
         "Agent Architecture": "operates as an agentless automation engine"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 226,
@@ -4136,7 +4361,8 @@ export const ccnaQuestions = [
         "Single-mode Fiber 1": "comprised of insulated glass strands",
         "Single-mode Fiber 2": "uses a single wavelength of light over long distances"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 227,
@@ -4165,7 +4391,8 @@ export const ccnaQuestions = [
         "Administrative Distance (AD)": "90",
         "Metric / Cost": "30"
       }
-    }
+    },
+    "originalSourceImage": null
   },
   {
     "id": 228,
@@ -4191,6 +4418,7 @@ export const ccnaQuestions = [
         "Switch-Spoofing VLAN-Hopping Attack": "disable the Dynamic Trunking Protocol (DTP)",
         "802.1Q Double-Tagging VLAN-Hopping Attack": "configure the native VLAN with a dedicated nondefault VLAN ID"
       }
-    }
+    },
+    "originalSourceImage": null
   }
 ];
