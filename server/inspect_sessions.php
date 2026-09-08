@@ -20,6 +20,7 @@ $pdo = new PDO("mysql:host=$dbHost;dbname=$dbName;charset=utf8mb4", $dbUser, $db
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
 ]);
 
+echo "--- SAVED SESSIONS ---\n";
 $rows = $pdo->query("SELECT id, user_email, bank_name, q_index, points, updated_at, questions, answers FROM saved_sessions")->fetchAll();
 foreach ($rows as $r) {
     $qs = json_decode($r['questions'] ?? '[]', true) ?: [];
@@ -27,4 +28,10 @@ foreach ($rows as $r) {
     $totalQ = count($qs);
     $answered = count(array_filter($ans, function($v) { return $v !== null && $v !== ''; }));
     echo "ID: {$r['id']} | User: {$r['user_email']} | Bank: {$r['bank_name']} | Index: {$r['q_index']} | Answered: $answered / $totalQ\n";
+}
+
+echo "\n--- EXAM ATTEMPTS (aasikhan2624) ---\n";
+$attempts = $pdo->query("SELECT id, bank_name, score, max_score, percentage, passed, exam_date FROM exam_attempts WHERE user_email = 'aasikhan2624@gmail.com' ORDER BY exam_date DESC")->fetchAll();
+foreach ($attempts as $a) {
+    echo "Attempt ID: {$a['id']} | Bank: {$a['bank_name']} | Score: {$a['score']}/{$a['max_score']} | Pct: {$a['percentage']}% | Passed: {$a['passed']} | Date: {$a['exam_date']}\n";
 }
