@@ -684,7 +684,7 @@ app.delete('/api/history/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const pool = getPool();
-    await pool.query('DELETE FROM exam_attempts WHERE id = ?', [id]);
+    await pool.query('DELETE FROM exam_attempts WHERE id = ? OR id LIKE ?', [id, id + '%']);
     res.json({ success: true, message: `Exam record ${id} deleted from MySQL` });
   } catch (error) {
     console.error('Failed to delete history record:', error);
@@ -695,15 +695,19 @@ app.delete('/api/history/:id', async (req, res) => {
 // 6. Clear all exam history for a user
 app.delete('/api/history', async (req, res) => {
   try {
-    const { userId, userEmail } = req.query;
+    const params = { ...req.query, ...req.body };
+    const userId = params.userId || null;
+    const userEmail = params.userEmail ? params.userEmail.trim().toLowerCase() : null;
     const pool = getPool();
 
-    if (userId) {
+    if (userId && userEmail) {
+      await pool.query('DELETE FROM exam_attempts WHERE user_id = ? OR user_email = ?', [userId, userEmail]);
+    } else if (userId) {
       await pool.query('DELETE FROM exam_attempts WHERE user_id = ?', [userId]);
     } else if (userEmail) {
-      await pool.query('DELETE FROM exam_attempts WHERE user_email = ?', [userEmail.trim().toLowerCase()]);
+      await pool.query('DELETE FROM exam_attempts WHERE user_email = ?', [userEmail]);
     } else {
-      await pool.query('DELETE FROM exam_attempts');
+      await pool.query('DELETE FROM exam_attempts WHERE (user_id IS NULL OR user_id = "") AND (user_email IS NULL OR user_email = "")');
     }
 
     res.json({ success: true, message: 'Exam records cleared from MySQL' });

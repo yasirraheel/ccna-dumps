@@ -749,15 +749,37 @@ if (preg_match('#^/api/history#', $basePath)) {
     }
 
     if ($method === 'GET') {
-        $userId = $_GET['userId'] ?? null;
-        $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : null;
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+        if (!$authHeader && function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            $authHeader = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
+        }
+        $tokenUser = null;
+        if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $tm)) {
+            $tokenUser = verifyToken($tm[1], $jwtSecret);
+        }
+
+        $userId = $_GET['userId'] ?? ($tokenUser['id'] ?? null);
+        $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : (isset($tokenUser['email']) ? strtolower($tokenUser['email']) : null);
         if (!$userId && !$userEmail) {
             echo json_encode(["history" => []]);
             exit;
         }
-        $query = "SELECT * FROM exam_attempts WHERE " . ($userId ? "user_id = ?" : "user_email = ?") . " ORDER BY exam_date DESC LIMIT 50";
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([$userId ?: $userEmail]);
+
+        if ($userId && $userEmail) {
+            $query = "SELECT * FROM exam_attempts WHERE (user_id = ? OR user_email = ?) ORDER BY exam_date DESC LIMIT 50";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$userId, $userEmail]);
+        } else if ($userId) {
+            $query = "SELECT * FROM exam_attempts WHERE user_id = ? ORDER BY exam_date DESC LIMIT 50";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$userId]);
+        } else {
+            $query = "SELECT * FROM exam_attempts WHERE user_email = ? ORDER BY exam_date DESC LIMIT 50";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$userEmail]);
+        }
+
         $rows = $stmt->fetchAll();
         $formatted = array_map(function($r) {
             return [
@@ -791,14 +813,32 @@ if (preg_match('#^/api/history#', $basePath)) {
 
     if ($method === 'DELETE') {
         if (preg_match('#/api/history/([^/]+)#', $basePath, $m)) {
-            $pdo->prepare("DELETE FROM exam_attempts WHERE id = ?")->execute([$m[1]]);
+            $recordId = urldecode($m[1]);
+            $pdo->prepare("DELETE FROM exam_attempts WHERE id = ? OR id LIKE ?")->execute([$recordId, $recordId . '%']);
+            echo json_encode(["success" => true, "message" => "Record deleted", "deletedId" => $recordId]);
+            exit;
         } else {
-            $userId = $_GET['userId'] ?? null;
-            $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : null;
-            if ($userId) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+            if (!$authHeader && function_exists('apache_request_headers')) {
+                $headers = apache_request_headers();
+                $authHeader = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
+            }
+            $tokenUser = null;
+            if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $tm)) {
+                $tokenUser = verifyToken($tm[1], $jwtSecret);
+            }
+
+            $userId = $_GET['userId'] ?? ($body['userId'] ?? ($tokenUser['id'] ?? null));
+            $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : (isset($body['userEmail']) ? strtolower($body['userEmail']) : (isset($tokenUser['email']) ? strtolower($tokenUser['email']) : null));
+
+            if ($userId && $userEmail) {
+                $pdo->prepare("DELETE FROM exam_attempts WHERE (user_id = ? OR user_email = ?)")->execute([$userId, $userEmail]);
+            } else if ($userId) {
                 $pdo->prepare("DELETE FROM exam_attempts WHERE user_id = ?")->execute([$userId]);
             } else if ($userEmail) {
                 $pdo->prepare("DELETE FROM exam_attempts WHERE user_email = ?")->execute([$userEmail]);
+            } else {
+                $pdo->prepare("DELETE FROM exam_attempts WHERE (user_id IS NULL OR user_id = '') AND (user_email IS NULL OR user_email = '')")->execute();
             }
         }
         echo json_encode(["success" => true, "message" => "History cleared"]);

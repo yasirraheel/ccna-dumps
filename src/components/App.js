@@ -926,6 +926,56 @@ export default function App() {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
+
+    // When navigating to homepage (dashboard), perform a genuine fresh reload as requested
+    if (view === "dashboard") {
+      if (status === "active" && !isReviewMode) {
+        const now = Date.now();
+        const sessionSnapshot = {
+          id: activeSessionId || `session_${startedAt || now}`,
+          userId: currentUser?.id || null,
+          userEmail: currentUser?.email || null,
+          candidateName: candidateNameVal,
+          status: "active",
+          questions,
+          index,
+          answer,
+          answers,
+          points,
+          secondsRemaining,
+          examMode,
+          settings,
+          selectedBankName,
+          selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+          bankName: selectedBankName,
+          flaggedQuestions,
+          revealedQuestions: revealedQuestions || [],
+          committedQuestions: committedQuestions || [],
+          startedAt: startedAt || now,
+          savedAt: now,
+          updatedAt: now,
+          isPaused: false,
+        };
+        syncActiveSessionToLocalStorage(sessionSnapshot);
+        try {
+          fetch(`${API_BASE_URL}/sessions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sessionSnapshot),
+            keepalive: true,
+          }).catch(() => {});
+        } catch (e) {}
+      }
+
+      const currentPath = window.location.pathname.toLowerCase().replace(/\/+$/, "");
+      if (currentPath === "" || currentPath === "/") {
+        window.location.reload();
+      } else {
+        window.location.href = "/";
+      }
+      return;
+    }
+
     setCurrentView(view);
     let targetUrl = "/";
     if (view === "admin") {
@@ -1337,11 +1387,32 @@ export default function App() {
   });
 
   // 1. Fresh Dashboard Data Loader (always bypasses cache with timestamp)
+  const [isDashboardLoading, setIsDashboardLoading] = useState(() => {
+    const p = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
+    return p === "" || p === "/" || p === "/index.html";
+  });
+
   const loadFreshDashboardData = useCallback(() => {
     const cacheBuster = `_t=${Date.now()}`;
+    const token = localStorage.getItem("ccna_auth_token") || localStorage.getItem("ccna_token") || localStorage.getItem("token");
+    const headers = {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const userQuery = currentUser?.id && currentUser?.email
+      ? `?userId=${encodeURIComponent(currentUser.id)}&userEmail=${encodeURIComponent(currentUser.email)}&${cacheBuster}`
+      : currentUser?.id
+      ? `?userId=${encodeURIComponent(currentUser.id)}&${cacheBuster}`
+      : currentUser?.email
+      ? `?userEmail=${encodeURIComponent(currentUser.email)}&${cacheBuster}`
+      : `?${cacheBuster}`;
+
+    setIsDashboardLoading(true);
 
     // 1.1 Fresh Questions from MySQL
-    fetch(`${API_BASE_URL}/questions?${cacheBuster}`)
+    const pQuestions = fetch(`${API_BASE_URL}/questions?${cacheBuster}`, { headers })
       .then((res) => res.json())
       .then((data) => {
         const qList = Array.isArray(data) ? data : data?.questions || [];
@@ -1352,13 +1423,7 @@ export default function App() {
       .catch(() => {});
 
     // 1.2 Fresh History for logged-in user
-    const userQuery = currentUser?.id
-      ? `?userId=${encodeURIComponent(currentUser.id)}&${cacheBuster}`
-      : currentUser?.email
-      ? `?userEmail=${encodeURIComponent(currentUser.email)}&${cacheBuster}`
-      : `?${cacheBuster}`;
-
-    fetch(`${API_BASE_URL}/history${userQuery}`)
+    const pHistory = fetch(`${API_BASE_URL}/history${userQuery}`, { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.history && Array.isArray(data.history)) {
@@ -1375,7 +1440,7 @@ export default function App() {
       .catch(() => {});
 
     // 1.3 Fresh Sessions
-    fetch(`${API_BASE_URL}/sessions${userQuery}`)
+    const pSessions = fetch(`${API_BASE_URL}/sessions${userQuery}`, { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data.sessions && Array.isArray(data.sessions)) {
@@ -1441,7 +1506,7 @@ export default function App() {
       .catch(() => {});
 
     // 1.4 Fresh Plans
-    fetch(`${API_BASE_URL}/plans?${cacheBuster}`)
+    const pPlans = fetch(`${API_BASE_URL}/plans?${cacheBuster}`, { headers })
       .then((res) => res.json())
       .then((data) => {
         if (data && data.plans) {
@@ -1453,9 +1518,9 @@ export default function App() {
       .catch(() => {});
 
     // 1.5 Fresh user profile if token exists
-    const token = localStorage.getItem("ccna_auth_token");
+    let pUser = Promise.resolve();
     if (token) {
-      fetch(`${API_BASE_URL}/auth/me?${cacheBuster}`, {
+      pUser = fetch(`${API_BASE_URL}/auth/me?${cacheBuster}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
@@ -1469,6 +1534,12 @@ export default function App() {
         })
         .catch(() => {});
     }
+
+    Promise.allSettled([pQuestions, pHistory, pSessions, pPlans, pUser]).finally(() => {
+      setTimeout(() => {
+        setIsDashboardLoading(false);
+      }, 300);
+    });
   }, [currentUser?.id, currentUser?.email]);
 
   // 1.1 Initial bundle load
@@ -1848,15 +1919,50 @@ export default function App() {
     }
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     setPastExams([]);
-    localStorage.removeItem(HISTORY_STORAGE_KEY);
-    fetch(`${API_BASE_URL}/history`, { method: "DELETE" }).catch(() => {});
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([]));
+    } catch {}
+
+    const queryParams = new URLSearchParams();
+    if (currentUser?.id) queryParams.append("userId", currentUser.id);
+    if (currentUser?.email) queryParams.append("userEmail", currentUser.email);
+    queryParams.append("_t", Date.now().toString());
+
+    const token = localStorage.getItem("ccna_auth_token") || localStorage.getItem("ccna_token") || localStorage.getItem("token");
+    const headers = {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      await fetch(`${API_BASE_URL}/history?${queryParams.toString()}`, {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({
+          userId: currentUser?.id || null,
+          userEmail: currentUser?.email || null,
+        }),
+      });
+    } catch (err) {
+      console.warn("Failed to clear history on server:", err);
+    }
+
+    setPastExams([]);
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([]));
+    } catch {}
   };
 
-  const handleDeleteHistoryRecord = (recordId) => {
+  const handleDeleteHistoryRecord = async (recordId) => {
+    if (!recordId) return;
     setPastExams((prev) => {
-      const updated = prev.filter((r) => r.id !== recordId);
+      const updated = prev.filter((r) => r.id !== recordId && r.sessionId !== recordId);
       try {
         localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
       } catch (e) {
@@ -1865,8 +1971,20 @@ export default function App() {
       return updated;
     });
 
-    if (recordId) {
-      fetch(`${API_BASE_URL}/history/${recordId}`, { method: "DELETE" }).catch(() => {});
+    const token = localStorage.getItem("ccna_auth_token") || localStorage.getItem("ccna_token") || localStorage.getItem("token");
+    const headers = {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      await fetch(`${API_BASE_URL}/history/${encodeURIComponent(recordId)}?_t=${Date.now()}`, {
+        method: "DELETE",
+        headers,
+      });
+    } catch (e) {
+      console.warn("History delete error:", e);
     }
   };
 
@@ -2121,28 +2239,35 @@ export default function App() {
 
         {/* 1. DASHBOARD & NAVIGATION VIEWS (When not inside an active test) */}
         {status === "ready" && currentView === "dashboard" && (
-          <ExamDashboard
-            totalQuestionsCount={allQuestions.length}
-            allQuestions={allQuestions}
-            onStartExam={handleStartExam}
-            candidateName={currentUser?.name || candidateName}
-            setCandidateName={setCandidateName}
-            savedSession={currentUser && savedSessions.length > 0 ? savedSessions[0] : null}
-            savedSessions={currentUser ? savedSessions : []}
-            onResumeExam={handleResumeSession}
-            onDiscardSavedSession={() => handleDeleteSession(savedSessions[0]?.id)}
-            onNavigate={handleNavigate}
-            pastExams={currentUser ? pastExams : []}
-            onReviewExam={handleReviewCompletedExam}
-            onRetakeExam={handleRetakeAllQuestions}
-            onRetakeAll={handleRetakeAllQuestions}
-            onRetakeFlagged={handleRetakeFlaggedOnly}
-            onRetakeIncorrect={handleRetakeIncorrectOnly}
-            currentUser={currentUser}
-            onOpenAuth={handleOpenAuth}
-            onLogout={handleLogout}
-            onOpenUpgrade={handleOpenUpgrade}
-          />
+          isDashboardLoading ? (
+            <div className="loader-container" style={{ minHeight: "65vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div className="loader"></div>
+              <p style={{ marginTop: "1rem", color: "#64748b", fontWeight: 600, fontSize: "1.05rem" }}>Refreshing latest exam data from server...</p>
+            </div>
+          ) : (
+            <ExamDashboard
+              totalQuestionsCount={allQuestions.length}
+              allQuestions={allQuestions}
+              onStartExam={handleStartExam}
+              candidateName={currentUser?.name || candidateName}
+              setCandidateName={setCandidateName}
+              savedSession={currentUser && savedSessions.length > 0 ? savedSessions[0] : null}
+              savedSessions={currentUser ? savedSessions : []}
+              onResumeExam={handleResumeSession}
+              onDiscardSavedSession={() => handleDeleteSession(savedSessions[0]?.id)}
+              onNavigate={handleNavigate}
+              pastExams={currentUser ? pastExams : []}
+              onReviewExam={handleReviewCompletedExam}
+              onRetakeExam={handleRetakeAllQuestions}
+              onRetakeAll={handleRetakeAllQuestions}
+              onRetakeFlagged={handleRetakeFlaggedOnly}
+              onRetakeIncorrect={handleRetakeIncorrectOnly}
+              currentUser={currentUser}
+              onOpenAuth={handleOpenAuth}
+              onLogout={handleLogout}
+              onOpenUpgrade={handleOpenUpgrade}
+            />
+          )
         )}
 
         {status === "ready" && currentView === "resume-exams" && (
@@ -2283,6 +2408,8 @@ export default function App() {
             flaggedQuestions={flaggedQuestions}
             examMode={examMode}
             selectedBankName={selectedBankName}
+            onClose={() => handleNavigate("dashboard")}
+            backButtonLabel="⌂ Back to Exam Selection"
             onReviewExam={() => handleReviewCompletedExam(null)}
             onRetakeAll={() => handleRetakeAllQuestions(null)}
             onRetakeFlagged={() => handleRetakeFlaggedOnly(null)}
