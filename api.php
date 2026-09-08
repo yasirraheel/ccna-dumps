@@ -44,6 +44,7 @@ try {
     try {
         $pdo->exec("UPDATE exam_attempts SET bank_name = REPLACE(REPLACE(bank_name, 'spoto-', ''), 'spoto', '') WHERE bank_name LIKE '%spoto%'");
         $pdo->exec("UPDATE saved_sessions SET bank_name = REPLACE(REPLACE(bank_name, 'spoto-', ''), 'spoto', '') WHERE bank_name LIKE '%spoto%'");
+        $pdo->exec("DELETE s FROM saved_sessions s INNER JOIN exam_attempts ea ON s.id = ea.id");
     } catch (Exception $e) {}
 
     // Ensure plans table exists with seed data
@@ -714,6 +715,18 @@ if (preg_match('#^/api/history#', $basePath)) {
             json_encode($b['settings'] ?? []),
             $b['examMode'] ?? 'study'
         ]);
+
+        // Automatically delete completed session from saved_sessions table
+        if (!empty($b['sessionId'])) {
+            $pdo->prepare("DELETE FROM saved_sessions WHERE id = ?")->execute([$b['sessionId']]);
+        }
+        if (!empty($b['activeSessionId'])) {
+            $pdo->prepare("DELETE FROM saved_sessions WHERE id = ?")->execute([$b['activeSessionId']]);
+        }
+        if (!empty($id)) {
+            $pdo->prepare("DELETE FROM saved_sessions WHERE id = ?")->execute([$id]);
+        }
+
         http_response_code(201);
         echo json_encode(["success" => true, "message" => "Exam saved to MySQL", "examId" => $id]);
         exit;
@@ -814,6 +827,25 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             }
         }
 
+        if (!empty($s['id'])) {
+            $checkAttempt = $pdo->prepare("SELECT id FROM exam_attempts WHERE id = ?");
+            $checkAttempt->execute([$s['id']]);
+            if ($checkAttempt->fetch()) {
+                echo json_encode(["success" => true, "message" => "Session already finished and archived."]);
+                exit;
+            }
+        }
+
+        $qList = $s['questions'] ?? [];
+        $ansList = $s['answers'] ?? [];
+        if (is_array($qList) && count($qList) > 0 && is_array($ansList)) {
+            $answered = count(array_filter($ansList, function($a) { return $a !== null && $a !== ''; }));
+            if ($answered >= count($qList)) {
+                echo json_encode(["success" => true, "message" => "All questions answered; not an active session."]);
+                exit;
+            }
+        }
+
         try {
             $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL");
         } catch (Exception $e) {}
@@ -872,11 +904,16 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             echo json_encode(["sessions" => []]);
             exit;
         }
-        $query = "SELECT * FROM saved_sessions WHERE " . ($userId ? "user_id = ?" : "user_email = ?") . " ORDER BY updated_at DESC";
+        $query = "SELECT s.* FROM saved_sessions s 
+                  LEFT JOIN exam_attempts ea ON (ea.id = s.id)
+                  WHERE " . ($userId ? "s.user_id = ?" : "s.user_email = ?") . " 
+                  AND ea.id IS NULL
+                  ORDER BY s.updated_at DESC";
         $stmt = $pdo->prepare($query);
         $stmt->execute([$userId ?: $userEmail]);
         $rows = $stmt->fetchAll();
-        $formatted = array_map(function($r) {
+        $formatted = [];
+        foreach ($rows as $r) {
             $startedAt = !empty($r['started_at']) ? (float)$r['started_at'] : null;
             if (!$startedAt && preg_match('/session_(\d+)/', $r['id'], $sm)) {
                 $startedAt = (float)$sm[1];
@@ -886,7 +923,23 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             }
             $savedAt = (float)$r['updated_at'];
 
-            return [
+            $qs = (function($json) {
+                $decoded = json_decode($json ?? '[]', true);
+                enrichQuestionArray($decoded);
+                return $decoded;
+            })($r['questions']);
+            $ans = json_decode($r['answers'] ?? '[]', true);
+
+            // Filter out any stale session where all questions were answered
+            $totalQ = count($qs);
+            $answeredCount = is_array($ans) ? count(array_filter($ans, function($v) { return $v !== null && $v !== ''; })) : 0;
+            if ($totalQ > 0 && $answeredCount >= $totalQ) {
+                // Delete finished orphan session from DB
+                $pdo->prepare("DELETE FROM saved_sessions WHERE id = ?")->execute([$r['id']]);
+                continue;
+            }
+
+            $formatted[] = [
                 'id' => $r['id'],
                 'userId' => $r['user_id'],
                 'userEmail' => $r['user_email'],
@@ -898,12 +951,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'points' => (int)$r['points'],
                 'secondsRemaining' => (int)$r['seconds_remaining'],
                 'timeSpentSeconds' => (int)$r['time_spent_seconds'],
-                'questions' => (function($json) {
-                    $qs = json_decode($json ?? '[]', true);
-                    enrichQuestionArray($qs);
-                    return $qs;
-                })($r['questions']),
-                'answers' => json_decode($r['answers'] ?? '[]', true),
+                'questions' => $qs,
+                'answers' => $ans,
                 'flaggedQuestions' => json_decode($r['flagged_questions'] ?? '[]', true),
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),
                 'questionNotes' => json_decode($r['question_notes'] ?? '{}', true),
@@ -912,7 +961,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'savedAt' => $savedAt,
                 'updatedAt' => $savedAt
             ];
-        }, $rows);
+        }
         echo json_encode(["sessions" => $formatted]);
         exit;
     }

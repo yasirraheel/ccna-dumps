@@ -23,25 +23,93 @@ const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
 const HISTORY_STORAGE_KEY = "ccna_past_exams_list";
 const ACTIVE_RUNNING_SESSION_KEY = "ccna_active_running_session";
 const ACTIVE_RUNNING_SESSION_ID_KEY = "ccna_active_running_session_id";
+const FINISHED_SESSIONS_STORAGE_KEY = "ccna_finished_session_ids";
+
+export function isExamFinishedId(targetId) {
+  if (!targetId) return false;
+  try {
+    const finishedIds = JSON.parse(localStorage.getItem(FINISHED_SESSIONS_STORAGE_KEY) || "[]");
+    if (Array.isArray(finishedIds) && finishedIds.includes(targetId)) return true;
+    const past = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+    if (Array.isArray(past) && past.some((p) => p.id === targetId || p.sessionId === targetId || p.activeSessionId === targetId)) {
+      return true;
+    }
+  } catch {}
+  return false;
+}
 
 function getInitialExamState() {
   const path = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
   const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const isExamUrl = path === "/exam" || path.startsWith("/exam") || search?.get("view") === "exam";
+  const urlId = search?.get("id") || search?.get("sessionId") || null;
+  const isReviewUrl = search?.get("review") === "1" || search?.get("mode") === "review";
+
+  // If visiting an exam URL whose session/exam has already finished and NOT in review mode:
+  if (isExamUrl && urlId && !isReviewUrl && isExamFinishedId(urlId)) {
+    try {
+      sessionStorage.setItem(
+        "ccna_redirect_notice",
+        JSON.stringify({
+          title: "Exam Already Finished",
+          message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your results, full explanations, and score report in Exam History.",
+        })
+      );
+      localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+      localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+    } catch {}
+    return {
+      allQuestions: ccnaQuestions || [],
+      questions: ccnaQuestions || [],
+      status: ccnaQuestions?.length > 0 ? "ready" : "loading",
+      index: 0,
+      answer: null,
+      answers: [],
+      points: 0,
+      highscore: 0,
+      secondsRemaining: null,
+      examMode: "study",
+      settings: {
+        randomizeQuestions: false,
+        randomizeAnswers: false,
+        showScoreLive: true,
+        showRequiredAnswersCount: true,
+        includeShowAnswerBtn: true,
+        showAnswersInline: true,
+        timerMode: "not_timed",
+      },
+      selectedBankName: "Full CCNA Exam",
+      selectedBankKey: "bank_all",
+      activeSessionId: null,
+      startedAt: null,
+      revealedQuestions: [],
+      isReviewMode: false,
+      isPaused: false,
+    };
+  }
 
   let activeSession = null;
   try {
     const directStored = localStorage.getItem(ACTIVE_RUNNING_SESSION_KEY);
     if (directStored) {
-      activeSession = JSON.parse(directStored);
+      const parsed = JSON.parse(directStored);
+      if (parsed && !isExamFinishedId(parsed.id)) {
+        activeSession = parsed;
+      }
     }
     if (!activeSession) {
-      const activeId = localStorage.getItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+      const activeId = urlId || localStorage.getItem(ACTIVE_RUNNING_SESSION_ID_KEY);
       const listStored = localStorage.getItem(SESSIONS_STORAGE_KEY);
       if (listStored) {
         const list = JSON.parse(listStored);
         if (Array.isArray(list) && list.length > 0) {
-          activeSession = (activeId ? list.find((s) => s.id === activeId) : null) || (isExamUrl ? list[0] : null);
+          const found = activeId ? list.find((s) => s.id === activeId) : null;
+          if (found && !isExamFinishedId(found.id)) {
+            const ansCount = (found.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length;
+            if (found.questions?.length > 0 && ansCount < found.questions.length) {
+              activeSession = found;
+            }
+          }
         }
       }
     }
@@ -507,11 +575,16 @@ export default function App() {
     const search = new URLSearchParams(window.location.search);
     const viewParam = search.get("view");
     const hash = window.location.hash.toLowerCase().replace(/^#\/?/, "");
+    const urlId = search.get("id") || search.get("sessionId");
+    const isReview = search.get("review") === "1" || search.get("mode") === "review";
 
     if (path === "/admin" || path.startsWith("/admin/") || viewParam === "admin" || hash.startsWith("admin")) {
       return "admin";
     }
     if (path === "/exam" || path === "/exam/" || viewParam === "exam" || hash === "exam") {
+      if (urlId && !isReview && isExamFinishedId(urlId)) {
+        return "dashboard";
+      }
       return "exam";
     }
     if (path === "/history" || viewParam === "history" || hash === "history") {
@@ -549,7 +622,13 @@ export default function App() {
     if (view === "admin") {
       targetUrl = "/admin";
     } else if (view === "exam") {
-      targetUrl = "/exam";
+      if (isReviewMode && activeSessionId) {
+        targetUrl = `/exam?id=${encodeURIComponent(activeSessionId)}&review=1`;
+      } else if (activeSessionId) {
+        targetUrl = `/exam?id=${encodeURIComponent(activeSessionId)}`;
+      } else {
+        targetUrl = "/exam";
+      }
     } else if (view === "history") {
       targetUrl = "/history";
     } else if (view === "resume-exams") {
@@ -573,7 +652,7 @@ export default function App() {
         window.history.pushState({ view }, "", targetUrl);
       }
     } else {
-      if (window.location.pathname !== targetUrl) {
+      if (window.location.pathname + window.location.search !== targetUrl) {
         window.history.pushState({ view }, "", targetUrl);
       }
     }
@@ -592,6 +671,24 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
+      const search = new URLSearchParams(window.location.search);
+      const urlId = search.get("id") || search.get("sessionId");
+      const isReview = search.get("review") === "1" || search.get("mode") === "review";
+      if (urlId && !isReview && isExamFinishedId(urlId)) {
+        window.history.replaceState({ view: "dashboard" }, "", "/");
+        setCurrentView("dashboard");
+        setAlertDialog({
+          isOpen: true,
+          title: "Exam Already Finished",
+          message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your past attempts and detailed performance in Exam History.",
+          confirmText: "Go to Exam History",
+          cancelText: "Return to Home",
+          type: "info",
+          onConfirm: () => handleNavigate("history"),
+        });
+        return;
+      }
+
       const nextView = getViewFromUrl();
       if (nextView !== "exam" && status === "active" && !isReviewMode) {
         try {
@@ -606,11 +703,20 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [status, isReviewMode]);
 
-  // Sync browser URL with active exam route (/exam)
+  // Sync browser URL with active exam route (/exam?id=...)
   useEffect(() => {
-    if (status === "active" && !isReviewMode) {
-      if (window.location.pathname !== "/exam") {
-        window.history.pushState({ view: "exam" }, "", "/exam");
+    if (status === "active" && !isReviewMode && activeSessionId) {
+      const examUrl = `/exam?id=${encodeURIComponent(activeSessionId)}`;
+      if (window.location.pathname + window.location.search !== examUrl) {
+        window.history.pushState({ view: "exam", id: activeSessionId }, "", examUrl);
+      }
+      if (currentView !== "exam") {
+        setCurrentView("exam");
+      }
+    } else if (status === "active" && isReviewMode && activeSessionId) {
+      const reviewUrl = `/exam?id=${encodeURIComponent(activeSessionId)}&review=1`;
+      if (window.location.pathname + window.location.search !== reviewUrl) {
+        window.history.pushState({ view: "exam", id: activeSessionId, review: true }, "", reviewUrl);
       }
       if (currentView !== "exam") {
         setCurrentView("exam");
@@ -623,7 +729,7 @@ export default function App() {
         setCurrentView("dashboard");
       }
     }
-  }, [status, isReviewMode, currentView]);
+  }, [status, isReviewMode, activeSessionId, currentView]);
 
   // If user opens /exam directly but there is no active session running, smoothly redirect to dashboard
   useEffect(() => {
@@ -665,6 +771,29 @@ export default function App() {
   const closeAlert = () => {
     setAlertDialog((prev) => ({ ...prev, isOpen: false }));
   };
+
+  // Handle redirect notice if user visited an already finished exam
+  useEffect(() => {
+    try {
+      const noticeStr = sessionStorage.getItem("ccna_redirect_notice");
+      if (noticeStr) {
+        sessionStorage.removeItem("ccna_redirect_notice");
+        const notice = JSON.parse(noticeStr);
+        if (window.location.pathname === "/exam") {
+          window.history.replaceState({ view: "dashboard" }, "", "/");
+        }
+        setAlertDialog({
+          isOpen: true,
+          title: notice.title || "Exam Already Finished",
+          message: notice.message || "This exam session has already been completed and graded. Results are saved in Exam History.",
+          confirmText: "Go to Exam History",
+          cancelText: "Return to Home",
+          type: "info",
+          onConfirm: () => handleNavigate("history"),
+        });
+      }
+    } catch {}
+  }, []);
 
   const handleOpenUpgrade = (lockContext = null) => {
     setUpgradeModal({ isOpen: true, lockContext });
@@ -785,7 +914,15 @@ export default function App() {
     try {
       const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed.map(normalizeSessionData) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map(normalizeSessionData)
+        .filter((s) => {
+          if (isExamFinishedId(s.id)) return false;
+          const ansCount = (s.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length;
+          if (s.questions?.length > 0 && ansCount >= s.questions.length) return false;
+          return true;
+        });
     } catch {
       return [];
     }
@@ -856,9 +993,15 @@ export default function App() {
       .then((data) => {
         if (data.sessions && Array.isArray(data.sessions)) {
           const normalized = data.sessions.map(normalizeSessionData);
-          setSavedSessions(normalized);
+          const cleanSessions = normalized.filter((s) => {
+            if (isExamFinishedId(s.id)) return false;
+            const ansCount = (s.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length;
+            if (s.questions?.length > 0 && ansCount >= s.questions.length) return false;
+            return true;
+          });
+          setSavedSessions(cleanSessions);
           try {
-            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(normalized));
+            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(cleanSessions));
           } catch {}
         }
       })
@@ -1008,6 +1151,8 @@ export default function App() {
 
       const completedRecord = {
         id: `exam_${Date.now()}`,
+        sessionId: activeSessionId,
+        activeSessionId: activeSessionId,
         userId: currentUser?.id || null,
         userEmail: currentUser?.email || null,
         candidateName: currentUser?.name || candidateName || "Candidate",
@@ -1028,6 +1173,16 @@ export default function App() {
         settings: { ...settings },
         examMode,
       };
+
+      // Record this session ID as permanently finished
+      try {
+        const finishedList = JSON.parse(localStorage.getItem(FINISHED_SESSIONS_STORAGE_KEY) || "[]");
+        const arr = Array.isArray(finishedList) ? finishedList : [];
+        if (activeSessionId && !arr.includes(activeSessionId)) {
+          arr.push(activeSessionId);
+          localStorage.setItem(FINISHED_SESSIONS_STORAGE_KEY, JSON.stringify(arr.slice(-200)));
+        }
+      } catch {}
 
       setPastExams((prev) => {
         const updated = [completedRecord, ...prev];
@@ -1065,7 +1220,7 @@ export default function App() {
 
       // Also clean active session from MySQL if present
       if (activeSessionId) {
-        fetch(`${API_BASE_URL}/sessions/${activeSessionId}`, {
+        fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(activeSessionId)}`, {
           method: "DELETE",
         }).catch(() => {});
       }
@@ -1122,6 +1277,36 @@ export default function App() {
 
   const handleResumeSession = (session) => {
     if (!requireAuth()) return;
+    if (!session) return;
+
+    if (isExamFinishedId(session.id)) {
+      setAlertDialog({
+        isOpen: true,
+        title: "Exam Already Finished",
+        message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your past attempts and detailed performance in Exam History.",
+        confirmText: "Go to Exam History",
+        cancelText: "Return to Home",
+        type: "info",
+        onConfirm: () => handleNavigate("history"),
+      });
+      return;
+    }
+
+    const answersList = Array.isArray(session.answers) ? session.answers : [];
+    const answeredCount = answersList.filter((a) => a !== null && a !== undefined && a !== "").length;
+    if (session.questions?.length > 0 && answeredCount >= session.questions.length) {
+      setAlertDialog({
+        isOpen: true,
+        title: "Exam Already Completed",
+        message: "All questions in this exam session were already answered. You can review your past attempts in Exam History.",
+        confirmText: "Go to Exam History",
+        cancelText: "Return to Home",
+        type: "info",
+        onConfirm: () => handleNavigate("history"),
+      });
+      return;
+    }
+
     setFlaggedQuestions(session.flaggedQuestions || []);
 
     let initialStartTime = session.startedAt || session.started_at;
@@ -1202,6 +1387,7 @@ export default function App() {
     const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
     const flags = examRecord?.flaggedQuestions || flaggedQuestions;
     const allRevealed = qList.map((_, i) => i);
+    const reviewId = examRecord?.id || examRecord?.sessionId || `review_${Date.now()}`;
 
     setFlaggedQuestions(flags || []);
     dispatch({
@@ -1216,11 +1402,12 @@ export default function App() {
         examMode: "study",
         settings: examRecord?.settings || settings,
         selectedBankName: `Review: ${examRecord?.bankName || selectedBankName}`,
-        activeSessionId: `review_${Date.now()}`,
+        activeSessionId: reviewId,
         revealedQuestions: allRevealed,
         isReviewMode: true,
       },
     });
+    handleNavigate("exam");
   };
 
   const handleRetakeAllQuestions = (examRecord) => {

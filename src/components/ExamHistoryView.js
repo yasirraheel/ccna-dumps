@@ -189,9 +189,9 @@ function ExamHistoryView({
                   {/* METRICS ROW */}
                   <div className="history-metrics-grid">
                     <div className="history-metric-box">
-                      <span className="metric-lbl">Raw Score</span>
-                      <strong className="metric-val">{exam.score} / {exam.maxScore || 1000}</strong>
-                      <span className="metric-sub">Points Earned</span>
+                      <span className="metric-lbl">Scaled Score</span>
+                      <strong className="metric-val">{Math.round(((exam.score || 0) / (exam.maxScore || 1)) * 1000)} / 1000</strong>
+                      <span className="metric-sub">{exam.score} / {exam.maxScore || 1000} Points</span>
                     </div>
 
                     <div className="history-metric-box">

@@ -303,8 +303,30 @@ function ExamDashboard({
       .trim();
   };
 
+  const isSessionActiveAndUnfinished = (s) => {
+    if (!s || !s.questions || !Array.isArray(s.questions) || s.questions.length === 0) return false;
+    if (s.status === "finished" || s.isFinished) return false;
+    if (Array.isArray(pastExams) && pastExams.some((p) => p.id === s.id || p.sessionId === s.id || p.activeSessionId === s.id)) {
+      return false;
+    }
+    try {
+      const finishedIds = JSON.parse(localStorage.getItem("ccna_finished_session_ids") || "[]");
+      if (Array.isArray(finishedIds) && finishedIds.includes(s.id)) return false;
+    } catch {}
+    const answersList = Array.isArray(s.answers) ? s.answers : [];
+    const answeredCount = answersList.filter((a) => a !== null && a !== undefined && a !== "").length;
+    if (answeredCount >= s.questions.length && s.questions.length > 0) {
+      return false;
+    }
+    return true;
+  };
+
+  const validSessions = (savedSessions || []).filter(isSessionActiveAndUnfinished);
   const activeSession =
-    currentUser && (savedSession || (savedSessions.length > 0 ? savedSessions[0] : null));
+    currentUser && (
+      (savedSession && isSessionActiveAndUnfinished(savedSession) ? savedSession : null) ||
+      (validSessions.length > 0 ? validSessions[0] : null)
+    );
 
   const sortedPastExams = (currentUser && Array.isArray(pastExams))
     ? [...pastExams].sort((a, b) => {
@@ -433,7 +455,7 @@ function ExamDashboard({
                 </div>
               </div>
 
-              {savedSessions.length > 1 && (
+              {validSessions.length > 1 && (
                 <button
                   type="button"
                   className="link-view-more"
@@ -789,8 +811,11 @@ function ExamDashboard({
                       <div className="stat-item">
                         <span className="stat-label">Final Score:</span>
                         <strong className="stat-val">
-                          {exam.score} / {exam.maxScore || 1000}
+                          {Math.round(((exam.score || 0) / (exam.maxScore || 1)) * 1000)} / 1000
                         </strong>
+                        <span className="stat-sub" style={{ fontSize: "11px", color: "#64748b", marginLeft: "4px" }}>
+                          ({exam.score}/{exam.maxScore || 1000} pts)
+                        </span>
                       </div>
 
                       <div className="stat-item">

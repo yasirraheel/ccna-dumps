@@ -75,8 +75,21 @@ function ResumeExamsView({
     });
   };
 
+  const validSessions = (savedSessions || []).filter((s) => {
+    if (!s || !s.questions || !Array.isArray(s.questions) || s.questions.length === 0) return false;
+    if (s.status === "finished" || s.isFinished) return false;
+    try {
+      const finishedIds = JSON.parse(localStorage.getItem("ccna_finished_session_ids") || "[]");
+      if (Array.isArray(finishedIds) && finishedIds.includes(s.id)) return false;
+    } catch {}
+    const answersList = Array.isArray(s.answers) ? s.answers : [];
+    const answeredCount = answersList.filter((a) => a !== null && a !== undefined && a !== "").length;
+    if (answeredCount >= s.questions.length && s.questions.length > 0) return false;
+    return true;
+  });
+
   return (
-    <div className="resume-exams-page">
+    <div className="resume-exams-page-container">
       <NavigationMenu
         currentView="resume-exams"
         onNavigate={onNavigate}
@@ -84,11 +97,11 @@ function ResumeExamsView({
         currentUser={currentUser}
         onOpenAuth={onOpenAuth}
         onLogout={onLogout}
-        pageTitle="Resume Exam"
+        pageTitle="My In-Progress Exams"
       />
 
       <div className="resume-exams-content">
-        {savedSessions.length === 0 ? (
+        {validSessions.length === 0 ? (
           <div className="empty-sessions-card">
             <span className="empty-icon">📂</span>
             <h3>No in-progress exams found</h3>
@@ -103,7 +116,7 @@ function ResumeExamsView({
           </div>
         ) : (
           <div className="resume-sessions-list">
-            {savedSessions.map((session, index) => {
+            {validSessions.map((session, index) => {
               const currentQ = (session.index || 0) + 1;
               const totalQ = session.questions?.length || 74;
               const progressPct = Math.min(

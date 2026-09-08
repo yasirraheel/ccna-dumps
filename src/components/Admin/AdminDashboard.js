@@ -143,7 +143,7 @@ function AdminDashboard({ stats, recentAttempts, recentUsers, onNavigate, onOpen
                         </span>
                       </td>
                       <td>
-                        <strong>{att.score}</strong> / {att.max_score} ({att.percentage}%)
+                        <strong>{Math.round(((att.score || 0) / (att.max_score || 1)) * 1000)}/1000</strong> ({att.score}/{att.max_score} pts, {att.percentage}%)
                       </td>
                       <td>
                         <span className={`badge-pill ${att.passed ? 'badge-passed' : 'badge-failed'}`}>
