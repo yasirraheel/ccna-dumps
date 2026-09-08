@@ -121,7 +121,31 @@ function QuestionView({
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
-  const [showOriginalSource, setShowOriginalSource] = useState(false);
+  const [showOriginalSource, setShowOriginalSource] = useState(() => {
+    try {
+      return localStorage.getItem("ccna_show_original_source") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleOriginalSource = () => {
+    setShowOriginalSource((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("ccna_show_original_source", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleCloseOriginalSource = () => {
+    setShowOriginalSource(false);
+    try {
+      localStorage.setItem("ccna_show_original_source", "false");
+    } catch {}
+  };
+
   const [sourceZoom, setSourceZoom] = useState(1);
   const [sourcePan, setSourcePan] = useState({ x: 0, y: 0 });
   const [isPanningSource, setIsPanningSource] = useState(false);
@@ -196,7 +220,6 @@ function QuestionView({
   useEffect(() => {
     setImgError(false);
     setSourceImgError(false);
-    setShowOriginalSource(false);
     setSourceZoom(1);
     setSourcePan({ x: 0, y: 0 });
     setIsPanningSource(false);
@@ -722,7 +745,7 @@ function QuestionView({
               <button
                 type="button"
                 className={`btn-boson-source-toggle ${showOriginalSource ? "is-active" : ""}`}
-                onClick={() => setShowOriginalSource((prev) => !prev)}
+                onClick={handleToggleOriginalSource}
                 title={showOriginalSource ? "Hide original exam dump source" : "View original question from exam dump PDF"}
               >
                 <svg
@@ -1013,7 +1036,7 @@ function QuestionView({
                 <button
                   type="button"
                   className="source-ctrl-btn close-btn"
-                  onClick={() => setShowOriginalSource(false)}
+                  onClick={handleCloseOriginalSource}
                   title="Close Original Source"
                   aria-label="Close"
                 >
