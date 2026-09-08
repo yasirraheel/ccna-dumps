@@ -282,10 +282,8 @@ function ExamDashboard({
       filtered = aggressiveShuffle(filtered);
     }
 
-    // When randomizeAnswers is enabled, randomize the display order of MCQ options
-    if (effectiveSettings.randomizeAnswers) {
-      filtered = filtered.map(randomizeQuestionOptions);
-    }
+    // Keep exact canonical dump options sequence (A, B, C, D) matching original source images
+    // Do not scramble options to ensure 100% synchronization with master catalog and exhibits
 
     onStartExam({
       questions: filtered,

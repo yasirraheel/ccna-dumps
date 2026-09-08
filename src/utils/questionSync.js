@@ -4,28 +4,16 @@ const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
 
 export function getQuestionOverrides() {
   try {
-    const raw = localStorage.getItem(OVERRIDES_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+    localStorage.removeItem(OVERRIDES_STORAGE_KEY);
+  } catch {}
+  return {};
 }
 
 export function applyQuestionOverrides(questionsList) {
-  if (!Array.isArray(questionsList) || questionsList.length === 0) {
+  if (!Array.isArray(questionsList)) {
     return questionsList || [];
   }
-  const overrides = getQuestionOverrides();
-  const overrideKeys = Object.keys(overrides);
-  if (overrideKeys.length === 0) return questionsList;
-
-  return questionsList.map((q) => {
-    if (!q) return q;
-    const match =
-      (q.id !== undefined && overrides[`id_${q.id}`]) ||
-      (q.questionNo && overrides[`qno_${q.questionNo}`]);
-    return match ? { ...q, ...match } : q;
-  });
+  return questionsList;
 }
 
 export function saveQuestionOverride(updatedQuestion) {

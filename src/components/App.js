@@ -1081,6 +1081,27 @@ export default function App() {
     }
   }, [currentView, status]);
   
+  // Clear any stale local storage session/override cache to guarantee 100% server authority
+  useEffect(() => {
+    try {
+      localStorage.removeItem("ccna_active_running_session");
+      localStorage.removeItem("ccna_active_running_session_id");
+      localStorage.removeItem("ccna_question_overrides");
+      localStorage.removeItem("ccna_saved_sessions_list");
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("ccna_study_settings_")) {
+          try {
+            const s = JSON.parse(localStorage.getItem(key));
+            if (s && s.randomizeAnswers) {
+              s.randomizeAnswers = false;
+              localStorage.setItem(key, JSON.stringify(s));
+            }
+          } catch {}
+        }
+      });
+    } catch {}
+  }, []);
+
   // Fetch questions from MySQL database so admin edits reflect on every page load and exam
   useEffect(() => {
     fetch("/api/questions")
