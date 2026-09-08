@@ -2230,15 +2230,15 @@ export const ccnaQuestions = [
   {
     "id": 123,
     "questionNo": "Question #173",
-    "question": "Refer to the exhibit. Which configuration allows hosts in the 192.168.1.0/24 network to access the Internet using Port Address Translation (PAT)? (Choose one answer)",
+    "question": "Refer to the exhibit. Which entry is the longest prefix match for host IP address 192.168.10.5? (Choose one answer)",
     "options": [
-      "A. ip nat inside source list 1 interface GigabitEthernet0/0",
-      "B. ip nat outside source list 1 interface GigabitEthernet0/1 overload",
-      "C. ip nat inside source static 192.168.1.1 209.165.200.225",
-      "D. ip nat inside source list 1 interface GigabitEthernet0/1 overload"
+      "A. 1",
+      "B. 2",
+      "C. 3",
+      "D. 4"
     ],
     "correctOption": [
-      3
+      1
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2412,12 +2412,12 @@ export const ccnaQuestions = [
   {
     "id": 133,
     "questionNo": "Question #192",
-    "question": "Refer to the exhibit. Which prefix did router R1 select as the successor route to 192.168.1.0/24? (Choose one answer)",
+    "question": "Refer to the exhibit. Which network prefix was learned via EIGRP? (Choose one answer)",
     "options": [
-      "A. 192.168.1.0/24 via 10.1.1.2",
-      "B. 192.168.1.0/24 via 10.1.1.6",
-      "C. 192.168.1.0/24 via 10.1.1.10",
-      "D. 192.168.1.0/24 via 10.1.1.14"
+      "A. 192.168.2.0/24",
+      "B. 207.165.200.0/24",
+      "C. 172.16.0.0/16",
+      "D. 192.168.1.0/24"
     ],
     "correctOption": [
       0
@@ -2484,15 +2484,15 @@ export const ccnaQuestions = [
   {
     "id": 137,
     "questionNo": "Question #151",
-    "question": "Refer to the exhibit. Each route is present within the routing table. Which interface is used to forward traffic with a destination IP of 10.1.1.19? (Choose one answer)",
+    "question": "Refer to the exhibit. Packets received by the router from BGP enter via a serial interface at 209.165.201.1. Each route is present within the routing table. Which interface is used to forward traffic with a destination IP of 10.1.1.19? (Choose one answer)",
     "options": [
-      "A. FastEthernet0/3",
-      "B. FastEthernet0/0",
-      "C. FastEthernet0/1",
-      "D. FastEthernet0/4"
+      "A. F0/3",
+      "B. F0/0",
+      "C. F0/1",
+      "D. F0/4"
     ],
     "correctOption": [
-      0
+      1
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2592,12 +2592,12 @@ export const ccnaQuestions = [
   {
     "id": 143,
     "questionNo": "Question #178",
-    "question": "Refer to the exhibit. Which command must be configured to provide a description and enable DHCP snooping trust on FastEthernet0/1? (Choose one answer)",
+    "question": "Refer to the exhibit. Which configuration enables DHCP addressing for hosts connected to interface FastEthernet0/1 on router R4? (Choose one answer)",
     "options": [
-      "A. ip dhcp snooping trust",
-      "B. description Link to Server, ip dhcp snooping trust",
-      "C. switchport mode access, ip dhcp snooping trust",
-      "D. ip dhcp snooping limit rate 100"
+      "A. interface FastEthernet0/0\nip helper-address 10.0.1.1\n!\naccess-list 100 permit host 10.0.1.1 host 10.148.2.1 eq bootps",
+      "B. interface FastEthernet0/1\nip helper-address 10.0.1.1\n!\naccess-list 100 permit udp host 10.0.1.1 eq bootps host 10.148.2.1",
+      "C. interface FastEthernet0/0\nip helper-address 10.0.1.1\n!\naccess-list 100 permit udp host 10.0.1.1 eq bootps host 10.148.2.1",
+      "D. interface FastEthernet0/1\nip helper-address 10.0.1.1\n!\naccess-list 100 permit tcp host 10.0.1.1 eq 67 host 10.148.2.1"
     ],
     "correctOption": [
       1
@@ -2702,15 +2702,15 @@ export const ccnaQuestions = [
   {
     "id": 149,
     "questionNo": "Question #193",
-    "question": "Refer to the exhibit. Which command allows only VLAN 72 and VLAN 82 on the trunk link? (Choose one answer)",
+    "question": "Refer to the exhibit. What is the next hop for a packet destined for 10.1.1.1? (Choose one answer)",
     "options": [
-      "A. switchport trunk allowed vlan 72,82",
-      "B. switchport trunk allowed vlan add 72,82",
-      "C. switchport trunk encapsulation dot1q",
-      "D. switchport mode trunk"
+      "A. Vlan72",
+      "B. Vlan82",
+      "C. 172.17.0.2",
+      "D. 10.3.25.1"
     ],
     "correctOption": [
-      0
+      2
     ],
     "points": 10,
     "cliSnippet": null,
