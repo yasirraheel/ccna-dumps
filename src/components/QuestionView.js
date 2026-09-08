@@ -661,23 +661,10 @@ function QuestionView({
           <h1 className="boson-exam-title">
             Cisco 200-301 CCNA Exam Simulator
           </h1>
-          {activeBankTitle && (
-            <div className="boson-current-bank-badge" title={`Active Question Bank: ${activeBankTitle}`}>
-              <span className="bank-badge-dot"></span>
-              <span className="bank-badge-prefix">BANK:</span>
-              <span className="bank-badge-text">{activeBankTitle}</span>
-            </div>
-          )}
         </div>
 
         <div className="boson-sub-header">
           <div className="boson-sub-left">
-            {activeBankTitle && (
-              <>
-                <span className="boson-bank-sub-tag">📚 {activeBankTitle}</span>
-                <span className="boson-dot-sep">•</span>
-              </>
-            )}
             <span className="boson-q-count">
               Question {seqNumber} of {numQuestions}
             </span>
