@@ -905,6 +905,9 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         try {
             $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL");
         } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN committed_questions JSON NULL");
+        } catch (Exception $e) {}
 
         $bankName = cleanBankName($s['selectedBankName'] ?? $s['bankName'] ?? 'CCNA Exam');
         
@@ -919,8 +922,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         $updatedAt = $s['savedAt'] ?? $s['updatedAt'] ?? (time() * 1000);
 
         $stmt = $pdo->prepare("INSERT INTO saved_sessions 
-            (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, question_notes, settings, started_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, question_notes, settings, started_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             user_id=VALUES(user_id), user_email=VALUES(user_email), bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode),
             q_index=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(q_index), saved_sessions.q_index),
@@ -930,6 +933,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             answers=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(answers), saved_sessions.answers),
             flagged_questions=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(flagged_questions), saved_sessions.flagged_questions),
             revealed_questions=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(revealed_questions), saved_sessions.revealed_questions),
+            committed_questions=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(committed_questions), saved_sessions.committed_questions),
             question_notes=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(question_notes), saved_sessions.question_notes),
             settings=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(settings), saved_sessions.settings),
             started_at=COALESCE(saved_sessions.started_at, VALUES(started_at)),
@@ -949,6 +953,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             json_encode($s['answers'] ?? []),
             json_encode($s['flaggedQuestions'] ?? []),
             json_encode($s['revealedQuestions'] ?? []),
+            json_encode($s['committedQuestions'] ?? []),
             json_encode($s['questionNotes'] ?? []),
             json_encode($s['settings'] ?? []),
             $startedAt,
@@ -1017,6 +1022,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'answers' => $ans,
                 'flaggedQuestions' => json_decode($r['flagged_questions'] ?? '[]', true),
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),
+                'committedQuestions' => json_decode($r['committed_questions'] ?? '[]', true) ?: [],
                 'questionNotes' => json_decode($r['question_notes'] ?? '{}', true),
                 'settings' => json_decode($r['settings'] ?? '{}', true),
                 'startedAt' => $startedAt,

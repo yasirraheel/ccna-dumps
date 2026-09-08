@@ -6,6 +6,7 @@ import QuestionNotesModal from "./QuestionNotesModal";
 import EditQuestionModal from "./Admin/EditQuestionModal";
 import MobileBottomBar from "./MobileBottomBar";
 import { resolveOriginalSourceImage } from "../utils/questionSourceHelper";
+import { calculateTotalPoints } from "../utils/examScoring";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -525,9 +526,59 @@ function QuestionView({
     }
   };
 
-  // Calculate live score percentage strictly based on committed or revealed questions
+  // Evaluated questions = any question committed (answered & advanced) or revealed (Show Answer clicked).
+  // Strictly excludes the current active uncommitted question to prevent score leak on mere option click!
+  const evaluatedIndices = useMemo(() => {
+    if (isReviewMode) {
+      return (questions || []).map((_, i) => i);
+    }
+    const set = new Set();
+    (committedQuestions || []).forEach((idx) => set.add(idx));
+    (revealedQuestions || []).forEach((idx) => set.add(idx));
+    if (Array.isArray(answers)) {
+      answers.forEach((ans, idx) => {
+        if (
+          ans !== null &&
+          ans !== undefined &&
+          (typeof ans === "number" ||
+            typeof ans === "string" ||
+            (Array.isArray(ans) && ans.length > 0) ||
+            (Array.isArray(ans?.selections) && ans.selections.length > 0) ||
+            (ans?.matches && Object.keys(ans.matches).length > 0))
+        ) {
+          // Prevent answer leak: current active question is excluded until committed or revealed
+          if (idx === seqNumber - 1 && !isRevealed && !isCommitted) {
+            return;
+          }
+          set.add(idx);
+        }
+      });
+    }
+    return Array.from(set);
+  }, [committedQuestions, revealedQuestions, isReviewMode, questions, answers, seqNumber, isRevealed, isCommitted]);
+
+  // Points strictly earned on evaluated questions
+  const evaluatedPoints = useMemo(() => {
+    if (!questions || evaluatedIndices.length === 0) return 0;
+    const filteredAnswers = (questions || []).map((_, i) =>
+      evaluatedIndices.includes(i) ? answers[i] : null
+    );
+    return calculateTotalPoints(questions, filteredAnswers);
+  }, [questions, answers, evaluatedIndices]);
+
+  const evaluatedMaxPoints = useMemo(() => {
+    if (!questions || evaluatedIndices.length === 0) return 0;
+    return evaluatedIndices.reduce((sum, idx) => {
+      const q = questions[idx];
+      return sum + (q?.points || 10);
+    }, 0);
+  }, [questions, evaluatedIndices]);
+
+  // Live accuracy percentage strictly based on questions evaluated so far (100% when 10/10 correct)
   const livePercentage =
-    maxPossiblePoints > 0 ? (((points || 0) / maxPossiblePoints) * 100).toFixed(1) : "0.0";
+    evaluatedMaxPoints > 0
+      ? (((evaluatedPoints || 0) / evaluatedMaxPoints) * 100).toFixed(1)
+      : "0.0";
 
   const canGoPrev = seqNumber > 1;
   const canGoNext = seqNumber < numQuestions;
@@ -714,7 +765,10 @@ function QuestionView({
             {settings?.showScoreLive !== false && (
               <>
                 <span className="boson-dot-sep">•</span>
-                <span className="boson-live-score" title={`${points || 0} / ${maxPossiblePoints} pts`}>
+                <span
+                  className="boson-live-score"
+                  title={`${evaluatedPoints || 0} / ${evaluatedMaxPoints || maxPossiblePoints} pts on evaluated questions (${evaluatedIndices.length} answered, ${points || 0} / ${maxPossiblePoints} overall)`}
+                >
                   {livePercentage}% correct
                 </span>
               </>

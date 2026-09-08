@@ -800,6 +800,7 @@ app.get('/api/sessions', async (req, res) => {
         answers: parsedAnswers,
         flaggedQuestions: parsedFlagged,
         revealedQuestions: parsedRevealed,
+        committedQuestions: typeof r.committed_questions === 'string' ? JSON.parse(r.committed_questions) : r.committed_questions || [],
         questionNotes: parsedNotes,
         settings: parsedSettings,
         updatedAt: Number(r.updated_at),

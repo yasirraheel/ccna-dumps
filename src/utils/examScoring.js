@@ -12,21 +12,25 @@ export function calculateTotalPoints(questions, answers) {
     if (ans === null || ans === undefined) continue;
 
     const pointValue = q.points || 10;
-    const rawCorrect = q.correctOptions || q.correctOption;
-    const correctArr = Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect];
+    const rawCorrect = q.correctOptions !== undefined ? q.correctOptions : q.correctOption;
+    const correctArr = (Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect])
+      .filter((x) => x !== null && x !== undefined)
+      .map(Number);
 
     if (q.type === "drag_drop" || q.dragDropData) {
       if (ans?.confirmed && ans?.isCorrect) {
         total += pointValue;
       }
     } else if (correctArr.length > 1) {
-      const userSelections = Array.isArray(ans)
-        ? ans
-        : Array.isArray(ans?.selections)
-        ? ans.selections
-        : typeof ans === "number"
-        ? [ans]
-        : [];
+      const userSelections = (
+        Array.isArray(ans)
+          ? ans
+          : Array.isArray(ans?.selections)
+          ? ans.selections
+          : typeof ans === "number" || typeof ans === "string"
+          ? [ans]
+          : []
+      ).map(Number);
       const isMatch =
         userSelections.length === correctArr.length &&
         userSelections.every((idx) => correctArr.includes(idx));
@@ -35,12 +39,16 @@ export function calculateTotalPoints(questions, answers) {
       }
     } else {
       const chosenOpt =
-        typeof ans === "number"
+        typeof ans === "number" || typeof ans === "string"
           ? ans
           : Array.isArray(ans)
           ? ans[0]
           : ans?.selections?.[0];
-      if (chosenOpt !== undefined && correctArr.includes(chosenOpt)) {
+      if (
+        chosenOpt !== undefined &&
+        chosenOpt !== null &&
+        correctArr.includes(Number(chosenOpt))
+      ) {
         total += pointValue;
       }
     }
@@ -58,33 +66,41 @@ export function getIncorrectQuestionIndices(questions, answers) {
       incorrectIndices.push(i);
       continue;
     }
-    const rawCorrect = q.correctOptions || q.correctOption;
-    const correctArr = Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect];
+    const rawCorrect = q.correctOptions !== undefined ? q.correctOptions : q.correctOption;
+    const correctArr = (Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect])
+      .filter((x) => x !== null && x !== undefined)
+      .map(Number);
 
     if (q.type === "drag_drop" || q.dragDropData) {
       if (!ans?.confirmed || !ans?.isCorrect) {
         incorrectIndices.push(i);
       }
     } else if (correctArr.length > 1) {
-      const userSelections = Array.isArray(ans)
-        ? ans
-        : Array.isArray(ans?.selections)
-        ? ans.selections
-        : typeof ans === "number"
-        ? [ans]
-        : [];
+      const userSelections = (
+        Array.isArray(ans)
+          ? ans
+          : Array.isArray(ans?.selections)
+          ? ans.selections
+          : typeof ans === "number" || typeof ans === "string"
+          ? [ans]
+          : []
+      ).map(Number);
       const isMatch =
         userSelections.length === correctArr.length &&
         userSelections.every((idx) => correctArr.includes(idx));
       if (!isMatch) incorrectIndices.push(i);
     } else {
       const chosenOpt =
-        typeof ans === "number"
+        typeof ans === "number" || typeof ans === "string"
           ? ans
           : Array.isArray(ans)
           ? ans[0]
           : ans?.selections?.[0];
-      if (chosenOpt === undefined || !correctArr.includes(chosenOpt)) {
+      if (
+        chosenOpt === undefined ||
+        chosenOpt === null ||
+        !correctArr.includes(Number(chosenOpt))
+      ) {
         incorrectIndices.push(i);
       }
     }
@@ -125,31 +141,38 @@ export function getExamQuestionStats(questions, answers) {
       continue;
     }
 
-    const rawCorrect = q.correctOptions || q.correctOption;
-    const correctArr = Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect];
+    const rawCorrect = q.correctOptions !== undefined ? q.correctOptions : q.correctOption;
+    const correctArr = (Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect])
+      .filter((x) => x !== null && x !== undefined)
+      .map(Number);
     let isCorrect = false;
 
     if (q.type === "drag_drop" || q.dragDropData) {
       isCorrect = Boolean(ans?.confirmed && ans?.isCorrect);
     } else if (correctArr.length > 1) {
-      const userSelections = Array.isArray(ans)
-        ? ans
-        : Array.isArray(ans?.selections)
-        ? ans.selections
-        : typeof ans === "number"
-        ? [ans]
-        : [];
+      const userSelections = (
+        Array.isArray(ans)
+          ? ans
+          : Array.isArray(ans?.selections)
+          ? ans.selections
+          : typeof ans === "number" || typeof ans === "string"
+          ? [ans]
+          : []
+      ).map(Number);
       isCorrect =
         userSelections.length === correctArr.length &&
         userSelections.every((idx) => correctArr.includes(idx));
     } else {
       const chosenOpt =
-        typeof ans === "number"
+        typeof ans === "number" || typeof ans === "string"
           ? ans
           : Array.isArray(ans)
           ? ans[0]
           : ans?.selections?.[0];
-      isCorrect = chosenOpt !== undefined && correctArr.includes(chosenOpt);
+      isCorrect =
+        chosenOpt !== undefined &&
+        chosenOpt !== null &&
+        correctArr.includes(Number(chosenOpt));
     }
 
     if (isCorrect) {

@@ -466,7 +466,7 @@ function ExamDashboard({
 
                 <div className="pickup-card-footer">
                   <span className="pickup-q-progress">
-                    {(activeSession.index || 0) + 1}/{activeSession.questions?.length || 74}
+                    Question {(activeSession.index || 0) + 1} of {activeSession.questions?.length || 50}
                   </span>
 
                   <button
