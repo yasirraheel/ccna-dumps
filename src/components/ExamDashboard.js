@@ -231,7 +231,7 @@ function ExamDashboard({
   const effectiveSettings = isSimulation
     ? {
         randomizeQuestions: true,
-        randomizeAnswers: true,
+        randomizeAnswers: false,
         showScoreLive: true,
         showRequiredAnswersCount: true,
         includeShowAnswerBtn: false,

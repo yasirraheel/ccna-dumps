@@ -44,23 +44,29 @@ export function syncActiveSessionToLocalStorage(sessionData) {
     return;
   }
   try {
-    const raw = JSON.stringify(sessionData);
-    localStorage.setItem(ACTIVE_RUNNING_SESSION_KEY, raw);
-    localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, sessionData.id);
+    localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+    localStorage.removeItem("ccna_question_overrides");
+  } catch {}
 
-    const rawList = localStorage.getItem(SESSIONS_STORAGE_KEY);
-    let list = rawList ? JSON.parse(rawList) : [];
-    if (!Array.isArray(list)) list = [];
-    const idx = list.findIndex((s) => s.id === sessionData.id);
-    if (idx >= 0) {
-      list[idx] = { ...list[idx], ...sessionData };
-    } else {
-      list.unshift(sessionData);
-    }
-    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn("syncActiveSessionToLocalStorage error:", e);
-  }
+  try {
+    fetch(`${API_BASE_URL}/sessions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sessionData),
+      keepalive: true,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.serverPoints === "number") {
+          window.dispatchEvent(
+            new CustomEvent("ccna_server_score_synced", {
+              detail: { sessionId: sessionData.id, points: data.serverPoints },
+            })
+          );
+        }
+      })
+      .catch(() => {});
+  } catch (e) {}
 }
 
 function getInitialExamState() {
@@ -264,6 +270,16 @@ function reducer(state, action) {
         questions: overriddenPayload,
         status: state.status === "loading" ? "ready" : state.status,
       };
+    }
+
+    case "syncServerScore": {
+      if (typeof action.payload === "number" && action.payload >= 0) {
+        return {
+          ...state,
+          points: action.payload,
+        };
+      }
+      return state;
     }
 
     case "dataFailed":
@@ -1091,6 +1107,19 @@ export default function App() {
     window.addEventListener("ccna_question_updated", handleQuestionUpdated);
     return () => {
       window.removeEventListener("ccna_question_updated", handleQuestionUpdated);
+    };
+  }, []);
+
+  // Listen to live server validated score updates
+  useEffect(() => {
+    const handleServerScore = (e) => {
+      if (e.detail && typeof e.detail.points === "number") {
+        dispatch({ type: "syncServerScore", payload: e.detail.points });
+      }
+    };
+    window.addEventListener("ccna_server_score_synced", handleServerScore);
+    return () => {
+      window.removeEventListener("ccna_server_score_synced", handleServerScore);
     };
   }, []);
 

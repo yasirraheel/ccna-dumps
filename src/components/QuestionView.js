@@ -574,10 +574,13 @@ function QuestionView({
     }, 0);
   }, [questions, evaluatedIndices]);
 
+  // Points earned: use authoritative points prop from server/reducer, or fall back to evaluated calculation
+  const effectiveScore = typeof points === "number" && points >= 0 ? points : evaluatedPoints;
+
   // Live accuracy percentage strictly based on questions evaluated so far (100% when 10/10 correct)
   const livePercentage =
     evaluatedMaxPoints > 0
-      ? (((evaluatedPoints || 0) / evaluatedMaxPoints) * 100).toFixed(1)
+      ? (((effectiveScore || 0) / evaluatedMaxPoints) * 100).toFixed(1)
       : "0.0";
 
   const canGoPrev = seqNumber > 1;
@@ -767,7 +770,7 @@ function QuestionView({
                 <span className="boson-dot-sep">•</span>
                 <span
                   className="boson-live-score"
-                  title={`${evaluatedPoints || 0} / ${evaluatedMaxPoints || maxPossiblePoints} pts on evaluated questions (${evaluatedIndices.length} answered, ${points || 0} / ${maxPossiblePoints} overall)`}
+                  title={`${effectiveScore || 0} / ${evaluatedMaxPoints || maxPossiblePoints} pts on evaluated questions (${evaluatedIndices.length} answered, ${effectiveScore || 0} / ${maxPossiblePoints} overall)`}
                 >
                   {livePercentage}% correct
                 </span>

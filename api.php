@@ -921,13 +921,106 @@ if (preg_match('#^/api/sessions#', $basePath)) {
 
         $updatedAt = $s['savedAt'] ?? $s['updatedAt'] ?? (time() * 1000);
 
+        // Canonicalize questions against MySQL and grade authoritative server points
+        $serverPoints = 0;
+        $correctCount = 0;
+        $qList = $s['questions'] ?? [];
+        $ansList = $s['answers'] ?? [];
+
+        $dbStmt = $pdo->query("SELECT id, question_no, type, options, correct_option, points, drag_drop_data FROM questions");
+        $masterDb = $dbStmt->fetchAll(PDO::FETCH_ASSOC);
+        $masterById = [];
+        $masterByQno = [];
+        foreach ($masterDb as $mq) {
+            $masterById[(int)$mq['id']] = $mq;
+            $cleanQno = strtolower(trim(preg_replace('/\s+/', ' ', $mq['question_no'] ?? '')));
+            if ($cleanQno !== '') {
+                $masterByQno[$cleanQno] = $mq;
+            }
+        }
+
+        $canonicalQuestions = [];
+        foreach ($qList as $i => $qItem) {
+            $m = null;
+            if (!empty($qItem['id']) && isset($masterById[(int)$qItem['id']])) {
+                $m = $masterById[(int)$qItem['id']];
+            } elseif (!empty($qItem['questionNo'])) {
+                $cq = strtolower(trim(preg_replace('/\s+/', ' ', $qItem['questionNo'])));
+                if (isset($masterByQno[$cq])) {
+                    $m = $masterByQno[$cq];
+                }
+            }
+
+            if ($m) {
+                $opts = json_decode($m['options'] ?? '[]', true) ?? [];
+                $corr = json_decode($m['correct_option'] ?? '[]', true) ?? [];
+                $qItem['options'] = $opts;
+                $qItem['correctOption'] = is_array($corr) ? $corr : [$corr];
+                $qItem['correctOptions'] = is_array($corr) ? $corr : [$corr];
+                $qItem['points'] = (int)($m['points'] ?? 10);
+            }
+            $canonicalQuestions[] = $qItem;
+
+            $userAns = $ansList[$i] ?? null;
+            if ($userAns === null || $userAns === '') continue;
+
+            $pts = (int)($m['points'] ?? $qItem['points'] ?? 10);
+            if ($pts <= 0) $pts = 10;
+
+            $cOpts = $m ? json_decode($m['correct_option'] ?? '[]', true) : ($qItem['correctOption'] ?? []);
+            $cArr = is_array($cOpts) ? array_map('intval', $cOpts) : [(int)$cOpts];
+
+            $isCorrect = false;
+            $qType = $m['type'] ?? $qItem['type'] ?? 'multiple_choice';
+            $isDragDrop = $qType === 'drag_drop' || !empty($m['drag_drop_data']) || !empty($qItem['dragDropData']);
+
+            if ($isDragDrop) {
+                if (is_array($userAns) && !empty($userAns['confirmed']) && !empty($userAns['isCorrect'])) {
+                    $isCorrect = true;
+                }
+            } elseif (count($cArr) > 1) {
+                $selections = [];
+                if (is_array($userAns)) {
+                    $selections = isset($userAns['selections']) && is_array($userAns['selections']) ? $userAns['selections'] : $userAns;
+                } elseif (is_numeric($userAns)) {
+                    $selections = [(int)$userAns];
+                }
+                $selections = array_values(array_unique(array_map('intval', $selections)));
+                sort($selections);
+                $cArrSorted = array_values(array_unique(array_map('intval', $cArr)));
+                sort($cArrSorted);
+                $isCorrect = ($selections === $cArrSorted);
+            } else {
+                $chosen = null;
+                if (is_numeric($userAns)) {
+                    $chosen = (int)$userAns;
+                } elseif (is_array($userAns)) {
+                    if (isset($userAns['selections']) && is_array($userAns['selections']) && count($userAns['selections']) > 0) {
+                        $chosen = (int)$userAns['selections'][0];
+                    } elseif (count($userAns) > 0 && is_numeric($userAns[0])) {
+                        $chosen = (int)$userAns[0];
+                    }
+                }
+                if ($chosen !== null && in_array($chosen, $cArr, true)) {
+                    $isCorrect = true;
+                }
+            }
+
+            if ($isCorrect) {
+                $serverPoints += $pts;
+                $correctCount++;
+            }
+        }
+
+        $effectivePoints = $serverPoints;
+
         $stmt = $pdo->prepare("INSERT INTO saved_sessions 
             (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, question_notes, settings, started_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             user_id=VALUES(user_id), user_email=VALUES(user_email), bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode),
             q_index=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(q_index), saved_sessions.q_index),
-            points=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(points), saved_sessions.points),
+            points=VALUES(points),
             seconds_remaining=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(seconds_remaining), saved_sessions.seconds_remaining),
             time_spent_seconds=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(time_spent_seconds), saved_sessions.time_spent_seconds),
             answers=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(answers), saved_sessions.answers),
@@ -946,10 +1039,10 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             $bankName,
             $s['examMode'] ?? 'study',
             $s['index'] ?? 0,
-            $s['points'] ?? 0,
+            $effectivePoints,
             $s['secondsRemaining'] ?? 7200,
             $s['timeSpentSeconds'] ?? 0,
-            json_encode($s['questions'] ?? []),
+            json_encode($canonicalQuestions),
             json_encode($s['answers'] ?? []),
             json_encode($s['flaggedQuestions'] ?? []),
             json_encode($s['revealedQuestions'] ?? []),
@@ -960,7 +1053,14 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             $updatedAt
         ]);
         http_response_code(201);
-        echo json_encode(["success" => true, "message" => "Session saved", "sessionId" => $s['id']]);
+        echo json_encode([
+            "success" => true,
+            "message" => "Session saved and validated live from server",
+            "sessionId" => $s['id'],
+            "points" => $effectivePoints,
+            "serverPoints" => $effectivePoints,
+            "correctCount" => $correctCount
+        ]);
         exit;
     }
 
