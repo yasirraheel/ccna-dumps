@@ -38,6 +38,30 @@ export function isExamFinishedId(targetId) {
   return false;
 }
 
+export function syncActiveSessionToLocalStorage(sessionData) {
+  if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
+    return;
+  }
+  try {
+    const raw = JSON.stringify(sessionData);
+    localStorage.setItem(ACTIVE_RUNNING_SESSION_KEY, raw);
+    localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, sessionData.id);
+
+    const rawList = localStorage.getItem(SESSIONS_STORAGE_KEY);
+    let list = rawList ? JSON.parse(rawList) : [];
+    if (!Array.isArray(list)) list = [];
+    const idx = list.findIndex((s) => s.id === sessionData.id);
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], ...sessionData };
+    } else {
+      list.unshift(sessionData);
+    }
+    localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn("syncActiveSessionToLocalStorage error:", e);
+  }
+}
+
 function getInitialExamState() {
   const path = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
   const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
@@ -337,6 +361,26 @@ function reducer(state, action) {
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = optIdx;
 
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: state.questions,
+          index: state.index,
+          answer: optIdx,
+          answers: newAnswersList,
+          points: state.points,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
+
       return {
         ...state,
         answer: optIdx,
@@ -354,6 +398,26 @@ function reducer(state, action) {
 
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = { selections, confirmed: false };
+
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: state.questions,
+          index: state.index,
+          answer: { selections, confirmed: false },
+          answers: newAnswersList,
+          points: state.points,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
 
       return {
         ...state,
@@ -378,6 +442,26 @@ function reducer(state, action) {
       const { matches } = action.payload;
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = { matches, confirmed: false };
+
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: state.questions,
+          index: state.index,
+          answer: { matches, confirmed: false },
+          answers: newAnswersList,
+          points: state.points,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
 
       return {
         ...state,
@@ -411,6 +495,30 @@ function reducer(state, action) {
         isCorrect: allCorrect,
       };
 
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: state.questions,
+          index: state.index,
+          answer: {
+            matches: userMatches,
+            confirmed: true,
+            isCorrect: allCorrect,
+          },
+          answers: newAnswersList,
+          points: state.points,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
+
       return {
         ...state,
         answer: {
@@ -436,6 +544,26 @@ function reducer(state, action) {
           : 0;
 
       const updatedPoints = calculateTotalPoints(state.questions, state.answers);
+
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: state.questions,
+          index: nextIdx,
+          answer: state.answers[nextIdx] ?? null,
+          answers: state.answers,
+          points: updatedPoints,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
 
       return {
         ...state,
@@ -503,6 +631,16 @@ function reducer(state, action) {
         points: finalPoints,
         highscore:
           finalPoints > state.highscore ? finalPoints : state.highscore,
+      };
+    }
+
+    case "suspendToDashboard": {
+      return {
+        ...initialState,
+        allQuestions: state.allQuestions,
+        questions: state.allQuestions,
+        status: "ready",
+        isPaused: false,
       };
     }
 
@@ -669,39 +807,7 @@ export default function App() {
     if (appContainer) appContainer.scrollTop = 0;
   }, [currentView]);
 
-  useEffect(() => {
-    const handlePopState = () => {
-      const search = new URLSearchParams(window.location.search);
-      const urlId = search.get("id") || search.get("sessionId");
-      const isReview = search.get("review") === "1" || search.get("mode") === "review";
-      if (urlId && !isReview && isExamFinishedId(urlId)) {
-        window.history.replaceState({ view: "dashboard" }, "", "/");
-        setCurrentView("dashboard");
-        setAlertDialog({
-          isOpen: true,
-          title: "Exam Already Finished",
-          message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your past attempts and detailed performance in Exam History.",
-          confirmText: "Go to Exam History",
-          cancelText: "Return to Home",
-          type: "info",
-          onConfirm: () => handleNavigate("history"),
-        });
-        return;
-      }
 
-      const nextView = getViewFromUrl();
-      if (nextView !== "exam" && status === "active" && !isReviewMode) {
-        try {
-          localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-          localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-        } catch {}
-        dispatch({ type: "restart" });
-      }
-      setCurrentView(nextView);
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [status, isReviewMode]);
 
   // Sync browser URL with active exam route (/exam?id=...)
   useEffect(() => {
@@ -838,6 +944,90 @@ export default function App() {
     return [];
   });
   const hasSavedRef = useRef(false);
+  const candidateNameVal = currentUser?.name || candidateName;
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const search = new URLSearchParams(window.location.search);
+      const urlId = search.get("id") || search.get("sessionId");
+      const isReview = search.get("review") === "1" || search.get("mode") === "review";
+      if (urlId && !isReview && isExamFinishedId(urlId)) {
+        window.history.replaceState({ view: "dashboard" }, "", "/");
+        setCurrentView("dashboard");
+        setAlertDialog({
+          isOpen: true,
+          title: "Exam Already Finished",
+          message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your past attempts and detailed performance in Exam History.",
+          confirmText: "Go to Exam History",
+          cancelText: "Return to Home",
+          type: "info",
+          onConfirm: () => handleNavigate("history"),
+        });
+        return;
+      }
+
+      const nextView = getViewFromUrl();
+      if (nextView !== "exam" && status === "active" && !isReviewMode) {
+        const now = Date.now();
+        const sessionSnapshot = {
+          id: activeSessionId || `session_${startedAt || now}`,
+          userId: currentUser?.id || null,
+          userEmail: currentUser?.email || null,
+          candidateName: candidateNameVal,
+          status: "active",
+          questions,
+          index,
+          answer,
+          answers,
+          points,
+          secondsRemaining,
+          examMode,
+          settings,
+          selectedBankName,
+          selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+          bankName: selectedBankName,
+          flaggedQuestions,
+          revealedQuestions: revealedQuestions || [],
+          startedAt: startedAt || now,
+          savedAt: now,
+          updatedAt: now,
+          isPaused: false,
+        };
+        syncActiveSessionToLocalStorage(sessionSnapshot);
+        try {
+          fetch(`${API_BASE_URL}/sessions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(sessionSnapshot),
+            keepalive: true,
+          }).catch(() => {});
+        } catch (e) {}
+        dispatch({ type: "suspendToDashboard" });
+      }
+      setCurrentView(nextView);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [
+    status,
+    isReviewMode,
+    activeSessionId,
+    startedAt,
+    currentUser,
+    candidateNameVal,
+    questions,
+    index,
+    answer,
+    answers,
+    points,
+    secondsRemaining,
+    examMode,
+    settings,
+    selectedBankName,
+    selectedBankKey,
+    flaggedQuestions,
+    revealedQuestions,
+  ]);
 
   // Validate session on launch
   useEffect(() => {
@@ -999,10 +1189,56 @@ export default function App() {
             if (s.questions?.length > 0 && ansCount >= s.questions.length) return false;
             return true;
           });
-          setSavedSessions(cleanSessions);
-          try {
-            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(cleanSessions));
-          } catch {}
+
+          setSavedSessions((prev) => {
+            const mergedMap = new Map();
+            cleanSessions.forEach((rem) => mergedMap.set(rem.id, rem));
+
+            prev.forEach((loc) => {
+              if (isExamFinishedId(loc.id)) {
+                mergedMap.delete(loc.id);
+                return;
+              }
+              const rem = mergedMap.get(loc.id);
+              if (!rem) {
+                mergedMap.set(loc.id, loc);
+              } else {
+                const locUpdated = Number(loc.updatedAt || loc.savedAt || 0);
+                const remUpdated = Number(rem.updatedAt || rem.savedAt || 0);
+                const locIndex = Number(loc.index || 0);
+                const remIndex = Number(rem.index || 0);
+
+                if (locIndex > remIndex || locUpdated > remUpdated) {
+                  const merged = {
+                    ...rem,
+                    ...loc,
+                    index: Math.max(locIndex, remIndex),
+                    answers:
+                      (loc.answers?.filter((a) => a !== null && a !== undefined).length || 0) >=
+                      (rem.answers?.filter((a) => a !== null && a !== undefined).length || 0)
+                        ? loc.answers
+                        : rem.answers,
+                  };
+                  mergedMap.set(loc.id, merged);
+                  fetch(`${API_BASE_URL}/sessions`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(merged),
+                    keepalive: true,
+                  }).catch(() => {});
+                }
+              }
+            });
+
+            const mergedList = Array.from(mergedMap.values());
+            mergedList.sort((a, b) => Number(b.updatedAt || b.savedAt || 0) - Number(a.updatedAt || a.savedAt || 0));
+
+            try {
+              localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(mergedList));
+            } catch {}
+
+            return mergedList;
+          });
         }
       })
       .catch(() => {});
@@ -1697,6 +1933,8 @@ export default function App() {
             dispatch={dispatch}
             examMode={examMode}
             settings={settings}
+            selectedBankName={selectedBankName}
+            selectedBankKey={selectedBankKey}
             flaggedQuestions={flaggedQuestions}
             revealedQuestions={revealedQuestions}
             isReviewMode={isReviewMode}
@@ -1709,11 +1947,56 @@ export default function App() {
             onFinishExam={() => dispatch({ type: "finish" })}
             onExitReview={() => dispatch({ type: "exitReview" })}
             onExitToDashboard={() => {
+              const now = Date.now();
+              const sessionSnapshot = {
+                id: activeSessionId || `session_${startedAt || now}`,
+                userId: currentUser?.id || null,
+                userEmail: currentUser?.email || null,
+                candidateName: currentUser?.name || candidateName,
+                status: "active",
+                questions,
+                index,
+                answer,
+                answers,
+                points,
+                secondsRemaining,
+                examMode,
+                settings,
+                selectedBankName,
+                selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+                bankName: selectedBankName,
+                flaggedQuestions,
+                revealedQuestions: revealedQuestions || [],
+                startedAt: startedAt || now,
+                savedAt: now,
+                updatedAt: now,
+                isPaused: false,
+              };
+
+              syncActiveSessionToLocalStorage(sessionSnapshot);
+
               try {
-                localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-                localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+                fetch(`${API_BASE_URL}/sessions`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(sessionSnapshot),
+                  keepalive: true,
+                }).catch(() => {});
               } catch (e) {}
-              dispatch({ type: "restart" });
+
+              setSavedSessions((prev) => {
+                const existingIdx = prev.findIndex((s) => s.id === sessionSnapshot.id);
+                let updated;
+                if (existingIdx >= 0) {
+                  updated = [...prev];
+                  updated[existingIdx] = sessionSnapshot;
+                } else {
+                  updated = [sessionSnapshot, ...prev];
+                }
+                return updated;
+              });
+
+              dispatch({ type: "suspendToDashboard" });
               handleNavigate("dashboard");
             }}
             points={points}

@@ -69,6 +69,8 @@ function QuestionView({
   dispatch,
   examMode,
   settings,
+  selectedBankName,
+  selectedBankKey,
   flaggedQuestions,
   revealedQuestions = [],
   isReviewMode = false,
@@ -85,6 +87,17 @@ function QuestionView({
   isPaused = false,
   onTogglePause,
 }) {
+  const cleanBankTitle = (name) => {
+    if (!name) return "";
+    return String(name)
+      .replace(/spoto-?/gi, "")
+      .replace(/\(\s*\)/g, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
+  const activeBankTitle = cleanBankTitle(selectedBankName || question?.bankName || "CCNA Exam");
+
   const [exhibitZoom, setExhibitZoom] = useState(1);
   const [exhibitPan, setExhibitPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -98,6 +111,15 @@ function QuestionView({
   const [sourceImgError, setSourceImgError] = useState(false);
 
   const [imgError, setImgError] = useState(false);
+  const [isNavTransitioning, setIsNavTransitioning] = useState(false);
+
+  useEffect(() => {
+    setIsNavTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsNavTransitioning(false);
+    }, 360);
+    return () => clearTimeout(timer);
+  }, [seqNumber]);
   const [showPaletteModal, setShowPaletteModal] = useState(false);
   const [isNoteBoxOpen, setIsNoteBoxOpen] = useState(false);
   const [isAllNotesModalOpen, setIsAllNotesModalOpen] = useState(false);
@@ -468,14 +490,19 @@ function QuestionView({
   const canGoNext = seqNumber < numQuestions;
 
   const handleExitClick = () => {
+    if (isReviewMode) {
+      onExitReview ? onExitReview() : onExitToDashboard();
+      return;
+    }
+
     setConfirmDialog({
       isOpen: true,
-      title: "Exit Exam Confirmation",
+      title: "Save & Return to Dashboard",
       message:
-        "Are you sure you want to return to the Exam Bank selection? Your current exam progress will be reset.",
-      confirmText: "Exit Exam",
-      cancelText: "Continue Exam",
-      type: "warning",
+        "Your current question, answers, and remaining time will be saved in real-time. You can resume right where you left off from the Dashboard.",
+      confirmText: "Save & Exit",
+      cancelText: "Continue Practicing",
+      type: "info",
       onConfirm: () => {
         setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         onExitToDashboard();
@@ -526,6 +553,15 @@ function QuestionView({
 
   return (
     <div className={`boson-exsim-view ${isPaused ? "is-paused" : ""}`}>
+      {/* SLIM THEME TRANSITION ANIMATED LOADER */}
+      <div
+        className={`boson-slim-transition-track ${isNavTransitioning ? "is-active" : ""}`}
+        aria-hidden="true"
+      >
+        <div className="boson-slim-transition-bar"></div>
+        <div className="boson-slim-transition-glow"></div>
+      </div>
+
       {/* TOP NAVIGATION BAR: Back to Exam, Notes Button, Timer & User Avatar */}
       <div className="boson-top-bar">
         <div className="top-bar-left-actions">
@@ -540,6 +576,13 @@ function QuestionView({
             </svg>
             <span>Exam</span>
           </button>
+
+          {activeBankTitle && (
+            <div className="top-bar-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
+              <span className="bank-tag-icon">🏷️</span>
+              <span className="bank-tag-name">{activeBankTitle}</span>
+            </div>
+          )}
 
           <button
             type="button"
@@ -614,12 +657,27 @@ function QuestionView({
 
       {/* MAIN TITLE HEADER */}
       <div className="boson-main-header">
-        <h1 className="boson-exam-title">
-          Cisco 200-301 CCNA Exam Simulator
-        </h1>
+        <div className="boson-title-bank-row">
+          <h1 className="boson-exam-title">
+            Cisco 200-301 CCNA Exam Simulator
+          </h1>
+          {activeBankTitle && (
+            <div className="boson-current-bank-badge" title={`Active Question Bank: ${activeBankTitle}`}>
+              <span className="bank-badge-dot"></span>
+              <span className="bank-badge-prefix">BANK:</span>
+              <span className="bank-badge-text">{activeBankTitle}</span>
+            </div>
+          )}
+        </div>
 
         <div className="boson-sub-header">
           <div className="boson-sub-left">
+            {activeBankTitle && (
+              <>
+                <span className="boson-bank-sub-tag">📚 {activeBankTitle}</span>
+                <span className="boson-dot-sep">•</span>
+              </>
+            )}
             <span className="boson-q-count">
               Question {seqNumber} of {numQuestions}
             </span>
@@ -788,7 +846,7 @@ function QuestionView({
       )}
 
       {/* QUESTION BODY AREA */}
-      <div className="boson-question-body">
+      <div className="boson-question-body" key={seqNumber}>
         {/* INLINE QUESTION NOTE COMPOSER */}
         {isNoteBoxOpen && (
           <div className="inline-note-composer-card">
@@ -1194,11 +1252,12 @@ function QuestionView({
 
           <button
             type="button"
-            className={`btn-boson-nav ${!canGoNext ? "disabled" : ""}`}
+            className={`btn-boson-nav ${!canGoNext ? "disabled" : ""} ${isNavTransitioning ? "is-nav-loading" : ""}`}
             onClick={() => canGoNext && onGoToQuestion(seqNumber)}
             disabled={!canGoNext}
           >
-            Next
+            <span>Next</span>
+            {isNavTransitioning && <span className="btn-nav-pulse-dot"></span>}
           </button>
         </div>
 

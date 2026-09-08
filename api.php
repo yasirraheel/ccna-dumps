@@ -874,11 +874,17 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             user_id=VALUES(user_id), user_email=VALUES(user_email), bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode),
-            q_index=VALUES(q_index), points=VALUES(points), seconds_remaining=VALUES(seconds_remaining), time_spent_seconds=VALUES(time_spent_seconds),
-            answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
-            revealed_questions=VALUES(revealed_questions), question_notes=VALUES(question_notes), settings=VALUES(settings),
+            q_index=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(q_index), saved_sessions.q_index),
+            points=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(points), saved_sessions.points),
+            seconds_remaining=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(seconds_remaining), saved_sessions.seconds_remaining),
+            time_spent_seconds=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(time_spent_seconds), saved_sessions.time_spent_seconds),
+            answers=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(answers), saved_sessions.answers),
+            flagged_questions=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(flagged_questions), saved_sessions.flagged_questions),
+            revealed_questions=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(revealed_questions), saved_sessions.revealed_questions),
+            question_notes=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(question_notes), saved_sessions.question_notes),
+            settings=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(settings), saved_sessions.settings),
             started_at=COALESCE(saved_sessions.started_at, VALUES(started_at)),
-            updated_at=VALUES(updated_at)");
+            updated_at=GREATEST(saved_sessions.updated_at, VALUES(updated_at))");
         $stmt->execute([
             $s['id'],
             $s['userId'] ?? null,
