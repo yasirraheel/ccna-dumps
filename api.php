@@ -726,6 +726,13 @@ if (preg_match('#^/api/history#', $basePath)) {
         if (!empty($id)) {
             $pdo->prepare("DELETE FROM saved_sessions WHERE id = ?")->execute([$id]);
         }
+        $userEmailClean = isset($b['userEmail']) ? strtolower($b['userEmail']) : null;
+        $userIdClean = $b['userId'] ?? null;
+        $bankNameClean = cleanBankName($b['bankName'] ?? '');
+        if (($userIdClean || $userEmailClean) && $bankNameClean) {
+            $delStmt = $pdo->prepare("DELETE FROM saved_sessions WHERE (" . ($userIdClean ? "user_id = ?" : "user_email = ?") . ") AND bank_name = ?");
+            $delStmt->execute([$userIdClean ?: $userEmailClean, $bankNameClean]);
+        }
 
         http_response_code(201);
         echo json_encode(["success" => true, "message" => "Exam saved to MySQL", "examId" => $id]);

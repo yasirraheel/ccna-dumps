@@ -23,12 +23,28 @@ try {
 
     echo "=== Cleaning Stale / Finished Sessions in MySQL ===\n";
 
+    // 1. Delete sessions that match existing exam_attempts by ID
     $delAttempts = $pdo->exec("DELETE s FROM saved_sessions s INNER JOIN exam_attempts ea ON s.id = ea.id");
-    echo "1. Deleted sessions already present in exam_attempts: $delAttempts\n";
+    echo "1. Deleted sessions already present in exam_attempts by ID: $delAttempts\n";
 
-    $rows = $pdo->query("SELECT id, user_email, questions, answers, q_index FROM saved_sessions")->fetchAll();
+    // 2. Delete sessions matching completed attempt for same user and bank
+    $sessions = $pdo->query("SELECT id, user_id, user_email, bank_name, q_index, started_at, updated_at FROM saved_sessions")->fetchAll();
+    $delBankCount = 0;
+    foreach ($sessions as $s) {
+        $check = $pdo->prepare("SELECT id FROM exam_attempts WHERE (user_id = ? OR user_email = ?) AND bank_name = ?");
+        $check->execute([$s['user_id'], $s['user_email'], $s['bank_name']]);
+        if ($check->fetch()) {
+            $pdo->prepare("DELETE FROM saved_sessions WHERE id = ?")->execute([$s['id']]);
+            echo "   Deleted stale session matching completed bank: {$s['id']} ({$s['user_email']}, {$s['bank_name']})\n";
+            $delBankCount++;
+        }
+    }
+    echo "2. Deleted sessions matching completed bank attempts: $delBankCount\n";
+
+    // 3. Inspect remaining sessions and delete any where all questions were answered
+    $remainingRows = $pdo->query("SELECT id, user_email, questions, answers, q_index FROM saved_sessions")->fetchAll();
     $deletedCount = 0;
-    foreach ($rows as $r) {
+    foreach ($remainingRows as $r) {
         $qs = json_decode($r['questions'] ?? '[]', true) ?: [];
         $ans = json_decode($r['answers'] ?? '[]', true) ?: [];
         $totalQ = count($qs);
@@ -40,7 +56,7 @@ try {
             $deletedCount++;
         }
     }
-    echo "2. Deleted sessions with 100% answered questions: $deletedCount\n";
+    echo "3. Deleted sessions with 100% answered questions: $deletedCount\n";
 
     $remaining = $pdo->query("SELECT COUNT(*) FROM saved_sessions")->fetchColumn();
     echo "Remaining active in-progress sessions: $remaining\n";
