@@ -1383,6 +1383,82 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         }
         exit;
     }
+
+    // 13.10 Update Question: PUT or POST /api/admin/questions/:id
+    if (preg_match('#^/api/admin/questions/(\d+)$#', $basePath, $m) && ($method === 'PUT' || $method === 'POST')) {
+        $qId = (int)$m[1];
+        $questionNo = trim($body['questionNo'] ?? $body['question_no'] ?? '');
+        $questionText = trim($body['question'] ?? '');
+        $options = isset($body['options']) && is_array($body['options']) 
+            ? json_encode(array_values($body['options']), JSON_UNESCAPED_UNICODE) 
+            : null;
+        $correctOption = isset($body['correctOption']) 
+            ? json_encode(array_values((array)$body['correctOption'])) 
+            : (isset($body['correct_option']) ? json_encode(array_values((array)$body['correct_option'])) : null);
+        $points = isset($body['points']) ? (int)$body['points'] : 10;
+        $cliSnippet = isset($body['cliSnippet']) 
+            ? (trim($body['cliSnippet']) !== '' ? trim($body['cliSnippet']) : null)
+            : (isset($body['cli_snippet']) ? (trim($body['cli_snippet']) !== '' ? trim($body['cli_snippet']) : null) : null);
+        $exhibitImage = isset($body['exhibitImage']) 
+            ? (trim($body['exhibitImage']) !== '' ? trim($body['exhibitImage']) : null)
+            : (isset($body['exhibit_image']) ? (trim($body['exhibit_image']) !== '' ? trim($body['exhibit_image']) : null) : null);
+        $originalSourceImage = isset($body['originalSourceImage']) 
+            ? (trim($body['originalSourceImage']) !== '' ? trim($body['originalSourceImage']) : null)
+            : (isset($body['original_source_image']) ? (trim($body['original_source_image']) !== '' ? trim($body['original_source_image']) : null) : null);
+        $dragDropData = isset($body['dragDropData']) ? json_encode($body['dragDropData'], JSON_UNESCAPED_UNICODE) : null;
+        $type = trim($body['type'] ?? '');
+
+        if (!$questionText) {
+            http_response_code(400);
+            echo json_encode(["error" => "Question prompt cannot be empty."]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("UPDATE questions SET
+            question_no = COALESCE(NULLIF(?, ''), question_no),
+            question = ?,
+            options = COALESCE(?, options),
+            correct_option = COALESCE(?, correct_option),
+            points = ?,
+            cli_snippet = ?,
+            exhibit_image = ?,
+            original_source_image = ?,
+            drag_drop_data = ?,
+            type = COALESCE(NULLIF(?, ''), type)
+            WHERE id = ?");
+        $stmt->execute([
+            $questionNo,
+            $questionText,
+            $options,
+            $correctOption,
+            $points,
+            $cliSnippet,
+            $exhibitImage,
+            $originalSourceImage,
+            $dragDropData,
+            $type,
+            $qId
+        ]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Question #{$qId} updated successfully.",
+            "question" => [
+                "id" => $qId,
+                "questionNo" => $questionNo,
+                "question" => $questionText,
+                "options" => json_decode($options ?? '[]', true),
+                "correctOption" => json_decode($correctOption ?? '[]', true),
+                "points" => $points,
+                "cliSnippet" => $cliSnippet,
+                "exhibitImage" => $exhibitImage,
+                "originalSourceImage" => $originalSourceImage,
+                "dragDropData" => json_decode($dragDropData ?? 'null', true),
+                "type" => $type ?: ($dragDropData ? 'drag_drop' : 'multiple_choice')
+            ]
+        ]);
+        exit;
+    }
 }
 
 // Fallback

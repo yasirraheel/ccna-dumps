@@ -1,13 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ccnaQuestions as ccnaQuestionsData } from '../../data/ccnaQuestions';
+import EditQuestionModal from './EditQuestionModal';
 
 function AdminQuestions() {
   const [bankFilter, setBankFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [questionsList, setQuestionsList] = useState(ccnaQuestionsData);
+
+  useEffect(() => {
+    fetch('/api/questions')
+      .then((res) => res.json())
+      .then((data) => {
+        const qList = Array.isArray(data) ? data : data?.questions || [];
+        if (qList.length > 0) {
+          setQuestionsList(qList);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const filterQuestions = () => {
-    let list = ccnaQuestionsData;
+    let list = questionsList;
     if (bankFilter === 'bank_a') list = list.slice(0, 50);
     else if (bankFilter === 'bank_b') list = list.slice(50, 100);
     else if (bankFilter === 'bank_c') list = list.slice(100, 150);
@@ -104,13 +119,28 @@ function AdminQuestions() {
                     <strong style={{ color: '#22c55e' }}>{q.points || 10} pts</strong>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn-table-action"
-                      onClick={() => setSelectedQuestion(q)}
-                    >
-                      Inspect 🔍
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        type="button"
+                        className="btn-table-action"
+                        onClick={() => setSelectedQuestion(q)}
+                      >
+                        Inspect 🔍
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-table-action"
+                        style={{
+                          borderColor: 'rgba(245, 158, 11, 0.45)',
+                          color: '#f59e0b',
+                          background: 'rgba(245, 158, 11, 0.1)',
+                          fontWeight: 700
+                        }}
+                        onClick={() => setEditingQuestion(q)}
+                      >
+                        Edit ✏️
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -204,7 +234,25 @@ function AdminQuestions() {
               )}
             </div>
 
-            <div className="admin-modal-footer">
+            <div className="admin-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn-admin-primary"
+                style={{
+                  background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                  borderColor: '#f59e0b',
+                  color: '#ffffff',
+                  fontWeight: 700
+                }}
+                onClick={() => {
+                  const toEdit = selectedQuestion;
+                  setSelectedQuestion(null);
+                  setEditingQuestion(toEdit);
+                }}
+              >
+                Edit This Question ✏️
+              </button>
+
               <button
                 type="button"
                 className="btn-admin-secondary"
@@ -215,6 +263,21 @@ function AdminQuestions() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* EDIT QUESTION MODAL */}
+      {editingQuestion && (
+        <EditQuestionModal
+          isOpen={Boolean(editingQuestion)}
+          question={editingQuestion}
+          onSaveSuccess={(updatedQ) => {
+            setQuestionsList((prev) =>
+              prev.map((q) => (q.id === updatedQ.id ? { ...q, ...updatedQ } : q))
+            );
+            setEditingQuestion(null);
+          }}
+          onClose={() => setEditingQuestion(null)}
+        />
       )}
     </div>
   );

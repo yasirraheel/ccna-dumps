@@ -634,6 +634,21 @@ function reducer(state, action) {
       };
     }
 
+    case "updateQuestion": {
+      const updatedQ = action.payload;
+      const updatedAll = (state.allQuestions || []).map((q) =>
+        q.id === updatedQ.id ? { ...q, ...updatedQ } : q
+      );
+      const updatedCur = (state.questions || []).map((q) =>
+        q.id === updatedQ.id ? { ...q, ...updatedQ } : q
+      );
+      return {
+        ...state,
+        allQuestions: updatedAll,
+        questions: updatedCur,
+      };
+    }
+
     case "suspendToDashboard": {
       return {
         ...initialState,
@@ -1938,6 +1953,7 @@ export default function App() {
             flaggedQuestions={flaggedQuestions}
             revealedQuestions={revealedQuestions}
             isReviewMode={isReviewMode}
+            isAdmin={isAdminUser}
             isPaused={isPaused}
             onTogglePause={() => dispatch({ type: "togglePauseExam" })}
             onToggleFlag={handleToggleFlag}
