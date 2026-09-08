@@ -375,6 +375,7 @@ function reducer(state, action) {
 
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = optIdx;
+      const updatedPoints = calculateTotalPoints(state.questions, newAnswersList);
 
       if (!state.isReviewMode && state.activeSessionId) {
         syncActiveSessionToLocalStorage({
@@ -383,7 +384,7 @@ function reducer(state, action) {
           index: state.index,
           answer: optIdx,
           answers: newAnswersList,
-          points: state.points,
+          points: updatedPoints,
           secondsRemaining: state.secondsRemaining,
           examMode: state.examMode,
           settings: state.settings,
@@ -400,7 +401,7 @@ function reducer(state, action) {
         ...state,
         answer: optIdx,
         answers: newAnswersList,
-        points: state.points,
+        points: updatedPoints,
       };
     }
 
@@ -413,6 +414,7 @@ function reducer(state, action) {
 
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = { selections, confirmed: false };
+      const updatedPoints = calculateTotalPoints(state.questions, newAnswersList);
 
       if (!state.isReviewMode && state.activeSessionId) {
         syncActiveSessionToLocalStorage({
@@ -421,7 +423,7 @@ function reducer(state, action) {
           index: state.index,
           answer: { selections, confirmed: false },
           answers: newAnswersList,
-          points: state.points,
+          points: updatedPoints,
           secondsRemaining: state.secondsRemaining,
           examMode: state.examMode,
           settings: state.settings,
@@ -438,7 +440,7 @@ function reducer(state, action) {
         ...state,
         answer: { selections, confirmed: false },
         answers: newAnswersList,
-        points: state.points,
+        points: updatedPoints,
       };
     }
 
@@ -457,6 +459,7 @@ function reducer(state, action) {
       const { matches } = action.payload;
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = { matches, confirmed: false };
+      const updatedPoints = calculateTotalPoints(state.questions, newAnswersList);
 
       if (!state.isReviewMode && state.activeSessionId) {
         syncActiveSessionToLocalStorage({
@@ -465,7 +468,7 @@ function reducer(state, action) {
           index: state.index,
           answer: { matches, confirmed: false },
           answers: newAnswersList,
-          points: state.points,
+          points: updatedPoints,
           secondsRemaining: state.secondsRemaining,
           examMode: state.examMode,
           settings: state.settings,
@@ -482,6 +485,7 @@ function reducer(state, action) {
         ...state,
         answer: { matches, confirmed: false },
         answers: newAnswersList,
+        points: updatedPoints,
       };
     }
 
@@ -509,6 +513,7 @@ function reducer(state, action) {
         confirmed: true,
         isCorrect: allCorrect,
       };
+      const updatedPoints = calculateTotalPoints(state.questions, newAnswersList);
 
       if (!state.isReviewMode && state.activeSessionId) {
         syncActiveSessionToLocalStorage({
@@ -521,7 +526,7 @@ function reducer(state, action) {
             isCorrect: allCorrect,
           },
           answers: newAnswersList,
-          points: state.points,
+          points: updatedPoints,
           secondsRemaining: state.secondsRemaining,
           examMode: state.examMode,
           settings: state.settings,
@@ -542,6 +547,7 @@ function reducer(state, action) {
           isCorrect: allCorrect,
         },
         answers: newAnswersList,
+        points: updatedPoints,
       };
     }
 
@@ -663,6 +669,7 @@ function reducer(state, action) {
       const updatedCur = (state.questions || []).map((q) =>
         isMatch(q) ? { ...q, ...updatedQ } : q
       );
+      const updatedPoints = calculateTotalPoints(updatedCur, state.answers);
 
       if (!state.isReviewMode && state.activeSessionId) {
         syncActiveSessionToLocalStorage({
@@ -671,7 +678,7 @@ function reducer(state, action) {
           index: state.index,
           answer: state.answer,
           answers: state.answers,
-          points: state.points,
+          points: updatedPoints,
           secondsRemaining: state.secondsRemaining,
           examMode: state.examMode,
           settings: state.settings,
@@ -688,6 +695,7 @@ function reducer(state, action) {
         ...state,
         allQuestions: updatedAll,
         questions: updatedCur,
+        points: updatedPoints,
       };
     }
 
