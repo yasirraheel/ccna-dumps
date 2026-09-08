@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { adminFetch } from "../../utils/adminApi";
 import { saveQuestionOverride } from "../../utils/questionSync";
 
@@ -17,6 +17,66 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  const exhibitFileInputRef = useRef(null);
+  const sourceFileInputRef = useRef(null);
+  const [isUploadingExhibit, setIsUploadingExhibit] = useState(false);
+  const [isUploadingSource, setIsUploadingSource] = useState(false);
+  const [uploadFeedback, setUploadFeedback] = useState("");
+
+  const handleImageUpload = async (file, type) => {
+    if (!file) return;
+    const isExhibit = type === "exhibit";
+    if (isExhibit) setIsUploadingExhibit(true);
+    else setIsUploadingSource(true);
+    setUploadFeedback("");
+    setErrorMsg("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("type", type);
+      formData.append("adminEmail", "candidate@ccna.com");
+
+      const token = localStorage.getItem("ccna_auth_token") || "";
+      const headers = {
+        "X-Admin-Email": "candidate@ccna.com",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+        headers["X-Admin-Token"] = token;
+      }
+
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to upload image file.");
+      }
+
+      if (isExhibit) {
+        setExhibitImage(data.path);
+        setUploadFeedback("Exhibit diagram uploaded successfully!");
+      } else {
+        setOriginalSourceImage(data.path);
+        setUploadFeedback("Original source dump uploaded successfully!");
+      }
+
+      setTimeout(() => {
+        setUploadFeedback("");
+      }, 4000);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      setErrorMsg(err.message || "Failed to upload image.");
+    } finally {
+      if (isExhibit) setIsUploadingExhibit(false);
+      else setIsUploadingSource(false);
+    }
+  };
 
   useEffect(() => {
     if (question && isOpen) {
@@ -297,6 +357,22 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
             </div>
           )}
 
+          {uploadFeedback && (
+            <div
+              style={{
+                padding: "10px 16px",
+                background: "rgba(56, 189, 248, 0.15)",
+                border: "1px solid #38bdf8",
+                borderRadius: "8px",
+                color: "#7dd3fc",
+                fontSize: "13px",
+                fontWeight: 600,
+              }}
+            >
+              🚀 {uploadFeedback}
+            </div>
+          )}
+
           {/* ROW 1: Question No, Points & Type */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 180px", gap: "14px" }}>
             <div>
@@ -512,27 +588,81 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             {/* Exhibit Diagram */}
             <div style={{ background: "#090e1a", border: "1px solid #1a2333", borderRadius: "10px", padding: "14px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                 <label style={{ fontSize: "12px", fontWeight: 700, color: "#4ade80", textTransform: "uppercase" }}>
-                  📸 Exhibit Diagram Path
+                  📸 Exhibit Diagram
                 </label>
                 {exhibitImage && (
                   <button
                     type="button"
                     onClick={() => setExhibitImage("")}
-                    style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "11px", cursor: "pointer", textDecoration: "underline" }}
+                    style={{ background: "transparent", border: "none", color: "#f87171", fontSize: "11px", cursor: "pointer", textDecoration: "underline" }}
                   >
                     Remove
                   </button>
                 )}
               </div>
+
+              {/* Hidden File Picker Input for Exhibit */}
               <input
-                type="text"
-                value={exhibitImage}
-                onChange={(e) => setExhibitImage(e.target.value)}
-                placeholder="e.g. exhibits/188.png"
-                style={{ width: "100%", background: "#131b2e", border: "1px solid #283548", color: "#fff", padding: "8px 12px", borderRadius: "8px", fontSize: "13px" }}
+                type="file"
+                ref={exhibitFileInputRef}
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageUpload(e.target.files[0], "exhibit");
+                    e.target.value = "";
+                  }
+                }}
               />
+
+              {/* Upload Button + Path Input Bar */}
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
+                <button
+                  type="button"
+                  disabled={isUploadingExhibit}
+                  onClick={() => exhibitFileInputRef.current && exhibitFileInputRef.current.click()}
+                  style={{
+                    background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                    border: "1px solid #22c55e",
+                    color: "#ffffff",
+                    padding: "7px 12px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: isUploadingExhibit ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 2px 6px rgba(22, 163, 74, 0.3)"
+                  }}
+                  title="Click to browse image from computer or replace existing diagram"
+                >
+                  {isUploadingExhibit ? (
+                    <>
+                      <span className="spinner" style={{ width: "12px", height: "12px", border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }}></span>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📁</span>
+                      <span>{exhibitImage ? "Replace Image" : "Upload File"}</span>
+                    </>
+                  )}
+                </button>
+
+                <input
+                  type="text"
+                  value={exhibitImage}
+                  onChange={(e) => setExhibitImage(e.target.value)}
+                  placeholder="e.g. exhibits/188.png"
+                  style={{ flex: 1, background: "#131b2e", border: "1px solid #283548", color: "#fff", padding: "7px 10px", borderRadius: "6px", fontSize: "12.5px" }}
+                  title="Direct image path or URL"
+                />
+              </div>
+
               {exhibitImage && (
                 <div style={{ marginTop: "10px", textAlign: "center", background: "#050811", borderRadius: "6px", padding: "8px", border: "1px dashed #243048" }}>
                   <img
@@ -542,7 +672,7 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                     onError={(e) => {
                       e.target.style.display = "none";
                       if (e.target.parentNode) {
-                        e.target.parentNode.innerHTML = `<span style="color:#ef4444;font-size:12px;">⚠️ Image not found at path</span>`;
+                        e.target.parentNode.innerHTML = `<span style="color:#ef4444;font-size:12px;">⚠️ Image not found at path: ${exhibitImage}</span>`;
                       }
                     }}
                   />
@@ -552,27 +682,81 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
 
             {/* Original Source Dump */}
             <div style={{ background: "#090e1a", border: "1px solid #1a2333", borderRadius: "10px", padding: "14px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                 <label style={{ fontSize: "12px", fontWeight: 700, color: "#38bdf8", textTransform: "uppercase" }}>
-                  📄 Original Source Dump Path
+                  📄 Original Source Dump
                 </label>
                 {originalSourceImage && (
                   <button
                     type="button"
                     onClick={() => setOriginalSourceImage("")}
-                    style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "11px", cursor: "pointer", textDecoration: "underline" }}
+                    style={{ background: "transparent", border: "none", color: "#f87171", fontSize: "11px", cursor: "pointer", textDecoration: "underline" }}
                   >
                     Remove
                   </button>
                 )}
               </div>
+
+              {/* Hidden File Picker Input for Source */}
               <input
-                type="text"
-                value={originalSourceImage}
-                onChange={(e) => setOriginalSourceImage(e.target.value)}
-                placeholder="e.g. original_sources/188.webp"
-                style={{ width: "100%", background: "#131b2e", border: "1px solid #283548", color: "#fff", padding: "8px 12px", borderRadius: "8px", fontSize: "13px" }}
+                type="file"
+                ref={sourceFileInputRef}
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageUpload(e.target.files[0], "original_source");
+                    e.target.value = "";
+                  }
+                }}
               />
+
+              {/* Upload Button + Path Input Bar */}
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
+                <button
+                  type="button"
+                  disabled={isUploadingSource}
+                  onClick={() => sourceFileInputRef.current && sourceFileInputRef.current.click()}
+                  style={{
+                    background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                    border: "1px solid #38bdf8",
+                    color: "#ffffff",
+                    padding: "7px 12px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: isUploadingSource ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 2px 6px rgba(2, 132, 199, 0.3)"
+                  }}
+                  title="Click to browse image from computer or replace existing source dump"
+                >
+                  {isUploadingSource ? (
+                    <>
+                      <span className="spinner" style={{ width: "12px", height: "12px", border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }}></span>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📁</span>
+                      <span>{originalSourceImage ? "Replace Image" : "Upload File"}</span>
+                    </>
+                  )}
+                </button>
+
+                <input
+                  type="text"
+                  value={originalSourceImage}
+                  onChange={(e) => setOriginalSourceImage(e.target.value)}
+                  placeholder="e.g. original_sources/188.webp"
+                  style={{ flex: 1, background: "#131b2e", border: "1px solid #283548", color: "#fff", padding: "7px 10px", borderRadius: "6px", fontSize: "12.5px" }}
+                  title="Direct image path or URL"
+                />
+              </div>
+
               {originalSourceImage && (
                 <div style={{ marginTop: "10px", textAlign: "center", background: "#050811", borderRadius: "6px", padding: "8px", border: "1px dashed #243048" }}>
                   <img
@@ -582,7 +766,7 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                     onError={(e) => {
                       e.target.style.display = "none";
                       if (e.target.parentNode) {
-                        e.target.parentNode.innerHTML = `<span style="color:#ef4444;font-size:12px;">⚠️ Image not found at path</span>`;
+                        e.target.parentNode.innerHTML = `<span style="color:#ef4444;font-size:12px;">⚠️ Image not found at path: ${originalSourceImage}</span>`;
                       }
                     }}
                   />

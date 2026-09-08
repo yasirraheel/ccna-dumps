@@ -1126,7 +1126,7 @@ function checkAdminAuth($pdo, $jwtSecret, $body = null) {
     $adminEmail = strtolower(trim(
         $_SERVER['HTTP_X_ADMIN_EMAIL'] 
         ?? $_SERVER['REDIRECT_HTTP_X_ADMIN_EMAIL'] 
-        ?? ($body['adminEmail'] ?? ($body['admin_email'] ?? ($_GET['adminEmail'] ?? '')))
+        ?? ($body['adminEmail'] ?? ($body['admin_email'] ?? ($_POST['adminEmail'] ?? ($_GET['adminEmail'] ?? ''))))
     ));
     if (!$adminEmail && function_exists('apache_request_headers')) {
         $headers = apache_request_headers();
@@ -1409,6 +1409,64 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             ]);
         }
         exit;
+    }
+
+    // 13.9 Upload Image: POST /api/admin/upload-image
+    if (preg_match('#^/api/admin/upload-image#', $basePath) && $method === 'POST') {
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            http_response_code(400);
+            echo json_encode(["error" => "No image file received or upload error."]);
+            exit;
+        }
+
+        $file = $_FILES['image'];
+        $uploadType = strtolower(trim($_POST['type'] ?? 'exhibit'));
+        $targetSubdir = ($uploadType === 'original_source' || $uploadType === 'source') ? 'original_sources' : 'exhibits';
+
+        $originalName = basename($file['name']);
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $allowedExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'];
+        if (!in_array($ext, $allowedExts)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Invalid image extension: .$ext. Allowed: " . implode(', ', $allowedExts)]);
+            exit;
+        }
+
+        $sanitizedBase = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
+        $newFilename = $sanitizedBase . '_' . time() . '.' . $ext;
+
+        $targetDir = __DIR__ . '/' . $targetSubdir;
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $destPath = $targetDir . '/' . $newFilename;
+        if (move_uploaded_file($file['tmp_name'], $destPath)) {
+            @chmod($destPath, 0644);
+
+            $publicDir = __DIR__ . '/public/' . $targetSubdir;
+            if (is_dir($publicDir)) {
+                @copy($destPath, $publicDir . '/' . $newFilename);
+            }
+            $buildDir = __DIR__ . '/build/' . $targetSubdir;
+            if (is_dir($buildDir)) {
+                @copy($destPath, $buildDir . '/' . $newFilename);
+            }
+
+            $relativePath = $targetSubdir . '/' . $newFilename;
+            echo json_encode([
+                "success" => true,
+                "message" => "Image uploaded successfully!",
+                "path" => $relativePath,
+                "url" => '/' . $relativePath,
+                "filename" => $newFilename
+            ]);
+            exit;
+        } else {
+            http_response_code(500);
+            echo json_encode(["error" => "Failed to save uploaded file on server."]);
+            exit;
+        }
     }
 
     // 13.10 Update Question: PUT or POST /api/admin/questions/:id
