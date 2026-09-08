@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 
-function DragDropQuestion({ question, dispatch, answer, isReviewMode = false }) {
+function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked }) {
   const dragData = question.dragDropData || {
     items: [],
     targets: [],
     correctMatches: {},
   };
 
-  const hasAnswered = (answer !== null && answer.confirmed === true) || isReviewMode;
-  const isLocked = hasAnswered || isReviewMode;
+  const isLocked = propIsLocked !== undefined ? propIsLocked : ((answer !== null && answer.confirmed === true) || isReviewMode);
+  const hasAnswered = isLocked;
   const currentMatches = answer?.matches || {};
 
   const [selectedItem, setSelectedItem] = useState(null);

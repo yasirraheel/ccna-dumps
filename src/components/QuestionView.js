@@ -74,6 +74,7 @@ function QuestionView({
   selectedBankKey,
   flaggedQuestions,
   revealedQuestions = [],
+  committedQuestions = [],
   isReviewMode = false,
   onToggleFlag,
   onGoToQuestion,
@@ -470,12 +471,14 @@ function QuestionView({
   const originalSourceSrc = getExhibitUrl(resolvedOriginalSource);
 
   const isRevealed = Boolean(revealedQuestions?.includes(seqNumber - 1));
+  const isCommitted = Boolean(committedQuestions?.includes(seqNumber - 1));
   const maxAllowed = isMulti ? correctOptions.length : 1;
   const isTimeOver = secondsRemaining !== null && secondsRemaining <= 0;
+  const isLocked = Boolean(isRevealed || isReviewMode || isTimeOver || isCommitted);
 
   const handleOptionClick = (index) => {
-    // Once answer is revealed, in review mode, or time has expired, user cannot modify their selection
-    if (isRevealed || isReviewMode || isTimeOver) return;
+    // Once answer is revealed, committed, in review mode, or time has expired, user cannot modify their selection
+    if (isLocked) return;
 
     if (isMulti) {
       const current = selectedIndices;
@@ -703,6 +706,12 @@ function QuestionView({
               <>
                 <span className="boson-dot-sep">•</span>
                 <span className="boson-review-badge">🔍 Review Mode (Read-Only)</span>
+              </>
+            )}
+            {!isReviewMode && isLocked && (
+              <>
+                <span className="boson-dot-sep">•</span>
+                <span className="boson-review-badge" style={{ background: "rgba(100, 116, 139, 0.2)", color: "#94a3b8", border: "1px solid rgba(148, 163, 184, 0.3)" }}>🔒 Answer Locked</span>
               </>
             )}
           </div>
@@ -1182,7 +1191,8 @@ function QuestionView({
             question={question}
             dispatch={dispatch}
             answer={answer}
-            isReviewMode={isReviewMode || isTimeOver}
+            isReviewMode={isReviewMode || isTimeOver || isLocked}
+            isLocked={isLocked}
           />
         ) : (
           <div className="boson-options-list">
@@ -1197,9 +1207,9 @@ function QuestionView({
 
                 let cardClass = "boson-option-item";
                 if (isSelected) cardClass += " selected";
-                if (isRevealed || isReviewMode || isTimeOver) {
+                if (isLocked) {
                   cardClass += " locked";
-                  if (settings?.showAnswersInline !== false || isReviewMode) {
+                  if (settings?.showAnswersInline !== false || isReviewMode || isRevealed) {
                     if (isCorrectChoice) {
                       cardClass += " correct-answer";
                     } else if (isSelected) {
@@ -1242,7 +1252,7 @@ function QuestionView({
         )}
 
         {/* SHOW ANSWER INLINE BANNER */}
-        {(isReviewMode || (isRevealed && settings?.showAnswersInline !== false)) && !isDragDrop && (
+        {(isReviewMode || ((isRevealed || isCommitted) && settings?.showAnswersInline !== false)) && !isDragDrop && (
           <div className="boson-explanation-card">
             <div className="explanation-title">
               💡 <strong>Correct Answer & Explanation:</strong>
@@ -1294,15 +1304,15 @@ function QuestionView({
           {!isDragDrop && !isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
             <button
               type="button"
-              className={`btn-boson-action ${isRevealed ? "disabled" : ""}`}
+              className={`btn-boson-action ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) ? "disabled" : ""}`}
               onClick={() => {
-                if (!isRevealed) {
+                if (!isRevealed && !(isCommitted && settings?.showAnswersInline !== false)) {
                   dispatch({ type: "revealAnswer", payload: seqNumber - 1 });
                 }
               }}
-              disabled={isRevealed}
+              disabled={isRevealed || (isCommitted && settings?.showAnswersInline !== false)}
             >
-              {isRevealed ? "✓ Answer Revealed" : "Show Answer"}
+              {isRevealed || (isCommitted && settings?.showAnswersInline !== false) ? "✓ Answer Revealed" : "Show Answer"}
             </button>
           )}
 

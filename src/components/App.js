@@ -184,6 +184,22 @@ function getInitialExamState() {
         activeSessionId: activeSession.id || `session_${Date.now()}`,
         startedAt: activeSession.startedAt || Date.now(),
         revealedQuestions: activeSession.revealedQuestions || [],
+        committedQuestions: Array.isArray(activeSession.committedQuestions)
+          ? activeSession.committedQuestions
+          : Array.isArray(activeSession.answers)
+          ? activeSession.answers
+              .map((a, i) => {
+                const hasAns =
+                  a !== null &&
+                  a !== undefined &&
+                  (typeof a === "number" ||
+                    (Array.isArray(a) && a.length > 0) ||
+                    (Array.isArray(a?.selections) && a.selections.length > 0) ||
+                    (a?.matches && Object.keys(a.matches).length > 0));
+                return hasAns ? i : null;
+              })
+              .filter((i) => i !== null)
+          : [],
         isReviewMode: Boolean(activeSession.isReviewMode),
         isPaused: Boolean(activeSession.isPaused),
       };
@@ -215,6 +231,7 @@ function getInitialExamState() {
     activeSessionId: null,
     startedAt: null,
     revealedQuestions: [],
+    committedQuestions: [],
     isReviewMode: false,
     isPaused: false,
   };
@@ -291,6 +308,7 @@ function reducer(state, action) {
         activeSessionId: newSessionId,
         startedAt: startTime,
         revealedQuestions: [],
+        committedQuestions: [],
         isReviewMode: false,
         isPaused: false,
       };
@@ -309,6 +327,7 @@ function reducer(state, action) {
         selectedBankName,
         activeSessionId,
         revealedQuestions,
+        committedQuestions,
         isReviewMode,
         startedAt,
       } = action.payload;
@@ -331,6 +350,24 @@ function reducer(state, action) {
 
       const finalQuestions = applyQuestionOverrides(questions);
 
+      let resumedCommitted = [];
+      if (Array.isArray(committedQuestions)) {
+        resumedCommitted = committedQuestions;
+      } else if (Array.isArray(answers)) {
+        resumedCommitted = answers
+          .map((a, i) => {
+            const hasAns =
+              a !== null &&
+              a !== undefined &&
+              (typeof a === "number" ||
+                (Array.isArray(a) && a.length > 0) ||
+                (Array.isArray(a?.selections) && a.selections.length > 0) ||
+                (a?.matches && Object.keys(a.matches).length > 0));
+            return hasAns ? i : null;
+          })
+          .filter((i) => i !== null);
+      }
+
       return {
         ...state,
         questions: finalQuestions,
@@ -347,6 +384,7 @@ function reducer(state, action) {
         activeSessionId: finalSessionId,
         startedAt: initialStartTime,
         revealedQuestions: revealedQuestions || [],
+        committedQuestions: resumedCommitted,
         isReviewMode: Boolean(isReviewMode),
         isPaused: false,
       };
@@ -357,6 +395,9 @@ function reducer(state, action) {
       const newRevealed = state.revealedQuestions.includes(qIdx)
         ? state.revealedQuestions
         : [...state.revealedQuestions, qIdx];
+      const newCommitted = !state.committedQuestions?.includes(qIdx)
+        ? [...(state.committedQuestions || []), qIdx]
+        : (state.committedQuestions || []);
       const updatedPoints = calculateTotalPoints(state.questions, state.answers);
 
       if (!state.isReviewMode && state.activeSessionId) {
@@ -375,6 +416,7 @@ function reducer(state, action) {
           bankName: state.selectedBankName,
           flaggedQuestions: state.flaggedQuestions,
           revealedQuestions: newRevealed,
+          committedQuestions: newCommitted,
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -384,6 +426,7 @@ function reducer(state, action) {
       return {
         ...state,
         revealedQuestions: newRevealed,
+        committedQuestions: newCommitted,
         points: updatedPoints,
       };
     }
@@ -391,6 +434,7 @@ function reducer(state, action) {
     case "newAnswer": {
       if (state.isReviewMode || state.isPaused) return state;
       if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
+      if (state.committedQuestions?.includes(state.index)) return state;
       const optIdx =
         typeof action.payload === "number"
           ? action.payload
@@ -415,6 +459,9 @@ function reducer(state, action) {
           selectedBankName: state.selectedBankName,
           selectedBankKey: state.selectedBankKey,
           bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: state.revealedQuestions || [],
+          committedQuestions: state.committedQuestions || [],
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -432,6 +479,7 @@ function reducer(state, action) {
     case "multiSelect": {
       if (state.isReviewMode || state.isPaused) return state;
       if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
+      if (state.committedQuestions?.includes(state.index)) return state;
       const selections = Array.isArray(action.payload)
         ? action.payload
         : action.payload?.selections || [];
@@ -453,6 +501,9 @@ function reducer(state, action) {
           selectedBankName: state.selectedBankName,
           selectedBankKey: state.selectedBankKey,
           bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: state.revealedQuestions || [],
+          committedQuestions: state.committedQuestions || [],
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -479,6 +530,7 @@ function reducer(state, action) {
     case "dragDropAnswer": {
       if (state.isReviewMode || state.isPaused) return state;
       if (state.secondsRemaining !== null && state.secondsRemaining <= 0) return state;
+      if (state.committedQuestions?.includes(state.index)) return state;
       const { matches } = action.payload;
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = { matches, confirmed: false };
@@ -497,6 +549,9 @@ function reducer(state, action) {
           selectedBankName: state.selectedBankName,
           selectedBankKey: state.selectedBankKey,
           bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: state.revealedQuestions || [],
+          committedQuestions: state.committedQuestions || [],
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -536,6 +591,9 @@ function reducer(state, action) {
         isCorrect: allCorrect,
       };
       const updatedPoints = calculateTotalPoints(state.questions, newAnswersList);
+      const newCommitted = !state.committedQuestions?.includes(state.index)
+        ? [...(state.committedQuestions || []), state.index]
+        : (state.committedQuestions || []);
 
       if (!state.isReviewMode && state.activeSessionId) {
         syncActiveSessionToLocalStorage({
@@ -555,6 +613,9 @@ function reducer(state, action) {
           selectedBankName: state.selectedBankName,
           selectedBankKey: state.selectedBankKey,
           bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: state.revealedQuestions || [],
+          committedQuestions: newCommitted,
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -570,6 +631,7 @@ function reducer(state, action) {
         },
         answers: newAnswersList,
         points: updatedPoints,
+        committedQuestions: newCommitted,
       };
     }
 
@@ -585,6 +647,20 @@ function reducer(state, action) {
           : action.payload !== undefined
           ? action.payload
           : 0;
+
+      const curAns = state.answers[state.index];
+      const hasCurrentAnswer =
+        curAns !== null &&
+        curAns !== undefined &&
+        (typeof curAns === "number" ||
+          (Array.isArray(curAns) && curAns.length > 0) ||
+          (Array.isArray(curAns?.selections) && curAns.selections.length > 0) ||
+          (curAns?.matches && Object.keys(curAns.matches).length > 0));
+
+      const newCommitted =
+        hasCurrentAnswer && !state.committedQuestions?.includes(state.index)
+          ? [...(state.committedQuestions || []), state.index]
+          : (state.committedQuestions || []);
 
       const updatedPoints = calculateTotalPoints(state.questions, state.answers);
 
@@ -602,6 +678,9 @@ function reducer(state, action) {
           selectedBankName: state.selectedBankName,
           selectedBankKey: state.selectedBankKey,
           bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: state.revealedQuestions || [],
+          committedQuestions: newCommitted,
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -614,6 +693,7 @@ function reducer(state, action) {
         index: nextIdx,
         answer: state.answers[nextIdx] ?? null,
         points: updatedPoints,
+        committedQuestions: newCommitted,
       };
     }
 
@@ -707,6 +787,9 @@ function reducer(state, action) {
           selectedBankName: state.selectedBankName,
           selectedBankKey: state.selectedBankKey,
           bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: state.revealedQuestions || [],
+          committedQuestions: state.committedQuestions || [],
           startedAt: state.startedAt,
           updatedAt: Date.now(),
           savedAt: Date.now(),
@@ -789,6 +872,7 @@ export default function App() {
       activeSessionId,
       startedAt,
       revealedQuestions,
+      committedQuestions = [],
       isReviewMode,
       isPaused,
     },
@@ -1104,6 +1188,7 @@ export default function App() {
           bankName: selectedBankName,
           flaggedQuestions,
           revealedQuestions: revealedQuestions || [],
+          committedQuestions: committedQuestions || [],
           startedAt: startedAt || now,
           savedAt: now,
           updatedAt: now,
@@ -1143,6 +1228,7 @@ export default function App() {
     selectedBankKey,
     flaggedQuestions,
     revealedQuestions,
+    committedQuestions,
   ]);
 
   // Validate session on launch
@@ -2105,6 +2191,7 @@ export default function App() {
             selectedBankKey={selectedBankKey}
             flaggedQuestions={flaggedQuestions}
             revealedQuestions={revealedQuestions}
+            committedQuestions={committedQuestions}
             isReviewMode={isReviewMode}
             isAdmin={isAdminUser}
             isPaused={isPaused}
@@ -2140,6 +2227,7 @@ export default function App() {
                 bankName: selectedBankName,
                 flaggedQuestions,
                 revealedQuestions: revealedQuestions || [],
+                committedQuestions: committedQuestions || [],
                 startedAt: startedAt || now,
                 savedAt: now,
                 updatedAt: now,
