@@ -658,7 +658,7 @@ export const ccnaQuestions = [
   {
     "id": 37,
     "questionNo": "Question #23",
-    "question": "Refer to the exhibit. HQ C needs to use a configuration that:\nhandles up to 150,000 concurrent connections\nminimizes consumption of public IP addresses\n\nWhich configuration meets the requirements? (Choose one answer)",
+    "question": "Refer to the exhibit. HQ C needs to use a configuration that:\n• handles up to 150,000 concurrent connections\n• minimizes consumption of public IP addresses\n\nWhich configuration meets the requirements? (Choose one answer)",
     "options": [
       "A. ip pool NATPOOL 209.165.201.1 209.165.201.5 netmask 255.255.255.248\nip nat inside source list HQC interface GigabitEthernet0/0 overload",
       "B. ip pool NATPOOL 209.165.200.225 209.165.200.226 netmask 255.255.255.252\nip nat outside source list HQC pool NATPOOL overload",
@@ -780,7 +780,7 @@ export const ccnaQuestions = [
       "D. 172.16.1.2"
     ],
     "correctOption": [
-      1
+      2
     ],
     "points": 10,
     "cliSnippet": null,
@@ -1454,13 +1454,13 @@ export const ccnaQuestions = [
     "questionNo": "Question #69",
     "question": "Which role does machine learning play in identifying network security breaches? (Choose one answer)",
     "options": [
-      "A. It establishes baseline behaviors and detects deviations indicating zero-day attacks.",
-      "B. It applies static firewall rules based on predefined signatures.",
-      "C. It replaces the requirement for encryption protocols.",
-      "D. It automatically powers off switches when an alert occurs."
+      "A. It monitors for outdated software.",
+      "B. It identifies patterns indicating intrusions.",
+      "C. It assigns security clearance levels.",
+      "D. It dictates security policy updates."
     ],
     "correctOption": [
-      0
+      1
     ],
     "points": 10,
     "cliSnippet": null,
@@ -1706,12 +1706,12 @@ export const ccnaQuestions = [
   {
     "id": 94,
     "questionNo": "Question #54",
-    "question": "Refer to the exhibit. The loopback IP of R3 has been learned via the two interfaces on R1. R1 is configured with reference-bandwidth 10000. Based on the metric calculations, which next-hop IP would be used for outgoing routing? (Choose one answer)",
+    "question": "Refer to the exhibit. The loopback IP of R3 has been learned via the two interfaces on R1. R1 is configured with a reference bandwidth of 10 Gbps. Based on the metric calculations, which next-hop IP would be used for outgoing routing? (Choose one answer)",
     "options": [
-      "A. 10.11.1.2",
-      "B. 10.12.1.2",
-      "C. 10.12.5.2",
-      "D. 10.12.1.1"
+      "A. 10.12.6",
+      "B. 10.12.2",
+      "C. 10.12.5",
+      "D. 10.12.1"
     ],
     "correctOption": [
       0
@@ -1724,12 +1724,12 @@ export const ccnaQuestions = [
   {
     "id": 95,
     "questionNo": "Question #79",
-    "question": "Refer to the exhibit. Of the routes learned with dynamic routing protocols, which route is preferred? (Choose one answer)",
+    "question": "Refer to the exhibit. Of the routes learned with dynamic routing protocols, which has the least preferred metric? (Choose one answer)",
     "options": [
-      "A. OSPF",
-      "B. EIGRP",
-      "C. BGP",
-      "D. RIP"
+      "A. EIGRP",
+      "B. OSPF",
+      "C. RIP",
+      "D. local"
     ],
     "correctOption": [
       2
