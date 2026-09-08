@@ -574,8 +574,11 @@ function QuestionView({
     }, 0);
   }, [questions, evaluatedIndices]);
 
-  // Points earned: use authoritative points prop from server/reducer, or fall back to evaluated calculation
-  const effectiveScore = typeof points === "number" && points >= 0 ? points : evaluatedPoints;
+  // Points earned: strictly reflects evaluated questions (committed via Next or revealed via Show Answer)
+  // Current active uncommitted question is strictly excluded so score NEVER updates on mere option selection
+  const effectiveScore = isReviewMode
+    ? (typeof points === "number" && points >= 0 ? points : evaluatedPoints)
+    : evaluatedPoints;
 
   // Live score percentage based on total exam maxPossiblePoints (e.g. 10 pts / 500 = 2.0%, 250 pts / 500 = 50.0%)
   const livePercentage =

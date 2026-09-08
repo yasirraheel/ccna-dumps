@@ -927,6 +927,11 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         $qList = $s['questions'] ?? [];
         $ansList = $s['answers'] ?? [];
 
+        $committedList = is_array($s['committedQuestions'] ?? null) ? $s['committedQuestions'] : (json_decode($s['committedQuestions'] ?? '[]', true) ?: []);
+        $revealedList = is_array($s['revealedQuestions'] ?? null) ? $s['revealedQuestions'] : (json_decode($s['revealedQuestions'] ?? '[]', true) ?: []);
+        $hasCommittedParam = isset($s['committedQuestions']) || isset($s['revealedQuestions']);
+        $evaluatedIndicesMap = array_flip(array_map('intval', array_merge($committedList, $revealedList)));
+
         $dbStmt = $pdo->query("SELECT id, question_no, type, options, correct_option, points, drag_drop_data FROM questions");
         $masterDb = $dbStmt->fetchAll(PDO::FETCH_ASSOC);
         $masterById = [];
@@ -974,6 +979,12 @@ if (preg_match('#^/api/sessions#', $basePath)) {
 
             $userAns = $ansList[$i] ?? null;
             if ($userAns === null || $userAns === '') continue;
+
+            // Strictly exclude active uncommitted question from server score calculation
+            // Score only updates when a question is committed (Next) or revealed (Show Answer)
+            if ($hasCommittedParam && !isset($evaluatedIndicesMap[(int)$i])) {
+                continue;
+            }
 
             $pts = (int)($m['points'] ?? $qItem['points'] ?? 10);
             if ($pts <= 0) $pts = 10;
