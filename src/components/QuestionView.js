@@ -6,7 +6,6 @@ import QuestionNotesModal from "./QuestionNotesModal";
 import EditQuestionModal from "./Admin/EditQuestionModal";
 import MobileBottomBar from "./MobileBottomBar";
 import { resolveOriginalSourceImage } from "../utils/questionSourceHelper";
-import { calculateTotalPoints } from "../utils/examScoring";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -500,16 +499,9 @@ function QuestionView({
     }
   };
 
-  // Calculate live score points and percentage reactively from questions & answers
-  const currentPoints = useMemo(() => {
-    if (questions && answers) {
-      return calculateTotalPoints(questions, answers);
-    }
-    return typeof points === "number" ? points : 0;
-  }, [questions, answers, points]);
-
+  // Calculate live score percentage strictly based on committed or revealed questions
   const livePercentage =
-    maxPossiblePoints > 0 ? ((currentPoints / maxPossiblePoints) * 100).toFixed(1) : "0.0";
+    maxPossiblePoints > 0 ? (((points || 0) / maxPossiblePoints) * 100).toFixed(1) : "0.0";
 
   const canGoPrev = seqNumber > 1;
   const canGoNext = seqNumber < numQuestions;
@@ -696,7 +688,7 @@ function QuestionView({
             {settings?.showScoreLive !== false && (
               <>
                 <span className="boson-dot-sep">•</span>
-                <span className="boson-live-score" title={`${currentPoints} / ${maxPossiblePoints} pts`}>
+                <span className="boson-live-score" title={`${points || 0} / ${maxPossiblePoints} pts`}>
                   {livePercentage}% correct
                 </span>
               </>
