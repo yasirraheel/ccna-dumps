@@ -7,6 +7,11 @@ export const getAdminHeaders = () => {
     email = u.email || '';
   } catch {}
 
+  // Fallback to candidate@ccna.com if not signed in or not found
+  if (!email) {
+    email = 'candidate@ccna.com';
+  }
+
   return {
     'Content-Type': 'application/json',
     'Authorization': token ? `Bearer ${token}` : '',

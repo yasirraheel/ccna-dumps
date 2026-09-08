@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ccnaQuestions as ccnaQuestionsData } from '../../data/ccnaQuestions';
 import EditQuestionModal from './EditQuestionModal';
+import { applyQuestionOverrides } from '../../utils/questionSync';
 
 function AdminQuestions() {
   const [bankFilter, setBankFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [questionsList, setQuestionsList] = useState(ccnaQuestionsData);
+  const [questionsList, setQuestionsList] = useState(() => applyQuestionOverrides(ccnaQuestionsData));
+  const [toastMsg, setToastMsg] = useState('');
+  const toastTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetch('/api/questions')
@@ -15,7 +24,7 @@ function AdminQuestions() {
       .then((data) => {
         const qList = Array.isArray(data) ? data : data?.questions || [];
         if (qList.length > 0) {
-          setQuestionsList(qList);
+          setQuestionsList(applyQuestionOverrides(qList));
         }
       })
       .catch(() => {});
@@ -272,12 +281,40 @@ function AdminQuestions() {
           question={editingQuestion}
           onSaveSuccess={(updatedQ) => {
             setQuestionsList((prev) =>
-              prev.map((q) => (q.id === updatedQ.id ? { ...q, ...updatedQ } : q))
+              prev.map((q) =>
+                ((updatedQ.id !== undefined && (q.id === updatedQ.id || String(q.id) === String(updatedQ.id))) ||
+                 (updatedQ.questionNo && q.questionNo === updatedQ.questionNo))
+                  ? { ...q, ...updatedQ }
+                  : q
+              )
             );
-            setEditingQuestion(null);
+            setToastMsg(`Question ${updatedQ.questionNo || "#" + updatedQ.id} updated successfully! Changes applied.`);
+            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+            toastTimeoutRef.current = setTimeout(() => {
+              setToastMsg("");
+            }, 5000);
           }}
           onClose={() => setEditingQuestion(null)}
         />
+      )}
+
+      {/* FLOATING SUCCESS TOAST NOTIFICATION */}
+      {toastMsg && (
+        <div className="boson-live-edit-toast" role="status" aria-live="polite">
+          <div className="toast-icon">✅</div>
+          <div className="toast-content">
+            <div className="toast-title">Update Applied</div>
+            <div className="toast-desc">{toastMsg}</div>
+          </div>
+          <button
+            type="button"
+            className="toast-close"
+            onClick={() => setToastMsg("")}
+            title="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );

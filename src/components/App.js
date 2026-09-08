@@ -227,10 +227,18 @@ function reducer(state, action) {
     case "dataReceived": {
       const overriddenPayload = applyQuestionOverrides(action.payload);
       if (state.status === "active") {
+        const patchedRunning = (state.questions || []).map((q) => {
+          const found = overriddenPayload.find(
+            (item) =>
+              (item.id !== undefined && (item.id === q.id || String(item.id) === String(q.id))) ||
+              (item.questionNo && item.questionNo === q.questionNo)
+          );
+          return found ? { ...q, ...found } : q;
+        });
         return {
           ...state,
           allQuestions: overriddenPayload,
-          questions: applyQuestionOverrides(state.questions),
+          questions: patchedRunning,
         };
       }
       return {
@@ -893,6 +901,35 @@ export default function App() {
     }
   }, [currentView, status]);
   
+  // Fetch questions from MySQL database so admin edits reflect on every page load and exam
+  useEffect(() => {
+    fetch("/api/questions")
+      .then((res) => res.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data?.questions || [];
+        if (list.length > 0) {
+          dispatch({ type: "dataReceived", payload: list });
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load /api/questions, fallback to static bundle:", err);
+      });
+  }, []);
+
+  // Listen to live question update events across the application
+  useEffect(() => {
+    const handleQuestionUpdated = (e) => {
+      const updatedQ = e.detail;
+      if (updatedQ) {
+        dispatch({ type: "updateQuestion", payload: updatedQ });
+      }
+    };
+    window.addEventListener("ccna_question_updated", handleQuestionUpdated);
+    return () => {
+      window.removeEventListener("ccna_question_updated", handleQuestionUpdated);
+    };
+  }, []);
+
   // User Authentication State
   const [currentUser, setCurrentUser] = useState(() => {
     try {
