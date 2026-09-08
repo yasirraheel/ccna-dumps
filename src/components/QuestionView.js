@@ -95,6 +95,14 @@ function QuestionView({
   );
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const toastTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const cleanBankTitle = (name) => {
     if (!name) return "";
@@ -1372,9 +1380,35 @@ function QuestionView({
             if (dispatch) {
               dispatch({ type: "updateQuestion", payload: updatedQ });
             }
+            setToastMsg(
+              `Question ${updatedQ.questionNo || "#" + updatedQ.id} updated successfully! Changes applied across all exams.`
+            );
+            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+            toastTimeoutRef.current = setTimeout(() => {
+              setToastMsg("");
+            }, 5000);
           }}
           onClose={() => setIsEditModalOpen(false)}
         />
+      )}
+
+      {/* FLOATING SUCCESS TOAST NOTIFICATION */}
+      {toastMsg && (
+        <div className="boson-live-edit-toast" role="status" aria-live="polite">
+          <div className="toast-icon">✅</div>
+          <div className="toast-content">
+            <div className="toast-title">Update Applied</div>
+            <div className="toast-desc">{toastMsg}</div>
+          </div>
+          <button
+            type="button"
+            className="toast-close"
+            onClick={() => setToastMsg("")}
+            title="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
       )}
 
       {/* EXAM PAUSED BLUR OVERLAY & RESUME MODAL */}

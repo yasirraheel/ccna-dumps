@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { adminFetch } from "../../utils/adminApi";
+import { saveQuestionOverride } from "../../utils/questionSync";
 
 function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
   const [questionNo, setQuestionNo] = useState("");
@@ -141,17 +142,22 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
         throw new Error(data.error || "Failed to update question on server.");
       }
 
-      setSuccessMsg("Question updated successfully!");
+      const updatedPayload = {
+        ...question,
+        ...payload,
+      };
+
+      // Apply and broadcast immediately across all sessions and local storage
+      saveQuestionOverride(updatedPayload);
+
+      setSuccessMsg("Question updated successfully! Changes applied across all exams.");
       if (onSaveSuccess) {
-        onSaveSuccess({
-          ...question,
-          ...payload,
-        });
+        onSaveSuccess(updatedPayload);
       }
 
       setTimeout(() => {
         onClose();
-      }, 700);
+      }, 1200);
     } catch (err) {
       setErrorMsg(err.message || "An error occurred while saving the question.");
     } finally {
@@ -611,6 +617,50 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
             />
           </div>
 
+          {/* BOTTOM PERSISTENT FEEDBACK BANNER */}
+          {errorMsg && (
+            <div
+              style={{
+                padding: "12px 16px",
+                background: "rgba(239, 68, 68, 0.2)",
+                border: "1.5px solid #ef4444",
+                borderRadius: "8px",
+                color: "#fca5a5",
+                fontSize: "13px",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginTop: "10px"
+              }}
+            >
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div
+              style={{
+                padding: "12px 16px",
+                background: "rgba(34, 197, 94, 0.2)",
+                border: "1.5px solid #22c55e",
+                borderRadius: "8px",
+                color: "#86efac",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 0 15px rgba(34, 197, 94, 0.3)",
+                marginTop: "10px"
+              }}
+            >
+              <span>✅</span>
+              <span>{successMsg}</span>
+            </div>
+          )}
+
           {/* MODAL ACTIONS FOOTER */}
           <div
             style={{
@@ -643,23 +693,33 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(successMsg)}
               style={{
-                background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-                border: "1px solid #38bdf8",
+                background: successMsg
+                  ? "linear-gradient(135deg, #16a34a 0%, #15803d 100%)"
+                  : "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
+                border: successMsg ? "1px solid #22c55e" : "1px solid #38bdf8",
                 color: "#ffffff",
                 padding: "9px 24px",
                 borderRadius: "8px",
                 fontSize: "13.5px",
                 fontWeight: 700,
-                cursor: isSubmitting ? "not-allowed" : "pointer",
-                boxShadow: "0 4px 12px rgba(2, 132, 199, 0.3)",
+                cursor: isSubmitting || successMsg ? "default" : "pointer",
+                boxShadow: successMsg
+                  ? "0 4px 16px rgba(34, 197, 94, 0.4)"
+                  : "0 4px 12px rgba(2, 132, 199, 0.3)",
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
+                transition: "all 0.2s ease"
               }}
             >
-              {isSubmitting ? (
+              {successMsg ? (
+                <>
+                  <span>✅</span>
+                  <span>Question Saved Successfully!</span>
+                </>
+              ) : isSubmitting ? (
                 <>
                   <span className="spinner" style={{ width: "14px", height: "14px", border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }}></span>
                   <span>Saving to MySQL...</span>

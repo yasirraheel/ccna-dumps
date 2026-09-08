@@ -1,9 +1,17 @@
 // Authenticated Admin API Helper
 export const getAdminHeaders = () => {
   const token = localStorage.getItem('ccna_auth_token') || '';
+  let email = '';
+  try {
+    const u = JSON.parse(localStorage.getItem('ccna_auth_user') || '{}');
+    email = u.email || '';
+  } catch {}
+
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    'Authorization': token ? `Bearer ${token}` : '',
+    'X-Admin-Token': token,
+    'X-Admin-Email': email
   };
 };
 

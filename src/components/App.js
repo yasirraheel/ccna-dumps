@@ -17,6 +17,7 @@ import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions"
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 import { enrichQuestionsList } from "../utils/questionSourceHelper";
+import { applyQuestionOverrides } from "../utils/questionSync";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
 const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
@@ -83,8 +84,8 @@ function getInitialExamState() {
       localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
     } catch {}
     return {
-      allQuestions: ccnaQuestions || [],
-      questions: ccnaQuestions || [],
+      allQuestions: applyQuestionOverrides(ccnaQuestions || []),
+      questions: applyQuestionOverrides(ccnaQuestions || []),
       status: ccnaQuestions?.length > 0 ? "ready" : "loading",
       index: 0,
       answer: null,
@@ -151,8 +152,8 @@ function getInitialExamState() {
           : 0;
 
       return {
-        allQuestions: ccnaQuestions || [],
-        questions: enrichQuestionsList(activeSession.questions),
+        allQuestions: applyQuestionOverrides(ccnaQuestions || []),
+        questions: applyQuestionOverrides(enrichQuestionsList(activeSession.questions)),
         status: "active",
         index: validIndex,
         answer:
@@ -190,8 +191,8 @@ function getInitialExamState() {
   }
 
   return {
-    allQuestions: ccnaQuestions || [],
-    questions: ccnaQuestions || [],
+    allQuestions: applyQuestionOverrides(ccnaQuestions || []),
+    questions: applyQuestionOverrides(ccnaQuestions || []),
     status: ccnaQuestions?.length > 0 ? "ready" : "loading",
     index: 0,
     answer: null,
@@ -223,19 +224,22 @@ const initialState = getInitialExamState();
 
 function reducer(state, action) {
   switch (action.type) {
-    case "dataReceived":
+    case "dataReceived": {
+      const overriddenPayload = applyQuestionOverrides(action.payload);
       if (state.status === "active") {
         return {
           ...state,
-          allQuestions: action.payload,
+          allQuestions: overriddenPayload,
+          questions: applyQuestionOverrides(state.questions),
         };
       }
       return {
         ...state,
-        allQuestions: action.payload,
-        questions: action.payload,
+        allQuestions: overriddenPayload,
+        questions: overriddenPayload,
         status: state.status === "loading" ? "ready" : state.status,
       };
+    }
 
     case "dataFailed":
       return {
@@ -245,16 +249,17 @@ function reducer(state, action) {
 
     case "startExam": {
       const { questions, examMode, settings, bankName, bankKey } = action.payload;
-      const initialAnswers = new Array(questions.length).fill(null);
+      const finalQuestions = applyQuestionOverrides(questions);
+      const initialAnswers = new Array(finalQuestions.length).fill(null);
 
       let timerSeconds = null;
       if (settings?.timerMode === "ccna_120") timerSeconds = 120 * 60;
       else if (settings?.timerMode === "90_mins" || settings?.timerMode === "timed_90") timerSeconds = 90 * 60;
       else if (settings?.timerMode === "60_mins") timerSeconds = 60 * 60;
       else if (settings?.timerMode === "30s_per_q")
-        timerSeconds = questions.length * 30;
+        timerSeconds = finalQuestions.length * 30;
       else if (settings?.timerMode === "60s_per_q")
-        timerSeconds = questions.length * 60;
+        timerSeconds = finalQuestions.length * 60;
 
       const startTime = Date.now();
       const newSessionId = `session_${startTime}`;
@@ -264,7 +269,7 @@ function reducer(state, action) {
 
       return {
         ...state,
-        questions,
+        questions: finalQuestions,
         status: "active",
         examMode,
         settings,
@@ -316,9 +321,11 @@ function reducer(state, action) {
         localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, finalSessionId);
       } catch {}
 
+      const finalQuestions = applyQuestionOverrides(questions);
+
       return {
         ...state,
-        questions,
+        questions: finalQuestions,
         index,
         answer,
         answers: answers || new Array(questions.length).fill(null),
@@ -636,12 +643,39 @@ function reducer(state, action) {
 
     case "updateQuestion": {
       const updatedQ = action.payload;
+      const isMatch = (q) =>
+        Boolean(
+          q &&
+          ((updatedQ.id !== undefined && (q.id === updatedQ.id || String(q.id) === String(updatedQ.id))) ||
+           (updatedQ.questionNo && q.questionNo === updatedQ.questionNo))
+        );
       const updatedAll = (state.allQuestions || []).map((q) =>
-        q.id === updatedQ.id ? { ...q, ...updatedQ } : q
+        isMatch(q) ? { ...q, ...updatedQ } : q
       );
       const updatedCur = (state.questions || []).map((q) =>
-        q.id === updatedQ.id ? { ...q, ...updatedQ } : q
+        isMatch(q) ? { ...q, ...updatedQ } : q
       );
+
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: updatedCur,
+          index: state.index,
+          answer: state.answer,
+          answers: state.answers,
+          points: state.points,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
+
       return {
         ...state,
         allQuestions: updatedAll,
@@ -1165,6 +1199,19 @@ export default function App() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  // 1.15 Listen for real-time question update broadcasts
+  useEffect(() => {
+    const handleLiveQuestionUpdate = (e) => {
+      if (e?.detail) {
+        dispatch({ type: "updateQuestion", payload: e.detail });
+      }
+    };
+    window.addEventListener("ccna_question_updated", handleLiveQuestionUpdate);
+    return () => {
+      window.removeEventListener("ccna_question_updated", handleLiveQuestionUpdate);
+    };
   }, []);
 
   // 1.2 Hydrate History & Sessions whenever currentUser changes
