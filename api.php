@@ -630,7 +630,14 @@ if (preg_match('#^/api/auth/reset-password#', $basePath) && $method === 'POST') 
 
 // 9. Questions API
 if (preg_match('#^/api/questions#', $basePath)) {
-    $rows = $pdo->query("SELECT * FROM questions ORDER BY id ASC")->fetchAll();
+    $rows = $pdo->query("SELECT * FROM questions ORDER BY 
+        CASE 
+            WHEN question_no LIKE 'Question #%' THEN 1 
+            WHEN question_no LIKE 'Drag & Drop #%' THEN 2 
+            ELSE 3 
+        END, 
+        CAST(SUBSTRING_INDEX(question_no, '#', -1) AS UNSIGNED) ASC,
+        id ASC")->fetchAll();
     $formatted = array_map(function($r) {
         $opts = json_decode($r['options'] ?? '[]', true) ?? [];
         $correct = json_decode($r['correct_option'] ?? '[]', true) ?? [];

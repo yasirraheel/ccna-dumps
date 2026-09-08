@@ -31,12 +31,39 @@ function AdminQuestions() {
   }, []);
 
   const filterQuestions = () => {
-    let list = questionsList;
-    if (bankFilter === 'bank_a') list = list.slice(0, 50);
-    else if (bankFilter === 'bank_b') list = list.slice(50, 100);
-    else if (bankFilter === 'bank_c') list = list.slice(100, 150);
-    else if (bankFilter === 'bank_d') list = list.slice(150, 200);
-    else if (bankFilter === 'drag_drop') list = list.filter(q => q.type === 'drag_drop' || q.dragDropData);
+    const nonDD = (questionsList || []).filter(
+      (q) =>
+        q &&
+        q.type !== "drag_drop" &&
+        q.questionType !== "drag_drop" &&
+        !q.dragDropData &&
+        !q.isDragDrop &&
+        !(typeof q.questionNo === "string" && q.questionNo.toLowerCase().includes("drag"))
+    );
+    const dd = (questionsList || []).filter(
+      (q) =>
+        q &&
+        (q.type === "drag_drop" ||
+          q.questionType === "drag_drop" ||
+          Boolean(q.dragDropData) ||
+          q.isDragDrop ||
+          (typeof q.questionNo === "string" && q.questionNo.toLowerCase().includes("drag")))
+    );
+
+    const getNum = (q) => {
+      const m = (q?.questionNo || "").match(/\d+/);
+      return m ? parseInt(m[0], 10) : 999999;
+    };
+
+    nonDD.sort((a, b) => getNum(a) - getNum(b));
+    dd.sort((a, b) => getNum(a) - getNum(b));
+
+    let list = [...nonDD, ...dd];
+    if (bankFilter === 'bank_a') list = nonDD.slice(0, 50);
+    else if (bankFilter === 'bank_b') list = nonDD.slice(50, 100);
+    else if (bankFilter === 'bank_c') list = nonDD.slice(100, 150);
+    else if (bankFilter === 'bank_d') list = nonDD.slice(150, 207);
+    else if (bankFilter === 'drag_drop') list = dd;
 
     if (search.trim()) {
       const qLower = search.toLowerCase();
@@ -81,7 +108,7 @@ function AdminQuestions() {
               <option value="bank_a">Exam A (Q 1-50)</option>
               <option value="bank_b">Exam B (Q 51-100)</option>
               <option value="bank_c">Exam C (Q 101-150)</option>
-              <option value="bank_d">Exam D (Q 151-200)</option>
+              <option value="bank_d">Exam D (Q 151-207)</option>
               <option value="drag_drop">Drag & Drop Interactive</option>
             </select>
           </div>

@@ -129,39 +129,63 @@ function ExamDashboard({
   };
 
   const getBankFilteredQuestions = () => {
-    let filtered = [...allQuestions];
+    // Separate non-drag-drop questions (sorted 1..207) and drag-drop questions (sorted 1..21)
+    const nonDD = (allQuestions || []).filter(
+      (q) =>
+        q &&
+        q.type !== "drag_drop" &&
+        q.questionType !== "drag_drop" &&
+        !q.dragDropData &&
+        !q.isDragDrop &&
+        !(typeof q.questionNo === "string" && q.questionNo.toLowerCase().includes("drag"))
+    );
+    const dd = (allQuestions || []).filter(
+      (q) =>
+        q &&
+        (q.type === "drag_drop" ||
+          q.questionType === "drag_drop" ||
+          Boolean(q.dragDropData) ||
+          q.isDragDrop ||
+          (typeof q.questionNo === "string" && q.questionNo.toLowerCase().includes("drag")))
+    );
+
+    const getNum = (q) => {
+      const m = (q?.questionNo || "").match(/\d+/);
+      return m ? parseInt(m[0], 10) : 999999;
+    };
+
+    nonDD.sort((a, b) => getNum(a) - getNum(b));
+    dd.sort((a, b) => getNum(a) - getNum(b));
+
+    const sortedAll = [...nonDD, ...dd];
+
+    let filtered = sortedAll;
     let bankTitle = "Full Question Bank";
 
     switch (selectedBank) {
       case "bank_a":
-        filtered = allQuestions.slice(0, 50);
+        filtered = nonDD.slice(0, 50);
         bankTitle = "Exam A (1–50)";
         break;
       case "bank_b":
-        filtered = allQuestions.slice(50, 100);
+        filtered = nonDD.slice(50, 100);
         bankTitle = "Exam B (51–100)";
         break;
       case "bank_c":
-        filtered = allQuestions.slice(100, 150);
+        filtered = nonDD.slice(100, 150);
         bankTitle = "Exam C (101–150)";
         break;
       case "bank_d":
-        filtered = allQuestions.slice(150, 207);
+        filtered = nonDD.slice(150, 207);
         bankTitle = "Exam D (151–207)";
         break;
       case "bank_dragdrop":
-        filtered = allQuestions.filter(
-          (q) =>
-            q.type === "drag_drop" ||
-            q.questionType === "drag_drop" ||
-            Boolean(q.dragDropData) ||
-            q.isDragDrop
-        );
+        filtered = dd;
         bankTitle = "Drag & Drop Special Bank";
         break;
       case "bank_all":
       default:
-        filtered = [...allQuestions];
+        filtered = sortedAll;
         bankTitle = "All Available Questions";
         break;
     }
