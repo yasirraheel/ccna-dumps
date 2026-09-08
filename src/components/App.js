@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useState, useRef } from "react";
+import React, { useReducer, useEffect, useState, useRef, useCallback } from "react";
 import ExamDashboard from "./ExamDashboard";
 import QuestionView from "./QuestionView";
 import FinishScreen from "./FinishScreen";
@@ -1250,14 +1250,12 @@ export default function App() {
     }
   });
 
-  // 1. Initial Load: Local Dataset guaranteed + MySQL API hydration (Filtered by logged-in user)
-  useEffect(() => {
-    // 1.1 Load bundled questions immediately, then refresh from MySQL
-    if (ccnaQuestions && ccnaQuestions.length > 0) {
-      dispatch({ type: "dataReceived", payload: ccnaQuestions });
-    }
+  // 1. Fresh Dashboard Data Loader (always bypasses cache with timestamp)
+  const loadFreshDashboardData = useCallback(() => {
+    const cacheBuster = `_t=${Date.now()}`;
 
-    fetch(`${API_BASE_URL}/questions`)
+    // 1.1 Fresh Questions from MySQL
+    fetch(`${API_BASE_URL}/questions?${cacheBuster}`)
       .then((res) => res.json())
       .then((data) => {
         const qList = Array.isArray(data) ? data : data?.questions || [];
@@ -1266,30 +1264,14 @@ export default function App() {
         }
       })
       .catch(() => {});
-  }, []);
 
-  // 1.15 Listen for real-time question update broadcasts
-  useEffect(() => {
-    const handleLiveQuestionUpdate = (e) => {
-      if (e?.detail) {
-        dispatch({ type: "updateQuestion", payload: e.detail });
-      }
-    };
-    window.addEventListener("ccna_question_updated", handleLiveQuestionUpdate);
-    return () => {
-      window.removeEventListener("ccna_question_updated", handleLiveQuestionUpdate);
-    };
-  }, []);
-
-  // 1.2 Hydrate History & Sessions whenever currentUser changes
-  useEffect(() => {
+    // 1.2 Fresh History for logged-in user
     const userQuery = currentUser?.id
-      ? `?userId=${encodeURIComponent(currentUser.id)}`
+      ? `?userId=${encodeURIComponent(currentUser.id)}&${cacheBuster}`
       : currentUser?.email
-      ? `?userEmail=${encodeURIComponent(currentUser.email)}`
-      : "";
+      ? `?userEmail=${encodeURIComponent(currentUser.email)}&${cacheBuster}`
+      : `?${cacheBuster}`;
 
-    // Fetch user specific history
     fetch(`${API_BASE_URL}/history${userQuery}`)
       .then((res) => res.json())
       .then((data) => {
@@ -1306,7 +1288,7 @@ export default function App() {
       })
       .catch(() => {});
 
-    // Fetch user specific active sessions
+    // 1.3 Fresh Sessions
     fetch(`${API_BASE_URL}/sessions${userQuery}`)
       .then((res) => res.json())
       .then((data) => {
@@ -1371,7 +1353,64 @@ export default function App() {
         }
       })
       .catch(() => {});
-  }, [currentUser]);
+
+    // 1.4 Fresh Plans
+    fetch(`${API_BASE_URL}/plans?${cacheBuster}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.plans) {
+          try {
+            localStorage.setItem("ccna_cached_plans", JSON.stringify(data.plans));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    // 1.5 Fresh user profile if token exists
+    const token = localStorage.getItem("ccna_auth_token");
+    if (token) {
+      fetch(`${API_BASE_URL}/auth/me?${cacheBuster}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            setCurrentUser(data.user);
+            try {
+              localStorage.setItem("ccna_auth_user", JSON.stringify(data.user));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+  }, [currentUser?.id, currentUser?.email]);
+
+  // 1.1 Initial bundle load
+  useEffect(() => {
+    if (ccnaQuestions && ccnaQuestions.length > 0) {
+      dispatch({ type: "dataReceived", payload: ccnaQuestions });
+    }
+  }, []);
+
+  // 1.15 Listen for real-time question update broadcasts
+  useEffect(() => {
+    const handleLiveQuestionUpdate = (e) => {
+      if (e?.detail) {
+        dispatch({ type: "updateQuestion", payload: e.detail });
+      }
+    };
+    window.addEventListener("ccna_question_updated", handleLiveQuestionUpdate);
+    return () => {
+      window.removeEventListener("ccna_question_updated", handleLiveQuestionUpdate);
+    };
+  }, []);
+
+  // 1.2 Trigger fresh dashboard load on mount and whenever returning to dashboard / ready status
+  useEffect(() => {
+    if (currentView === "dashboard" || status === "ready") {
+      loadFreshDashboardData();
+    }
+  }, [currentView, status, loadFreshDashboardData]);
 
   // *** EXAM TIMER COUNTDOWN ***
   useEffect(() => {
@@ -2075,7 +2114,11 @@ export default function App() {
               dispatch({ type: "goToQuestion", payload: targetIdx })
             }
             onFinishExam={() => dispatch({ type: "finish" })}
-            onExitReview={() => dispatch({ type: "exitReview" })}
+            onExitReview={() => {
+              dispatch({ type: "exitReview" });
+              handleNavigate("dashboard");
+              loadFreshDashboardData();
+            }}
             onExitToDashboard={() => {
               const now = Date.now();
               const sessionSnapshot = {
@@ -2128,6 +2171,7 @@ export default function App() {
 
               dispatch({ type: "suspendToDashboard" });
               handleNavigate("dashboard");
+              loadFreshDashboardData();
             }}
             points={points}
             maxPossiblePoints={maxPossiblePoints}

@@ -555,7 +555,7 @@ function ExamDashboard({
                           }
                         }}
                       >
-                        <div className="bank-card-main-line">
+                        <div className="bank-card-left">
                           <input
                             type="radio"
                             name="examBank"
@@ -565,63 +565,50 @@ function ExamDashboard({
                           />
                           <span className="radio-circle"></span>
                           <span className="bank-name">{displayName}</span>
-                          <div className="bank-card-right-group">
-                            <span className="bank-meta">{metaText}</span>
-                            {isLocked && <span className="bank-lock-badge">🔒 LOCKED</span>}
-                          </div>
                         </div>
 
-                        {/* STATS STRIP FOR LOGGED IN CANDIDATE */}
-                        {currentUser ? (
-                          <div className="bank-card-stats-area">
-                            {stats && stats.attemptsCount > 0 ? (
-                              <>
-                                <div className="bank-stats-subline">
-                                  <div className="bank-attempts-pill-group">
-                                    <span className="bank-stat-chip attempts-chip" title={`${stats.attemptsCount} total completed exam attempt(s)`}>
-                                      {stats.attemptsCount} {stats.attemptsCount === 1 ? "Attempt" : "Attempts"}
-                                    </span>
-                                    <span className="bank-stat-chip pass-chip" title={`${stats.passCount} attempt(s) passed (≥ 82.5%)`}>
-                                      <span className="chip-indicator pass-dot"></span>
-                                      {stats.passCount} Pass
-                                    </span>
-                                    <span className="bank-stat-chip fail-chip" title={`${stats.failCount} attempt(s) failed (< 82.5%)`}>
-                                      <span className="chip-indicator fail-dot"></span>
-                                      {stats.failCount} Fail
-                                    </span>
-                                  </div>
-
-                                  <div className="bank-strength-pill-group">
-                                    <span
-                                      className={`bank-strength-badge ${stats.strengthTierClass}`}
-                                      title={stats.interventionMessage}
-                                    >
-                                      <span className="strength-dot"></span>
-                                      <span className="strength-percent">{stats.strengthScore}%</span>
-                                      <span className="strength-text">{stats.strengthLabel}</span>
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="bank-mini-meter-track" title={`Mastery Strength: ${stats.strengthScore}% — ${stats.interventionMessage}`}>
-                                  <div
-                                    className={`bank-mini-meter-bar ${stats.strengthTierClass}`}
-                                    style={{ width: `${Math.min(100, Math.max(3, stats.strengthScore))}%` }}
-                                  />
-                                </div>
-                              </>
-                            ) : (
-                              <div className="bank-stats-subline unattempted-line">
-                                <span className="bank-unattempted-badge">0 Attempts</span>
-                                <span className="bank-unattempted-hint">
-                                  {isLocked
-                                    ? "Locked on current pass"
-                                    : "Untested • Complete an exam to evaluate mastery"}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
+                        {/* SINGLE UNIFIED BADGE IN ONE ROW */}
+                        <div className="bank-unified-badge" title={stats?.interventionMessage || `${displayName} • ${metaText}`}>
+                          {currentUser && stats && stats.attemptsCount > 0 ? (
+                            <>
+                              <span className="badge-item-attempts">
+                                {stats.attemptsCount} {stats.attemptsCount === 1 ? "attempt" : "attempts"}
+                              </span>
+                              <span className="badge-item-sep">|</span>
+                              <span className="badge-item-pass">
+                                {stats.passCount} pass
+                              </span>
+                              <span className="badge-item-sep">|</span>
+                              <span className={`badge-item-fail ${stats.failCount > 0 ? "has-fails" : ""}`}>
+                                {stats.failCount} fail
+                              </span>
+                              <span className="badge-item-sep">|</span>
+                              <span className={`badge-item-strength ${stats.strengthTierClass}`}>
+                                {stats.strengthScore}% {stats.strengthLabel}
+                              </span>
+                              <span className="badge-item-sep">|</span>
+                              <span className="badge-item-qs">
+                                {metaText}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="badge-item-unattempted">
+                                0 attempts
+                              </span>
+                              <span className="badge-item-sep">|</span>
+                              <span className="badge-item-qs">
+                                {metaText}
+                              </span>
+                            </>
+                          )}
+                          {isLocked && (
+                            <>
+                              <span className="badge-item-sep">|</span>
+                              <span className="badge-item-locked">🔒 Locked</span>
+                            </>
+                          )}
+                        </div>
                       </label>
                     );
                   })}

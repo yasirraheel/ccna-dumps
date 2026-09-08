@@ -640,22 +640,25 @@ body {
 .bank-options-list {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  margin-bottom: 2.4rem;
+  gap: 0.5rem;
+  margin-bottom: 1.8rem;
 }
 
 .bank-radio-card {
   display: flex;
-  flex-direction: column;
-  padding: 1.2rem 1.4rem;
-  background-color: rgba(255, 255, 255, 0.02);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1.1rem;
+  background-color: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   user-select: none;
   gap: 0.8rem;
-  border-radius: 0.8rem;
+  border-radius: 0.6rem;
   position: relative;
+  min-height: 4.2rem;
 }
 
 .bank-radio-card:hover {
@@ -665,8 +668,8 @@ body {
 
 .bank-radio-card.active {
   background-color: var(--color-green-light);
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.08);
 }
 
 .bank-radio-card.bank-attention-highlight {
@@ -681,19 +684,19 @@ body {
   border-left: 3.5px solid #f59e0b !important;
 }
 
-.bank-card-main-line {
+.bank-card-left {
   display: flex;
   align-items: center;
-  width: 100%;
   gap: 0.8rem;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
-.bank-card-right-group {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-left: auto;
-  flex-shrink: 0;
+.bank-name {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+  white-space: nowrap;
 }
 
 .panel-header-title-row {
@@ -720,193 +723,85 @@ body {
   line-height: 1.2;
 }
 
-/* Stats Container inside Bank Card */
-.bank-card-stats-area {
-  width: 100%;
-  padding-top: 0.6rem;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.bank-stats-subline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.bank-attempts-pill-group {
+/* SINGLE UNIFIED BADGE - ONE COMPACT ROW */
+.bank-unified-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.bank-stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2rem;
+  padding: 0.3rem 0.85rem;
   font-size: 1.15rem;
-  font-weight: 500;
-  padding: 0.2rem 0.65rem;
-  border-radius: 0.4rem;
-  line-height: 1.3;
+  line-height: 1.2;
   white-space: nowrap;
-}
-
-.bank-stat-chip.attempts-chip {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color-text-main);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.bank-stat-chip.pass-chip {
-  background: rgba(52, 211, 153, 0.12);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.28);
-}
-
-.bank-stat-chip.fail-chip {
-  background: rgba(248, 113, 113, 0.12);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.28);
-}
-
-.chip-indicator {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
   flex-shrink: 0;
 }
 
-.chip-indicator.pass-dot {
-  background-color: #34d399;
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+.bank-radio-card.active .bank-unified-badge {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.22);
 }
 
-.chip-indicator.fail-dot {
-  background-color: #f87171;
-}
-
-.bank-strength-pill-group {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-}
-
-.bank-strength-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.8rem;
-  border-radius: 1.2rem;
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.bank-strength-badge .strength-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.bank-strength-badge.tier-strong {
-  background: rgba(52, 211, 153, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.35);
-}
-
-.bank-strength-badge.tier-strong .strength-dot {
-  background: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
-}
-
-.bank-strength-badge.tier-moderate {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.35);
-}
-
-.bank-strength-badge.tier-moderate .strength-dot {
-  background: #fbbf24;
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
-}
-
-.bank-strength-badge.tier-attention {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.35);
-}
-
-.bank-strength-badge.tier-attention .strength-dot {
-  background: #f87171;
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.8);
-}
-
-.bank-strength-badge.tier-unattempted {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text-dim);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.bank-mini-meter-track {
-  width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.07);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.bank-mini-meter-bar {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.bank-mini-meter-bar.tier-strong {
-  background: linear-gradient(90deg, #10b981, #34d399);
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
-}
-
-.bank-mini-meter-bar.tier-moderate {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
-  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
-}
-
-.bank-mini-meter-bar.tier-attention {
-  background: linear-gradient(90deg, #ef4444, #f87171);
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
-}
-
-.bank-stats-subline.unattempted-line {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  font-size: 1.15rem;
-  color: var(--color-text-dim);
-}
-
-.bank-unattempted-badge {
-  display: inline-block;
-  padding: 0.15rem 0.55rem;
-  border-radius: 0.4rem;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text-dim);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.badge-item-sep {
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 300;
   font-size: 1.1rem;
 }
 
-.bank-unattempted-hint {
-  font-size: 1.15rem;
+.badge-item-attempts {
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.badge-item-pass {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.badge-item-fail {
   color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+
+.badge-item-fail.has-fails {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.badge-item-strength {
+  font-weight: 600;
+}
+
+.badge-item-strength.tier-strong {
+  color: #34d399;
+}
+
+.badge-item-strength.tier-moderate {
+  color: #fbbf24;
+}
+
+.badge-item-strength.tier-attention {
+  color: #f87171;
+}
+
+.badge-item-strength.tier-unattempted {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.badge-item-unattempted {
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+
+.badge-item-qs {
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 500;
+}
+
+.badge-item-locked {
+  color: #fbbf24;
+  font-weight: 600;
 }
 
 .bank-radio-card input {
@@ -5922,31 +5817,16 @@ body {
   }
 
   .bank-radio-card {
-    padding: 1.2rem 1.2rem !important;
+    padding: 0.65rem 0.85rem !important;
     min-height: auto !important;
-  }
-
-  .bank-card-stats-area {
-    padding-top: 0.5rem !important;
+    flex-wrap: wrap !important;
     gap: 0.5rem !important;
   }
 
-  .bank-stats-subline {
-    gap: 0.5rem !important;
-  }
-
-  .bank-attempts-pill-group {
-    gap: 0.4rem !important;
-  }
-
-  .bank-stat-chip {
-    font-size: 1.1rem !important;
-    padding: 0.18rem 0.55rem !important;
-  }
-
-  .bank-strength-badge {
-    font-size: 1.1rem !important;
-    padding: 0.2rem 0.65rem !important;
+  .bank-unified-badge {
+    font-size: 1.05rem !important;
+    padding: 0.25rem 0.65rem !important;
+    gap: 0.45rem !important;
   }
 
   .bank-attention-alert-badge {
