@@ -142,7 +142,7 @@ function getInitialExamState() {
     console.warn("Initial active session parse error:", e);
   }
 
-  if (activeSession && (isExamUrl || localStorage.getItem(ACTIVE_RUNNING_SESSION_ID_KEY))) {
+  if (activeSession && isExamUrl) {
     if (activeSession.questions && Array.isArray(activeSession.questions) && activeSession.questions.length > 0) {
       const validIndex =
         typeof activeSession.index === "number" &&
