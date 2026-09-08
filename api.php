@@ -952,12 +952,23 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             }
 
             if ($m) {
-                $opts = json_decode($m['options'] ?? '[]', true) ?? [];
-                $corr = json_decode($m['correct_option'] ?? '[]', true) ?? [];
-                $qItem['options'] = $opts;
-                $qItem['correctOption'] = is_array($corr) ? $corr : [$corr];
-                $qItem['correctOptions'] = is_array($corr) ? $corr : [$corr];
+                if (empty($qItem['options']) || !is_array($qItem['options'])) {
+                    $opts = json_decode($m['options'] ?? '[]', true) ?? [];
+                    $corr = json_decode($m['correct_option'] ?? '[]', true) ?? [];
+                    $qItem['options'] = $opts;
+                    $qItem['correctOption'] = is_array($corr) ? $corr : [$corr];
+                    $qItem['correctOptions'] = is_array($corr) ? $corr : [$corr];
+                }
                 $qItem['points'] = (int)($m['points'] ?? 10);
+                if (empty($qItem['exhibitImage']) && !empty($m['exhibit_image'])) {
+                    $qItem['exhibitImage'] = $m['exhibit_image'];
+                }
+                if (empty($qItem['originalSourceImage']) && !empty($m['original_source_image'])) {
+                    $qItem['originalSourceImage'] = $m['original_source_image'];
+                }
+                if (empty($qItem['cliSnippet']) && !empty($m['cli_snippet'])) {
+                    $qItem['cliSnippet'] = $m['cli_snippet'];
+                }
             }
             $canonicalQuestions[] = $qItem;
 
@@ -967,42 +978,89 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             $pts = (int)($m['points'] ?? $qItem['points'] ?? 10);
             if ($pts <= 0) $pts = 10;
 
-            $cOpts = $m ? json_decode($m['correct_option'] ?? '[]', true) : ($qItem['correctOption'] ?? []);
-            $cArr = is_array($cOpts) ? array_map('intval', $cOpts) : [(int)$cOpts];
-
-            $isCorrect = false;
             $qType = $m['type'] ?? $qItem['type'] ?? 'multiple_choice';
             $isDragDrop = $qType === 'drag_drop' || !empty($m['drag_drop_data']) || !empty($qItem['dragDropData']);
+
+            $isCorrect = false;
 
             if ($isDragDrop) {
                 if (is_array($userAns) && !empty($userAns['confirmed']) && !empty($userAns['isCorrect'])) {
                     $isCorrect = true;
                 }
-            } elseif (count($cArr) > 1) {
-                $selections = [];
-                if (is_array($userAns)) {
-                    $selections = isset($userAns['selections']) && is_array($userAns['selections']) ? $userAns['selections'] : $userAns;
-                } elseif (is_numeric($userAns)) {
-                    $selections = [(int)$userAns];
-                }
-                $selections = array_values(array_unique(array_map('intval', $selections)));
-                sort($selections);
-                $cArrSorted = array_values(array_unique(array_map('intval', $cArr)));
-                sort($cArrSorted);
-                $isCorrect = ($selections === $cArrSorted);
             } else {
-                $chosen = null;
-                if (is_numeric($userAns)) {
-                    $chosen = (int)$userAns;
-                } elseif (is_array($userAns)) {
-                    if (isset($userAns['selections']) && is_array($userAns['selections']) && count($userAns['selections']) > 0) {
-                        $chosen = (int)$userAns['selections'][0];
-                    } elseif (count($userAns) > 0 && is_numeric($userAns[0])) {
-                        $chosen = (int)$userAns[0];
+                // Determine correct options from qItem (shuffled or canonical)
+                $qCorrRaw = $qItem['correctOptions'] ?? $qItem['correctOption'] ?? null;
+                $qCorrArr = is_array($qCorrRaw) ? array_map('intval', $qCorrRaw) : ($qCorrRaw !== null ? [(int)$qCorrRaw] : []);
+
+                // Determine master correct option texts if available
+                $masterCorrectTexts = [];
+                if ($m) {
+                    $mOpts = json_decode($m['options'] ?? '[]', true) ?? [];
+                    $mCorrRaw = json_decode($m['correct_option'] ?? '[]', true) ?? [];
+                    $mCorrArr = is_array($mCorrRaw) ? array_map('intval', $mCorrRaw) : ($mCorrRaw !== null ? [(int)$mCorrRaw] : []);
+                    foreach ($mCorrArr as $cIdx) {
+                        if (isset($mOpts[$cIdx])) {
+                            $masterCorrectTexts[] = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', (string)$mOpts[$cIdx])));
+                        }
                     }
                 }
-                if ($chosen !== null && in_array($chosen, $cArr, true)) {
-                    $isCorrect = true;
+
+                $isMulti = count($qCorrArr) > 1 || count($masterCorrectTexts) > 1;
+
+                if ($isMulti) {
+                    $selections = [];
+                    if (is_array($userAns)) {
+                        $selections = isset($userAns['selections']) && is_array($userAns['selections']) ? $userAns['selections'] : $userAns;
+                    } elseif (is_numeric($userAns)) {
+                        $selections = [(int)$userAns];
+                    }
+                    $selections = array_values(array_unique(array_map('intval', $selections)));
+                    sort($selections);
+
+                    // 1. Index match against qItem's correct options
+                    $qCorrSorted = array_values(array_unique(array_map('intval', $qCorrArr)));
+                    sort($qCorrSorted);
+                    if (!empty($qCorrSorted) && $selections === $qCorrSorted) {
+                        $isCorrect = true;
+                    } elseif (!empty($masterCorrectTexts)) {
+                        // 2. Authoritative text-based match against master question options
+                        $userTexts = [];
+                        foreach ($selections as $sIdx) {
+                            if (isset($qItem['options'][$sIdx])) {
+                                $userTexts[] = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', (string)$qItem['options'][$sIdx])));
+                            }
+                        }
+                        sort($userTexts);
+                        $mTextsSorted = $masterCorrectTexts;
+                        sort($mTextsSorted);
+                        if (!empty($userTexts) && $userTexts === $mTextsSorted) {
+                            $isCorrect = true;
+                        }
+                    }
+                } else {
+                    $chosen = null;
+                    if (is_numeric($userAns)) {
+                        $chosen = (int)$userAns;
+                    } elseif (is_array($userAns)) {
+                        if (isset($userAns['selections']) && is_array($userAns['selections']) && count($userAns['selections']) > 0) {
+                            $chosen = (int)$userAns['selections'][0];
+                        } elseif (count($userAns) > 0 && is_numeric($userAns[0])) {
+                            $chosen = (int)$userAns[0];
+                        }
+                    }
+
+                    if ($chosen !== null) {
+                        // 1. Index match against qItem's correct options
+                        if (in_array($chosen, $qCorrArr, true)) {
+                            $isCorrect = true;
+                        } elseif (!empty($masterCorrectTexts) && isset($qItem['options'][$chosen])) {
+                            // 2. Authoritative text-based match against master question options
+                            $chosenText = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', (string)$qItem['options'][$chosen])));
+                            if (in_array($chosenText, $masterCorrectTexts, true)) {
+                                $isCorrect = true;
+                            }
+                        }
+                    }
                 }
             }
 

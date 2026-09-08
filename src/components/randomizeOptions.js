@@ -64,18 +64,18 @@ export function randomizeQuestionOptions(q) {
 
   const rawCorrect = q.correctOptions !== undefined ? q.correctOptions : q.correctOption;
   const isArray = Array.isArray(rawCorrect);
-  const correctArr = isArray
+  const correctArr = (isArray
     ? rawCorrect
     : rawCorrect !== undefined && rawCorrect !== null
     ? [rawCorrect]
-    : [];
+    : []).map(Number);
 
   const indexed = q.options.map((opt, idx) => {
     let text = typeof opt === "string" ? opt.replace(/^[A-Z][.):-]\s*/i, "").trim() : String(opt);
     return {
       origIdx: idx,
       text,
-      isCorrect: correctArr.includes(idx),
+      isCorrect: correctArr.includes(Number(idx)),
     };
   });
 

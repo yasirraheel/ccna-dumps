@@ -231,9 +231,9 @@ function ExamDashboard({
   const effectiveSettings = isSimulation
     ? {
         randomizeQuestions: true,
-        randomizeAnswers: false,
-        showScoreLive: true,
-        showRequiredAnswersCount: true,
+        randomizeAnswers: Boolean(settings.randomizeAnswers),
+        showScoreLive: settings.showScoreLive !== undefined ? settings.showScoreLive : true,
+        showRequiredAnswersCount: settings.showRequiredAnswersCount !== undefined ? settings.showRequiredAnswersCount : true,
         includeShowAnswerBtn: false,
         showAnswersInline: false,
         timerMode: "timed_90",
@@ -282,8 +282,9 @@ function ExamDashboard({
       filtered = aggressiveShuffle(filtered);
     }
 
-    // Keep exact canonical dump options sequence (A, B, C, D) matching original source images
-    // Do not scramble options to ensure 100% synchronization with master catalog and exhibits
+    if (effectiveSettings.randomizeAnswers) {
+      filtered = filtered.map(randomizeQuestionOptions);
+    }
 
     onStartExam({
       questions: filtered,

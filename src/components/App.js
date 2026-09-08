@@ -256,7 +256,16 @@ function reducer(state, action) {
               (item.id !== undefined && (item.id === q.id || String(item.id) === String(q.id))) ||
               (item.questionNo && item.questionNo === q.questionNo)
           );
-          return found ? { ...q, ...found } : q;
+          if (!found) return q;
+          // When exam is active, keep the running exam's options and correctOption so randomized choices are preserved
+          return {
+            ...found,
+            ...q,
+            exhibitImage: found.exhibitImage || q.exhibitImage,
+            originalSourceImage: found.originalSourceImage || q.originalSourceImage,
+            cliSnippet: found.cliSnippet || q.cliSnippet,
+            points: found.points || q.points || 10,
+          };
         });
         return {
           ...state,
@@ -1088,17 +1097,6 @@ export default function App() {
       localStorage.removeItem("ccna_active_running_session_id");
       localStorage.removeItem("ccna_question_overrides");
       localStorage.removeItem("ccna_saved_sessions_list");
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("ccna_study_settings_")) {
-          try {
-            const s = JSON.parse(localStorage.getItem(key));
-            if (s && s.randomizeAnswers) {
-              s.randomizeAnswers = false;
-              localStorage.setItem(key, JSON.stringify(s));
-            }
-          } catch {}
-        }
-      });
     } catch {}
   }, []);
 
