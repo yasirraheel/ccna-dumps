@@ -1698,7 +1698,7 @@ export default function App() {
 
       const numQuestions = questions.length;
       const maxPossiblePoints = questions.reduce(
-        (prev, cur) => prev + (cur.points || 1),
+        (prev, cur) => prev + (cur.points || 10),
         0
       );
       const percentage = Number(
@@ -2136,7 +2136,7 @@ export default function App() {
 
   const numQuestions = questions.length;
   const maxPossiblePoints = questions.reduce(
-    (prev, cur) => prev + (cur.points || 1),
+    (prev, cur) => prev + (cur.points || 10),
     0
   );
 

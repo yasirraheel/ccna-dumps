@@ -369,7 +369,7 @@ function ExamHistoryView({
               maxPossiblePoints={
                 selectedReportExam.maxScore ||
                 (selectedReportExam.questions?.length
-                  ? selectedReportExam.questions.reduce((a, b) => a + (b.points || 1), 0)
+                  ? selectedReportExam.questions.reduce((a, b) => a + (b.points || 10), 0)
                   : 1000)
               }
               candidateName={selectedReportExam.candidateName || candidateName}
