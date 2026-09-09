@@ -2604,6 +2604,7 @@ body {
   color: #f1f5f9;
   line-height: 1.45;
   display: block;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 600px) {

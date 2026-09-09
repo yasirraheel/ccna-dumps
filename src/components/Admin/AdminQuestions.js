@@ -251,14 +251,14 @@ function AdminQuestions() {
                             border: `1px solid ${isCorrect ? '#22c55e' : '#1e293b'}`,
                             color: isCorrect ? '#4ade80' : '#cbd5e1',
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
                             justifyContent: 'space-between',
                             fontSize: '13px'
                           }}
                         >
-                          <span>{opt}</span>
+                          <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', flex: 1, lineHeight: '1.45' }}>{opt}</span>
                           {isCorrect && (
-                            <span className="badge-pill badge-verified">
+                            <span className="badge-pill badge-verified" style={{ marginLeft: '10px', flexShrink: 0 }}>
                               ✓ Correct Choice
                             </span>
                           )}

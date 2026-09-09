@@ -454,7 +454,7 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                     Options & Correct Answers ({correctOption.length} selected correct)
                   </label>
                   <p style={{ margin: "3px 0 0 0", fontSize: "11.5px", color: "#94a3b8" }}>
-                    Click the checkmark pill next to an option to designate it as a correct answer.
+                    Click the checkmark pill next to an option to designate it as correct. You can hit <strong>Enter</strong> to split option text into multiple lines.
                   </p>
                 </div>
 
@@ -484,7 +484,7 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                       key={idx}
                       style={{
                         display: "flex",
-                        alignItems: "center",
+                        alignItems: "flex-start",
                         gap: "10px",
                         background: isCorrect ? "rgba(34, 197, 94, 0.08)" : "#111827",
                         border: isCorrect ? "1px solid rgba(34, 197, 94, 0.4)" : "1px solid #1f293d",
@@ -511,16 +511,17 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                           cursor: "pointer",
                           flexShrink: 0,
                           transition: "all 0.15s ease",
+                          marginTop: "4px",
                         }}
                       >
                         {isCorrect ? "✓" : ""}
                       </button>
 
-                      <input
-                        type="text"
+                      <textarea
                         value={opt}
                         onChange={(e) => handleOptionChange(idx, e.target.value)}
                         placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                        rows={Math.max(1, (opt || "").split("\n").length)}
                         style={{
                           flex: 1,
                           background: "transparent",
@@ -529,6 +530,12 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                           color: isCorrect ? "#86efac" : "#f8fafc",
                           fontSize: "13.5px",
                           fontWeight: isCorrect ? 600 : 400,
+                          lineHeight: "1.45",
+                          fontFamily: "inherit",
+                          resize: "vertical",
+                          minHeight: "34px",
+                          padding: "4px 0",
+                          whiteSpace: "pre-wrap",
                         }}
                       />
 
@@ -546,6 +553,7 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
                             padding: "4px 8px",
                             borderRadius: "4px",
                             opacity: 0.7,
+                            marginTop: "4px",
                           }}
                         >
                           🗑️
