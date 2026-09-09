@@ -27,6 +27,12 @@ const DEFAULT_STUDY_SETTINGS = {
 const getSettingsKey = (user) =>
   user?.id ? `ccna_study_settings_${user.id}` : "ccna_study_settings_guest";
 
+const getSelectedBankKey = (user) =>
+  user?.id ? `ccna_selected_bank_${user.id}` : "ccna_selected_bank_guest";
+
+const getExamModeKey = (user) =>
+  user?.id ? `ccna_exam_mode_${user.id}` : "ccna_exam_mode_guest";
+
 function ExamDashboard({
   totalQuestionsCount,
   onStartExam,
@@ -49,8 +55,24 @@ function ExamDashboard({
   onLogout,
   onOpenUpgrade,
 }) {
-  const [selectedBank, setSelectedBank] = useState("bank_a");
-  const [examMode, setExamMode] = useState("study");
+  const [selectedBank, setSelectedBank] = useState(() => {
+    try {
+      const key = getSelectedBankKey(currentUser);
+      const stored = localStorage.getItem(key) || localStorage.getItem("ccna_selected_bank_guest");
+      return stored || "bank_a";
+    } catch {
+      return "bank_a";
+    }
+  });
+  const [examMode, setExamMode] = useState(() => {
+    try {
+      const key = getExamModeKey(currentUser);
+      const stored = localStorage.getItem(key) || localStorage.getItem("ccna_exam_mode_guest");
+      return stored || "study";
+    } catch {
+      return "study";
+    }
+  });
   const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -107,6 +129,16 @@ function ExamDashboard({
       const stored = localStorage.getItem(key);
       if (stored) {
         setSettings({ ...DEFAULT_STUDY_SETTINGS, ...JSON.parse(stored) });
+      }
+      const bankKey = getSelectedBankKey(currentUser);
+      const storedBank = localStorage.getItem(bankKey) || localStorage.getItem("ccna_selected_bank_guest");
+      if (storedBank) {
+        setSelectedBank(storedBank);
+      }
+      const modeKey = getExamModeKey(currentUser);
+      const storedMode = localStorage.getItem(modeKey) || localStorage.getItem("ccna_exam_mode_guest");
+      if (storedMode) {
+        setExamMode(storedMode);
       }
     } catch (e) {
       console.warn("Load user settings error:", e);
@@ -213,6 +245,11 @@ function ExamDashboard({
       return;
     }
     setSelectedBank(bankKey);
+    try {
+      const key = getSelectedBankKey(currentUser);
+      localStorage.setItem(key, bankKey);
+      localStorage.setItem("ccna_selected_bank_guest", bankKey);
+    } catch (e) {}
   };
 
   const handleModeSelect = (mode) => {
@@ -226,6 +263,11 @@ function ExamDashboard({
       return;
     }
     setExamMode(mode);
+    try {
+      const key = getExamModeKey(currentUser);
+      localStorage.setItem(key, mode);
+      localStorage.setItem("ccna_exam_mode_guest", mode);
+    } catch (e) {}
   };
 
   const effectiveSettings = isSimulation
