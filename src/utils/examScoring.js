@@ -56,6 +56,50 @@ export function calculateTotalPoints(questions, answers) {
   return total;
 }
 
+export function isQuestionAnswerCorrect(q, ans) {
+  if (!q || ans === null || ans === undefined || ans === "") return false;
+
+  const rawCorrect = q.correctOptions !== undefined && q.correctOptions !== null
+    ? q.correctOptions
+    : q.correctOption;
+  const correctArr = (Array.isArray(rawCorrect) ? rawCorrect : [rawCorrect])
+    .filter((x) => x !== null && x !== undefined)
+    .map(Number);
+
+  if (q.type === "drag_drop" || q.dragDropData || q.isDragDrop) {
+    return Boolean(ans?.confirmed && ans?.isCorrect);
+  }
+
+  if (correctArr.length > 1) {
+    const userSelections = (
+      Array.isArray(ans)
+        ? ans
+        : Array.isArray(ans?.selections)
+        ? ans.selections
+        : typeof ans === "number" || typeof ans === "string"
+        ? [ans]
+        : []
+    ).map(Number);
+    return (
+      userSelections.length === correctArr.length &&
+      userSelections.every((idx) => correctArr.includes(idx))
+    );
+  }
+
+  const chosenOpt =
+    typeof ans === "number" || typeof ans === "string"
+      ? ans
+      : Array.isArray(ans)
+      ? ans[0]
+      : ans?.selections?.[0];
+
+  return (
+    chosenOpt !== undefined &&
+    chosenOpt !== null &&
+    correctArr.includes(Number(chosenOpt))
+  );
+}
+
 export function getIncorrectQuestionIndices(questions, answers) {
   if (!questions || !Array.isArray(questions)) return [];
   const incorrectIndices = [];

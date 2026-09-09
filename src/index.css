@@ -3529,6 +3529,14 @@ body {
   background-color: #4b5563;
 }
 
+.dot-correct {
+  background-color: #10b981;
+}
+
+.dot-incorrect {
+  background-color: #ef4444;
+}
+
 .palette-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(4.4rem, 1fr));
@@ -3569,6 +3577,30 @@ body {
 .cell-answered {
   background-color: var(--color-green);
   color: #0f172a;
+}
+
+.cell-correct {
+  background-color: #10b981 !important;
+  color: #0f172a !important;
+  border-color: #34d399 !important;
+}
+
+.cell-incorrect {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #f87171 !important;
+}
+
+.tab-btn.active-incorrect {
+  background-color: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.tab-btn.active-correct {
+  background-color: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #0f172a !important;
 }
 
 .cell-unanswered {

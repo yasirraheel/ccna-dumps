@@ -206,11 +206,16 @@ function reducer(state, action) {
           points: updatedPoints,
         };
       }
+      const isExamRoute =
+        typeof window !== "undefined" &&
+        (window.location.pathname.toLowerCase().includes("/exam") ||
+          new URLSearchParams(window.location.search).get("view") === "exam");
+
       return {
         ...state,
         allQuestions: overriddenPayload,
         questions: overriddenPayload,
-        status: state.status === "loading" ? "ready" : state.status,
+        status: isExamRoute && state.status === "loading" ? "loading" : (state.status === "loading" ? "ready" : state.status),
       };
     }
 
@@ -1021,13 +1026,6 @@ export default function App() {
     }
   }, [status, isReviewMode, activeSessionId, currentView]);
 
-  // If user opens /exam directly but there is no active session running, smoothly redirect to dashboard
-  useEffect(() => {
-    if (currentView === "exam" && status !== "active") {
-      handleNavigate("dashboard");
-    }
-  }, [currentView, status]);
-  
   // Clear any stale local storage session/override cache to guarantee 100% server authority
   useEffect(() => {
     try {
@@ -1880,12 +1878,20 @@ export default function App() {
 
     const recalculatedPoints = calculateTotalPoints(safeQuestions, session.answers || []);
 
+    const activeIdx = typeof session.index === "number" ? session.index : 0;
+    const activeAnswer =
+      session.answer !== undefined && session.answer !== null
+        ? session.answer
+        : (session.answers && session.answers[activeIdx] !== undefined
+            ? session.answers[activeIdx]
+            : null);
+
     dispatch({
       type: "resumeExam",
       payload: {
         questions: safeQuestions,
-        index: session.index || 0,
-        answer: session.answer || null,
+        index: activeIdx,
+        answer: activeAnswer,
         answers: session.answers || [],
         points: typeof recalculatedPoints === "number" ? recalculatedPoints : (session.points || 0),
         secondsRemaining: session.secondsRemaining,
@@ -1897,7 +1903,7 @@ export default function App() {
         startedAt: initialStartTime,
       },
     });
-    handleNavigate("exam");
+    setCurrentView("exam");
   };
 
   // On /exam mount: fetch fresh session from server (ZERO LOCALSTORAGE CACHING)
@@ -1909,7 +1915,6 @@ export default function App() {
 
     const urlSessionId = search?.get("id") || search?.get("sessionId") || null;
     const isReview = search?.get("review") === "1" || search?.get("mode") === "review";
-    if (isReview) return;
 
     const token = localStorage.getItem("ccna_auth_token") || "";
     const userObj = (() => {
@@ -1923,6 +1928,29 @@ export default function App() {
 
     const headers = { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    if (isReview) {
+      if (urlSessionId) {
+        fetch(`${API_BASE_URL}/history?${queryParams.toString()}`, { headers })
+          .then((res) => res.json())
+          .then((data) => {
+            const list = data?.history || [];
+            const cleanId = urlSessionId.replace(/^review_/, "");
+            const record = list.find((r) => r.id === urlSessionId || r.id === cleanId || r.id?.includes(cleanId));
+            if (record) {
+              handleReviewCompletedExam(record);
+            } else {
+              handleNavigate("dashboard");
+            }
+          })
+          .catch(() => {
+            handleNavigate("dashboard");
+          });
+      } else {
+        handleNavigate("dashboard");
+      }
+      return;
+    }
 
     fetch(`${API_BASE_URL}/sessions?${queryParams.toString()}`, { headers })
       .then((res) => res.json())
