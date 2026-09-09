@@ -4,16 +4,27 @@ const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
 
 export function getQuestionOverrides() {
   try {
-    localStorage.removeItem(OVERRIDES_STORAGE_KEY);
-  } catch {}
-  return {};
+    const raw = localStorage.getItem(OVERRIDES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 }
 
 export function applyQuestionOverrides(questionsList) {
   if (!Array.isArray(questionsList)) {
     return questionsList || [];
   }
-  return questionsList;
+  const overrides = getQuestionOverrides();
+  if (!overrides || Object.keys(overrides).length === 0) {
+    return questionsList;
+  }
+  return questionsList.map((q) => {
+    const keyId = q.id !== undefined ? `id_${q.id}` : null;
+    const keyQno = q.questionNo ? `qno_${q.questionNo}` : null;
+    const ov = (keyId && overrides[keyId]) || (keyQno && overrides[keyQno]);
+    return ov ? { ...q, ...ov } : q;
+  });
 }
 
 export function saveQuestionOverride(updatedQuestion) {
@@ -71,10 +82,18 @@ export function saveQuestionOverride(updatedQuestion) {
       }
     }
 
-    // 4. Dispatch custom event for real-time reactivity
+    // 4. Dispatch custom event for real-time reactivity in the current window
     window.dispatchEvent(
       new CustomEvent("ccna_question_updated", { detail: updatedQuestion })
     );
+
+    // 5. Trigger cross-tab storage event for active exams open in other tabs
+    try {
+      localStorage.setItem(
+        "ccna_question_updated_event",
+        JSON.stringify({ question: updatedQuestion, _t: Date.now() })
+      );
+    } catch {}
   } catch (e) {
     console.error("Error saving question override:", e);
   }

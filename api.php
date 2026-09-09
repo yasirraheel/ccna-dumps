@@ -1148,6 +1148,20 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         $stmt = $pdo->prepare($query);
         $stmt->execute([$userId ?: $userEmail]);
         $rows = $stmt->fetchAll();
+
+        // Fetch master questions so any admin edits to question text, options, or exhibits reflect in active sessions
+        $dbStmt = $pdo->query("SELECT id, question_no, type, question, options, correct_option, points, exhibit_image, original_source_image, cli_snippet, drag_drop_data FROM questions");
+        $masterDb = $dbStmt->fetchAll(PDO::FETCH_ASSOC);
+        $masterById = [];
+        $masterByQno = [];
+        foreach ($masterDb as $mq) {
+            $masterById[(int)$mq['id']] = $mq;
+            $cleanQno = strtolower(trim(preg_replace('/\s+/', ' ', $mq['question_no'] ?? '')));
+            if ($cleanQno !== '') {
+                $masterByQno[$cleanQno] = $mq;
+            }
+        }
+
         $formatted = [];
         foreach ($rows as $r) {
             $startedAt = !empty($r['started_at']) ? (float)$r['started_at'] : null;
@@ -1159,8 +1173,51 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             }
             $savedAt = (float)$r['updated_at'];
 
-            $qs = (function($json) {
+            $sessionSettings = json_decode($r['settings'] ?? '{}', true);
+            $isRandomized = !empty($sessionSettings['randomizeAnswers']);
+
+            $qs = (function($json) use ($masterById, $masterByQno, $isRandomized) {
                 $decoded = json_decode($json ?? '[]', true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as &$qItem) {
+                        $m = null;
+                        if (!empty($qItem['id']) && isset($masterById[(int)$qItem['id']])) {
+                            $m = $masterById[(int)$qItem['id']];
+                        } elseif (!empty($qItem['questionNo'])) {
+                            $cq = strtolower(trim(preg_replace('/\s+/', ' ', $qItem['questionNo'])));
+                            if (isset($masterByQno[$cq])) {
+                                $m = $masterByQno[$cq];
+                            }
+                        }
+                        if ($m) {
+                            $mOpts = json_decode($m['options'] ?? '[]', true) ?? [];
+                            $mCorr = json_decode($m['correct_option'] ?? '[]', true) ?? [];
+                            if (!$isRandomized) {
+                                $qItem['question'] = $m['question'];
+                                $qItem['options'] = $mOpts;
+                                $qItem['correctOption'] = is_array($mCorr) ? $mCorr : [$mCorr];
+                                $qItem['correctOptions'] = is_array($mCorr) ? $mCorr : [$mCorr];
+                            } else {
+                                $stripFn = function($s) { return strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', (string)$s))); };
+                                $mTexts = array_map($stripFn, $mOpts);
+                                $qTexts = array_map($stripFn, $qItem['options'] ?? []);
+                                sort($mTexts);
+                                sort($qTexts);
+                                if ($mTexts !== $qTexts) {
+                                    $qItem['options'] = $mOpts;
+                                    $qItem['correctOption'] = is_array($mCorr) ? $mCorr : [$mCorr];
+                                    $qItem['correctOptions'] = is_array($mCorr) ? $mCorr : [$mCorr];
+                                }
+                                $qItem['question'] = $m['question'];
+                            }
+                            $qItem['points'] = (int)($m['points'] ?? 10);
+                            if (!empty($m['exhibit_image'])) $qItem['exhibitImage'] = $m['exhibit_image'];
+                            if (!empty($m['original_source_image'])) $qItem['originalSourceImage'] = $m['original_source_image'];
+                            if (!empty($m['cli_snippet'])) $qItem['cliSnippet'] = $m['cli_snippet'];
+                            if (!empty($m['drag_drop_data'])) $qItem['dragDropData'] = json_decode($m['drag_drop_data'], true);
+                        }
+                    }
+                }
                 enrichQuestionArray($decoded);
                 return $decoded;
             })($r['questions']);
@@ -1749,6 +1806,41 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             $qId,
             $questionNo
         ]);
+
+        // Immediately propagate updated question options and text to any active saved_sessions
+        try {
+            $openSessions = $pdo->query("SELECT id, questions, settings FROM saved_sessions")->fetchAll();
+            foreach ($openSessions as $sess) {
+                $sessQuestions = json_decode($sess['questions'] ?? '[]', true);
+                if (!is_array($sessQuestions) || empty($sessQuestions)) continue;
+                $sessChanged = false;
+                $sessSettings = json_decode($sess['settings'] ?? '{}', true);
+                $isRandom = !empty($sessSettings['randomizeAnswers']);
+
+                foreach ($sessQuestions as &$sq) {
+                    $isHit = (!empty($sq['id']) && (int)$sq['id'] === $qId) || 
+                             (!empty($sq['questionNo']) && $questionNo !== '' && $sq['questionNo'] === $questionNo);
+                    if ($isHit) {
+                        $sq['question'] = $questionText;
+                        $sq['points'] = $points;
+                        if ($cliSnippet !== null) $sq['cliSnippet'] = $cliSnippet;
+                        if ($exhibitImage !== null) $sq['exhibitImage'] = $exhibitImage;
+                        if ($originalSourceImage !== null) $sq['originalSourceImage'] = $originalSourceImage;
+                        if ($dragDropData !== null) $sq['dragDropData'] = json_decode($dragDropData, true);
+                        if (!$isRandom && $options !== null) {
+                            $sq['options'] = json_decode($options, true);
+                            $sq['correctOption'] = json_decode($correctOption ?? '[]', true);
+                            $sq['correctOptions'] = json_decode($correctOption ?? '[]', true);
+                        }
+                        $sessChanged = true;
+                    }
+                }
+                if ($sessChanged) {
+                    $upStmt = $pdo->prepare("UPDATE saved_sessions SET questions = ? WHERE id = ?");
+                    $upStmt->execute([json_encode($sessQuestions, JSON_UNESCAPED_UNICODE), $sess['id']]);
+                }
+            }
+        } catch (Exception $e) {}
 
         echo json_encode([
             "success" => true,

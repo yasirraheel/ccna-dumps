@@ -250,6 +250,12 @@ function reducer(state, action) {
     case "dataReceived": {
       const overriddenPayload = applyQuestionOverrides(action.payload);
       if (state.status === "active") {
+        const isRandomized = Boolean(state.settings?.randomizeAnswers);
+        const stripPrefix = (str) =>
+          typeof str === "string"
+            ? str.replace(/^[A-Z][.):-]\s*/i, "").trim()
+            : String(str);
+
         const patchedRunning = (state.questions || []).map((q) => {
           const found = overriddenPayload.find(
             (item) =>
@@ -257,14 +263,33 @@ function reducer(state, action) {
               (item.questionNo && item.questionNo === q.questionNo)
           );
           if (!found) return q;
-          // When exam is active, keep the running exam's options and correctOption so randomized choices are preserved
+
+          if (isRandomized) {
+            const foundTexts = (found.options || []).map(stripPrefix).sort();
+            const qTexts = (q.options || []).map(stripPrefix).sort();
+            const optionsChanged = JSON.stringify(foundTexts) !== JSON.stringify(qTexts);
+            if (optionsChanged) {
+              return randomizeQuestionOptions(found);
+            }
+            return {
+              ...q,
+              question: found.question,
+              exhibitImage: found.exhibitImage || q.exhibitImage,
+              originalSourceImage: found.originalSourceImage || q.originalSourceImage,
+              cliSnippet: found.cliSnippet || q.cliSnippet,
+              points: found.points || q.points || 10,
+              dragDropData: found.dragDropData || q.dragDropData,
+            };
+          }
+
+          // Standard mode: update running question directly with latest admin options and question prompt
           return {
-            ...found,
             ...q,
-            exhibitImage: found.exhibitImage || q.exhibitImage,
-            originalSourceImage: found.originalSourceImage || q.originalSourceImage,
-            cliSnippet: found.cliSnippet || q.cliSnippet,
-            points: found.points || q.points || 10,
+            ...found,
+            options: found.options,
+            correctOption: found.correctOption,
+            correctOptions: found.correctOptions,
+            question: found.question,
           };
         });
         return {
@@ -790,12 +815,17 @@ function reducer(state, action) {
           ((updatedQ.id !== undefined && (q.id === updatedQ.id || String(q.id) === String(updatedQ.id))) ||
            (updatedQ.questionNo && q.questionNo === updatedQ.questionNo))
         );
+      const isRandomized = Boolean(state.settings?.randomizeAnswers);
       const updatedAll = (state.allQuestions || []).map((q) =>
         isMatch(q) ? { ...q, ...updatedQ } : q
       );
-      const updatedCur = (state.questions || []).map((q) =>
-        isMatch(q) ? { ...q, ...updatedQ } : q
-      );
+      const updatedCur = (state.questions || []).map((q) => {
+        if (!isMatch(q)) return q;
+        if (isRandomized) {
+          return randomizeQuestionOptions(updatedQ);
+        }
+        return { ...q, ...updatedQ };
+      });
       const updatedPoints = calculateTotalPoints(updatedCur, state.answers);
 
       if (!state.isReviewMode && state.activeSessionId) {
@@ -1115,7 +1145,7 @@ export default function App() {
       });
   }, []);
 
-  // Listen to live question update events across the application
+  // Listen to live question update events across the application and cross-tab storage
   useEffect(() => {
     const handleQuestionUpdated = (e) => {
       const updatedQ = e.detail;
@@ -1123,9 +1153,21 @@ export default function App() {
         dispatch({ type: "updateQuestion", payload: updatedQ });
       }
     };
+    const handleStorageUpdate = (e) => {
+      if (e.key === "ccna_question_updated_event" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed?.question) {
+            dispatch({ type: "updateQuestion", payload: parsed.question });
+          }
+        } catch {}
+      }
+    };
     window.addEventListener("ccna_question_updated", handleQuestionUpdated);
+    window.addEventListener("storage", handleStorageUpdate);
     return () => {
       window.removeEventListener("ccna_question_updated", handleQuestionUpdated);
+      window.removeEventListener("storage", handleStorageUpdate);
     };
   }, []);
 
@@ -1929,7 +1971,43 @@ export default function App() {
       initialStartTime = session.savedAt || session.updatedAt || session.updated_at || Date.now();
     }
 
-    const safeQuestions = enrichQuestionsList(session.questions);
+    const baseList = enrichQuestionsList(session.questions);
+    const isRandomized = Boolean(session.settings?.randomizeAnswers);
+    const stripPrefix = (str) =>
+      typeof str === "string" ? str.replace(/^[A-Z][.):-]\s*/i, "").trim() : String(str);
+
+    const safeQuestions = applyQuestionOverrides(baseList).map((q) => {
+      const found = (allQuestions || []).find(
+        (item) =>
+          (item.id !== undefined && (item.id === q.id || String(item.id) === String(q.id))) ||
+          (item.questionNo && item.questionNo === q.questionNo)
+      );
+      if (!found) return q;
+      if (isRandomized) {
+        const foundTexts = (found.options || []).map(stripPrefix).sort();
+        const qTexts = (q.options || []).map(stripPrefix).sort();
+        if (JSON.stringify(foundTexts) !== JSON.stringify(qTexts)) {
+          return randomizeQuestionOptions(found);
+        }
+        return {
+          ...q,
+          question: found.question,
+          exhibitImage: found.exhibitImage || q.exhibitImage,
+          originalSourceImage: found.originalSourceImage || q.originalSourceImage,
+          cliSnippet: found.cliSnippet || q.cliSnippet,
+          points: found.points || q.points || 10,
+          dragDropData: found.dragDropData || q.dragDropData,
+        };
+      }
+      return {
+        ...q,
+        ...found,
+        options: found.options,
+        correctOption: found.correctOption,
+        correctOptions: found.correctOptions,
+        question: found.question,
+      };
+    });
 
     dispatch({
       type: "resumeExam",
