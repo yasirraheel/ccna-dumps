@@ -45,6 +45,8 @@ export function syncActiveSessionToLocalStorage(sessionData) {
   }
   try {
     localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+    localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+    localStorage.removeItem(SESSIONS_STORAGE_KEY);
     localStorage.removeItem("ccna_question_overrides");
   } catch {}
 
@@ -76,6 +78,13 @@ function getInitialExamState() {
   const urlId = search?.get("id") || search?.get("sessionId") || null;
   const isReviewUrl = search?.get("review") === "1" || search?.get("mode") === "review";
 
+  try {
+    localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+    localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+    localStorage.removeItem(SESSIONS_STORAGE_KEY);
+    localStorage.removeItem("ccna_question_overrides");
+  } catch {}
+
   // If visiting an exam URL whose session/exam has already finished and NOT in review mode:
   if (isExamUrl && urlId && !isReviewUrl && isExamFinishedId(urlId)) {
     try {
@@ -86,136 +95,13 @@ function getInitialExamState() {
           message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your results, full explanations, and score report in Exam History.",
         })
       );
-      localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-      localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
     } catch {}
-    return {
-      allQuestions: applyQuestionOverrides(ccnaQuestions || []),
-      questions: applyQuestionOverrides(ccnaQuestions || []),
-      status: ccnaQuestions?.length > 0 ? "ready" : "loading",
-      index: 0,
-      answer: null,
-      answers: [],
-      points: 0,
-      highscore: 0,
-      secondsRemaining: null,
-      examMode: "study",
-      settings: {
-        randomizeQuestions: false,
-        randomizeAnswers: false,
-        showScoreLive: true,
-        showRequiredAnswersCount: true,
-        includeShowAnswerBtn: true,
-        showAnswersInline: true,
-        timerMode: "not_timed",
-      },
-      selectedBankName: "Full CCNA Exam",
-      selectedBankKey: "bank_all",
-      activeSessionId: null,
-      startedAt: null,
-      revealedQuestions: [],
-      isReviewMode: false,
-      isPaused: false,
-    };
-  }
-
-  let activeSession = null;
-  try {
-    const directStored = localStorage.getItem(ACTIVE_RUNNING_SESSION_KEY);
-    if (directStored) {
-      const parsed = JSON.parse(directStored);
-      if (parsed && !isExamFinishedId(parsed.id)) {
-        activeSession = parsed;
-      }
-    }
-    if (!activeSession) {
-      const activeId = urlId || localStorage.getItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-      const listStored = localStorage.getItem(SESSIONS_STORAGE_KEY);
-      if (listStored) {
-        const list = JSON.parse(listStored);
-        if (Array.isArray(list) && list.length > 0) {
-          const found = activeId ? list.find((s) => s.id === activeId) : null;
-          if (found && !isExamFinishedId(found.id)) {
-            const ansCount = (found.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length;
-            if (found.questions?.length > 0 && ansCount < found.questions.length) {
-              activeSession = found;
-            }
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("Initial active session parse error:", e);
-  }
-
-  if (activeSession && isExamUrl) {
-    if (activeSession.questions && Array.isArray(activeSession.questions) && activeSession.questions.length > 0) {
-      const validIndex =
-        typeof activeSession.index === "number" &&
-        activeSession.index >= 0 &&
-        activeSession.index < activeSession.questions.length
-          ? activeSession.index
-          : 0;
-
-      return {
-        allQuestions: applyQuestionOverrides(ccnaQuestions || []),
-        questions: applyQuestionOverrides(enrichQuestionsList(activeSession.questions)),
-        status: "active",
-        index: validIndex,
-        answer:
-          activeSession.answer !== undefined
-            ? activeSession.answer
-            : (activeSession.answers?.[validIndex] ?? null),
-        answers:
-          activeSession.answers ||
-          new Array(activeSession.questions.length).fill(null),
-        points: typeof activeSession.points === "number" ? activeSession.points : 0,
-        highscore: 0,
-        secondsRemaining:
-          activeSession.secondsRemaining !== undefined
-            ? activeSession.secondsRemaining
-            : null,
-        examMode: activeSession.examMode || "study",
-        settings: activeSession.settings || {
-          randomizeQuestions: false,
-          randomizeAnswers: false,
-          showScoreLive: true,
-          showRequiredAnswersCount: true,
-          includeShowAnswerBtn: true,
-          showAnswersInline: true,
-          timerMode: "not_timed",
-        },
-        selectedBankName:
-          activeSession.selectedBankName || activeSession.bankName || "Exam",
-        activeSessionId: activeSession.id || `session_${Date.now()}`,
-        startedAt: activeSession.startedAt || Date.now(),
-        revealedQuestions: activeSession.revealedQuestions || [],
-        committedQuestions: Array.isArray(activeSession.committedQuestions)
-          ? activeSession.committedQuestions
-          : Array.isArray(activeSession.answers)
-          ? activeSession.answers
-              .map((a, i) => {
-                const hasAns =
-                  a !== null &&
-                  a !== undefined &&
-                  (typeof a === "number" ||
-                    (Array.isArray(a) && a.length > 0) ||
-                    (Array.isArray(a?.selections) && a.selections.length > 0) ||
-                    (a?.matches && Object.keys(a.matches).length > 0));
-                return hasAns ? i : null;
-              })
-              .filter((i) => i !== null)
-          : [],
-        isReviewMode: Boolean(activeSession.isReviewMode),
-        isPaused: Boolean(activeSession.isPaused),
-      };
-    }
   }
 
   return {
-    allQuestions: applyQuestionOverrides(ccnaQuestions || []),
-    questions: applyQuestionOverrides(ccnaQuestions || []),
-    status: ccnaQuestions?.length > 0 ? "ready" : "loading",
+    allQuestions: ccnaQuestions || [],
+    questions: ccnaQuestions || [],
+    status: isExamUrl ? "loading" : (ccnaQuestions?.length > 0 ? "ready" : "loading"),
     index: 0,
     answer: null,
     answers: [],
@@ -268,12 +154,32 @@ function reducer(state, action) {
             const foundTexts = (found.options || []).map(stripPrefix).sort();
             const qTexts = (q.options || []).map(stripPrefix).sort();
             const optionsChanged = JSON.stringify(foundTexts) !== JSON.stringify(qTexts);
-            if (optionsChanged) {
+            if (optionsChanged || !Array.isArray(q.options) || q.options.length === 0) {
               return randomizeQuestionOptions(found);
             }
+            const masterCorr = Array.isArray(found.correctOption)
+              ? found.correctOption
+              : Array.isArray(found.correctOptions)
+              ? found.correctOptions
+              : typeof found.correctOption === "number"
+              ? [found.correctOption]
+              : [];
+            const masterCorrectTexts = masterCorr
+              .map((idx) => (found.options?.[idx] ? stripPrefix(found.options[idx]) : null))
+              .filter(Boolean);
+
+            const newCorrIndices = [];
+            (q.options || []).forEach((opt, idx) => {
+              if (masterCorrectTexts.includes(stripPrefix(opt))) {
+                newCorrIndices.push(idx);
+              }
+            });
+
             return {
               ...q,
               question: found.question,
+              correctOption: newCorrIndices.length === 1 ? newCorrIndices[0] : newCorrIndices,
+              correctOptions: newCorrIndices,
               exhibitImage: found.exhibitImage || q.exhibitImage,
               originalSourceImage: found.originalSourceImage || q.originalSourceImage,
               cliSnippet: found.cliSnippet || q.cliSnippet,
@@ -292,10 +198,12 @@ function reducer(state, action) {
             question: found.question,
           };
         });
+        const updatedPoints = calculateTotalPoints(patchedRunning, state.answers);
         return {
           ...state,
           allQuestions: overriddenPayload,
           questions: patchedRunning,
+          points: updatedPoints,
         };
       }
       return {
@@ -1441,24 +1349,8 @@ export default function App() {
     };
   };
 
-  // Multi-session state
-  const [savedSessions, setSavedSessions] = useState(() => {
-    try {
-      const stored = localStorage.getItem(SESSIONS_STORAGE_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .map(normalizeSessionData)
-        .filter((s) => {
-          if (isExamFinishedId(s.id)) return false;
-          const ansCount = (s.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length;
-          if (s.questions?.length > 0 && ansCount >= s.questions.length) return false;
-          return true;
-        });
-    } catch {
-      return [];
-    }
-  });
+  // Multi-session state - pure server authority, zero localStorage caching
+  const [savedSessions, setSavedSessions] = useState([]);
 
   // Past completed exams history state
   const [pastExams, setPastExams] = useState(() => {
@@ -1542,55 +1434,12 @@ export default function App() {
             return true;
           });
 
-          setSavedSessions((prev) => {
-            const mergedMap = new Map();
-            cleanSessions.forEach((rem) => mergedMap.set(rem.id, rem));
-
-            prev.forEach((loc) => {
-              if (isExamFinishedId(loc.id)) {
-                mergedMap.delete(loc.id);
-                return;
-              }
-              const rem = mergedMap.get(loc.id);
-              if (!rem) {
-                mergedMap.set(loc.id, loc);
-              } else {
-                const locUpdated = Number(loc.updatedAt || loc.savedAt || 0);
-                const remUpdated = Number(rem.updatedAt || rem.savedAt || 0);
-                const locIndex = Number(loc.index || 0);
-                const remIndex = Number(rem.index || 0);
-
-                if (locIndex > remIndex || locUpdated > remUpdated) {
-                  const merged = {
-                    ...rem,
-                    ...loc,
-                    index: Math.max(locIndex, remIndex),
-                    answers:
-                      (loc.answers?.filter((a) => a !== null && a !== undefined).length || 0) >=
-                      (rem.answers?.filter((a) => a !== null && a !== undefined).length || 0)
-                        ? loc.answers
-                        : rem.answers,
-                  };
-                  mergedMap.set(loc.id, merged);
-                  fetch(`${API_BASE_URL}/sessions`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(merged),
-                    keepalive: true,
-                  }).catch(() => {});
-                }
-              }
-            });
-
-            const mergedList = Array.from(mergedMap.values());
-            mergedList.sort((a, b) => Number(b.updatedAt || b.savedAt || 0) - Number(a.updatedAt || a.savedAt || 0));
-
-            try {
-              localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(mergedList));
-            } catch {}
-
-            return mergedList;
-          });
+          setSavedSessions(cleanSessions);
+          try {
+            localStorage.removeItem(SESSIONS_STORAGE_KEY);
+            localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+            localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+          } catch {}
         }
       })
       .catch(() => {});
@@ -1733,12 +1582,11 @@ export default function App() {
           updated = [finalSession, ...prev];
         }
         try {
-          localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated));
-          localStorage.setItem(ACTIVE_RUNNING_SESSION_KEY, JSON.stringify(finalSession));
-          localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, finalSession.id);
-        } catch (e) {
-          console.warn("Sessions save error:", e);
-        }
+          localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+          localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+          localStorage.removeItem(SESSIONS_STORAGE_KEY);
+          localStorage.removeItem("ccna_question_overrides");
+        } catch (e) {}
 
         // MySQL backend sync for active session tied to user
         fetch(`${API_BASE_URL}/sessions`, {
@@ -1986,12 +1834,33 @@ export default function App() {
       if (isRandomized) {
         const foundTexts = (found.options || []).map(stripPrefix).sort();
         const qTexts = (q.options || []).map(stripPrefix).sort();
-        if (JSON.stringify(foundTexts) !== JSON.stringify(qTexts)) {
+        const optionsChanged = JSON.stringify(foundTexts) !== JSON.stringify(qTexts);
+        if (optionsChanged || !Array.isArray(q.options) || q.options.length === 0) {
           return randomizeQuestionOptions(found);
         }
+        const masterCorr = Array.isArray(found.correctOption)
+          ? found.correctOption
+          : Array.isArray(found.correctOptions)
+          ? found.correctOptions
+          : typeof found.correctOption === "number"
+          ? [found.correctOption]
+          : [];
+        const masterCorrectTexts = masterCorr
+          .map((idx) => (found.options?.[idx] ? stripPrefix(found.options[idx]) : null))
+          .filter(Boolean);
+
+        const newCorrIndices = [];
+        (q.options || []).forEach((opt, idx) => {
+          if (masterCorrectTexts.includes(stripPrefix(opt))) {
+            newCorrIndices.push(idx);
+          }
+        });
+
         return {
           ...q,
           question: found.question,
+          correctOption: newCorrIndices.length === 1 ? newCorrIndices[0] : newCorrIndices,
+          correctOptions: newCorrIndices,
           exhibitImage: found.exhibitImage || q.exhibitImage,
           originalSourceImage: found.originalSourceImage || q.originalSourceImage,
           cliSnippet: found.cliSnippet || q.cliSnippet,
@@ -2009,6 +1878,8 @@ export default function App() {
       };
     });
 
+    const recalculatedPoints = calculateTotalPoints(safeQuestions, session.answers || []);
+
     dispatch({
       type: "resumeExam",
       payload: {
@@ -2016,7 +1887,7 @@ export default function App() {
         index: session.index || 0,
         answer: session.answer || null,
         answers: session.answers || [],
-        points: session.points || 0,
+        points: typeof recalculatedPoints === "number" ? recalculatedPoints : (session.points || 0),
         secondsRemaining: session.secondsRemaining,
         examMode: session.examMode || "study",
         settings: session.settings || initialState.settings,
@@ -2029,14 +1900,54 @@ export default function App() {
     handleNavigate("exam");
   };
 
+  // On /exam mount: fetch fresh session from server (ZERO LOCALSTORAGE CACHING)
+  useEffect(() => {
+    const path = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
+    const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const isExam = path === "/exam" || path.startsWith("/exam") || search?.get("view") === "exam";
+    if (!isExam) return;
+
+    const urlSessionId = search?.get("id") || search?.get("sessionId") || null;
+    const isReview = search?.get("review") === "1" || search?.get("mode") === "review";
+    if (isReview) return;
+
+    const token = localStorage.getItem("ccna_auth_token") || "";
+    const userObj = (() => {
+      try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+    })();
+    const queryParams = new URLSearchParams();
+    queryParams.set("_t", Date.now().toString());
+    if (urlSessionId) queryParams.set("sessionId", urlSessionId);
+    if (userObj.id) queryParams.set("userId", userObj.id);
+    if (userObj.email) queryParams.set("userEmail", userObj.email);
+
+    const headers = { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    fetch(`${API_BASE_URL}/sessions?${queryParams.toString()}`, { headers })
+      .then((res) => res.json())
+      .then((data) => {
+        const list = data?.sessions || [];
+        const session = urlSessionId ? list.find((s) => s.id === urlSessionId) : list[0];
+        if (session && !isExamFinishedId(session.id)) {
+          handleResumeSession(session);
+        } else {
+          handleNavigate("dashboard");
+        }
+      })
+      .catch(() => {
+        handleNavigate("dashboard");
+      });
+  }, []);
+
   const handleDeleteSession = (sessionId) => {
     setSavedSessions((prev) => {
       const updated = prev.filter((s, idx) => s.id !== sessionId && idx !== sessionId);
       try {
-        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.warn("Delete error:", e);
-      }
+        localStorage.removeItem(SESSIONS_STORAGE_KEY);
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
+        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
+      } catch (e) {}
       return updated;
     });
 

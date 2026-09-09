@@ -2098,7 +2098,7 @@ export const ccnaQuestions = [
       "D. 10.12.0.6"
     ],
     "correctOption": [
-      0
+      3
     ],
     "points": 10,
     "cliSnippet": null,

@@ -459,10 +459,13 @@ function QuestionView({
 
   const isDragDrop = question.type === "drag_drop" || Boolean(question.dragDropData);
 
-  const correctOptions = Array.isArray(question.correctOption)
+  const rawCorrect = question.correctOption !== undefined && question.correctOption !== null
     ? question.correctOption
-    : question.correctOption !== undefined && question.correctOption !== null
-    ? [question.correctOption]
+    : question.correctOptions;
+  const correctOptions = Array.isArray(rawCorrect)
+    ? rawCorrect
+    : rawCorrect !== undefined && rawCorrect !== null
+    ? [rawCorrect]
     : [];
   const isMulti = correctOptions.length > 1;
 
