@@ -46,12 +46,30 @@ export function aggressiveShuffle(array) {
 }
 
 /**
+ * Generates all combinations of size `k` from an array.
+ */
+function getSlotCombinations(arr, k) {
+  if (k === 0) return [[]];
+  if (arr.length < k) return [];
+  const head = arr[0];
+  const tail = arr.slice(1);
+  const withHead = getSlotCombinations(tail, k - 1).map((combo) => [head, ...combo]);
+  const withoutHead = getSlotCombinations(tail, k);
+  return [...withHead, ...withoutHead];
+}
+
+/**
  * Aggressively randomizes the display sequence of multiple-choice question options.
  * Enforces true scrambling (derangement) so that:
  * 1. Options do NOT stay in their original positions.
- * 2. If single correct answer, it is moved to a different index whenever possible.
- * 3. Re-prefixes clean A., B., C., D. labels.
- * 4. Correctly updates correctOption and correctOptions so grading is 100% accurate.
+ * 2. If multiple correct answers (e.g. 2 or 3 answers to choose from):
+ *    - Correct answers are NEVER placed in contiguous sequence (e.g. NOT A & B, NOT B & C, NOT C & D)
+ *      whenever the total number of options allows separating them.
+ *    - Correct answers are separated/scattered by incorrect answers (e.g. A & C, A & D, B & D, etc.).
+ *    - The relative order of the correct answers is thoroughly shuffled.
+ * 3. If single correct answer, it is moved to a different index whenever possible.
+ * 4. Re-prefixes clean A., B., C., D., E. labels.
+ * 5. Correctly updates correctOption and correctOptions so grading is 100% accurate.
  */
 export function randomizeQuestionOptions(q) {
   if (!q || !q.options || !Array.isArray(q.options) || q.options.length <= 1) {
@@ -62,16 +80,52 @@ export function randomizeQuestionOptions(q) {
     return q;
   }
 
-  const rawCorrect = q.correctOptions !== undefined ? q.correctOptions : q.correctOption;
+  const rawCorrect =
+    q.correctOptions !== undefined && q.correctOptions !== null
+      ? q.correctOptions
+      : q.correctOption;
   const isArray = Array.isArray(rawCorrect);
-  const correctArr = (isArray
-    ? rawCorrect
-    : rawCorrect !== undefined && rawCorrect !== null
-    ? [rawCorrect]
-    : []).map(Number);
+
+  let correctArr = [];
+  if (isArray) {
+    correctArr = rawCorrect
+      .map(Number)
+      .filter((v) => !isNaN(v) && v >= 0 && v < q.options.length);
+  } else if (typeof rawCorrect === "number") {
+    if (rawCorrect >= 0 && rawCorrect < q.options.length) {
+      correctArr = [rawCorrect];
+    }
+  } else if (typeof rawCorrect === "string") {
+    if (rawCorrect.includes(",")) {
+      correctArr = rawCorrect
+        .split(",")
+        .map(Number)
+        .filter((v) => !isNaN(v) && v >= 0 && v < q.options.length);
+    } else if (!isNaN(Number(rawCorrect))) {
+      const parsed = Number(rawCorrect);
+      if (parsed >= 0 && parsed < q.options.length) {
+        correctArr = [parsed];
+      }
+    }
+  }
+
+  // Fallback for letter characters in rawCorrect like ["A", "B"]
+  if (correctArr.length === 0 && Array.isArray(rawCorrect)) {
+    rawCorrect.forEach((item) => {
+      if (typeof item === "string" && /^[A-E]$/i.test(item.trim())) {
+        const idx = item.trim().toUpperCase().charCodeAt(0) - 65;
+        if (idx >= 0 && idx < q.options.length && !correctArr.includes(idx)) {
+          correctArr.push(idx);
+        }
+      }
+    });
+  }
 
   const indexed = q.options.map((opt, idx) => {
-    let text = typeof opt === "string" ? opt.replace(/^[A-Z][.):-]\s*/i, "").trim() : String(opt);
+    let text =
+      typeof opt === "string"
+        ? opt.replace(/^[A-Z][.):-]\s*/i, "").trim()
+        : String(opt || "");
     return {
       origIdx: idx,
       text,
@@ -80,58 +134,112 @@ export function randomizeQuestionOptions(q) {
   });
 
   const n = indexed.length;
-  let bestShuffled = null;
-  let minSamePositions = Infinity;
+  const correctItems = indexed.filter((item) => item.isCorrect);
+  const incorrectItems = indexed.filter((item) => !item.isCorrect);
+  const k = correctItems.length;
 
-  // Attempt up to 30 aggressive shuffle attempts to find a near-derangement
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const candidate = [...indexed];
+  let finalShuffled = null;
 
-    // Multi-pass Fisher-Yates
-    for (let pass = 0; pass < 2; pass++) {
-      for (let i = n - 1; i > 0; i--) {
-        const j = Math.floor(getSecureRandom() * (i + 1));
-        const temp = candidate[i];
-        candidate[i] = candidate[j];
-        candidate[j] = temp;
+  // CASE 1: Multiple correct answers (k >= 2) and we have both correct and incorrect options
+  if (k >= 2 && incorrectItems.length > 0) {
+    // 1. Thoroughly shuffle correct items among themselves (scrambling their internal relative order)
+    const shuffledCorrect = aggressiveShuffle(correctItems);
+    // 2. Thoroughly shuffle incorrect items among themselves
+    const shuffledIncorrect = aggressiveShuffle(incorrectItems);
+
+    // 3. Generate all combinations of k destination slots from [0, 1, ..., n - 1]
+    const allSlotIndices = Array.from({ length: n }, (_, i) => i);
+    const allCombos = getSlotCombinations(allSlotIndices, k);
+
+    const sortedOrig = [...correctArr].sort((a, b) => a - b);
+
+    // Score and filter combinations
+    const scoredCombos = allCombos.map((combo) => {
+      let adjacentCount = 0;
+      for (let i = 0; i < combo.length - 1; i++) {
+        if (combo[i + 1] - combo[i] === 1) {
+          adjacentCount++;
+        }
+      }
+      const isOrigPositions =
+        combo.length === sortedOrig.length &&
+        combo.every((val, i) => val === sortedOrig[i]);
+
+      return { combo, adjacentCount, isOrigPositions };
+    });
+
+    // We never want original positions if alternatives exist
+    let candidates = scoredCombos.filter((sc) => !sc.isOrigPositions);
+    if (candidates.length === 0) candidates = scoredCombos;
+
+    // For k === 2 and n >= 3, non-adjacent combinations ALWAYS exist (e.g. [0, 2], [0, 3], [1, 3])!
+    // Never allow them to be adjacent (NOT A&B, NOT B&C, NOT C&D)
+    if (k === 2 && n >= 3) {
+      const nonAdjacent = candidates.filter((sc) => sc.adjacentCount === 0);
+      if (nonAdjacent.length > 0) {
+        candidates = nonAdjacent;
+      }
+    } else if (k >= 3 && n > k) {
+      // For k >= 3, find the minimum possible adjacent count to break up solid contiguous blocks
+      const minAdjacent = Math.min(...candidates.map((sc) => sc.adjacentCount));
+      const bestSeparated = candidates.filter((sc) => sc.adjacentCount === minAdjacent);
+      if (bestSeparated.length > 0) {
+        candidates = bestSeparated;
       }
     }
 
-    let sameCount = 0;
-    candidate.forEach((item, idx) => {
-      if (item.origIdx === idx) sameCount++;
-    });
+    // Randomly pick one of the separated slot combinations
+    const chosenSlots =
+      candidates[Math.floor(getSecureRandom() * candidates.length)].combo;
 
-    // Check if the single correct answer changed position
-    const correctMoved = correctArr.length === 1 ? !candidate[correctArr[0]].isCorrect : true;
-
-    // Perfect derangement (0 options in original spots, and correct answer moved)
-    if (sameCount === 0 && correctMoved) {
-      bestShuffled = candidate;
-      break;
+    finalShuffled = new Array(n);
+    let cIdx = 0;
+    let iIdx = 0;
+    for (let i = 0; i < n; i++) {
+      if (chosenSlots.includes(i)) {
+        finalShuffled[i] = shuffledCorrect[cIdx++];
+      } else {
+        finalShuffled[i] = shuffledIncorrect[iIdx++];
+      }
     }
+  } else if (k === 1 && incorrectItems.length > 0) {
+    // CASE 2: Single correct answer
+    // Shuffle incorrect items
+    const shuffledIncorrect = aggressiveShuffle(incorrectItems);
+    const origPos = correctArr[0];
 
-    if (sameCount < minSamePositions && (correctArr.length !== 1 || correctMoved)) {
-      minSamePositions = sameCount;
-      bestShuffled = candidate;
+    // Pick a destination slot different from origPos whenever possible
+    const availableSlots = Array.from({ length: n }, (_, i) => i).filter(
+      (i) => i !== origPos
+    );
+    const chosenSlot =
+      availableSlots.length > 0
+        ? availableSlots[Math.floor(getSecureRandom() * availableSlots.length)]
+        : 0;
+
+    finalShuffled = new Array(n);
+    let iIdx = 0;
+    for (let i = 0; i < n; i++) {
+      if (i === chosenSlot) {
+        finalShuffled[i] = correctItems[0];
+      } else {
+        finalShuffled[i] = shuffledIncorrect[iIdx++];
+      }
     }
+  } else {
+    // CASE 3: No marked correct options or all options correct: full derangement shuffle
+    finalShuffled = aggressiveShuffle(indexed);
   }
 
-  // Fallback: If no good derangement was found, apply a guaranteed cyclic offset
-  if (!bestShuffled || (n >= 2 && bestShuffled.every((item, idx) => item.origIdx === idx))) {
-    const offset = 1 + Math.floor(getSecureRandom() * (n - 1));
-    bestShuffled = indexed.map((_, i) => indexed[(i + offset) % n]);
-  }
-
-  // Generate new clean options with updated letter prefixes A., B., C., D.
-  const newOptions = bestShuffled.map((item, idx) => {
+  // Generate new clean options with updated letter prefixes A., B., C., D., E.
+  const newOptions = finalShuffled.map((item, idx) => {
     const letter = String.fromCharCode(65 + idx);
     return `${letter}. ${item.text}`;
   });
 
   // Re-map the correct options to their new shuffled indices
   const newCorrectIndices = [];
-  bestShuffled.forEach((item, idx) => {
+  finalShuffled.forEach((item, idx) => {
     if (item.isCorrect) {
       newCorrectIndices.push(idx);
     }
