@@ -79,7 +79,14 @@ function QuestionPaletteModal({
         </div>
 
         {/* Filter Tabs */}
-        <div className="palette-filter-tabs">
+        <div
+          className="palette-filter-tabs"
+          onWheel={(e) => {
+            if (e.deltaY !== 0) {
+              e.currentTarget.scrollLeft += e.deltaY;
+            }
+          }}
+        >
           <button
             type="button"
             className={`tab-btn ${filter === "all" ? "active" : ""}`}
