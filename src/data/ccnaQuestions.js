@@ -402,7 +402,7 @@ export const ccnaQuestions = [
   {
     "id": 37,
     "questionNo": "Question #23",
-    "question": "Refer to the exhibit. HQ C needs to use a configuration that:\n• handles up to 150,000 concurrent connections\n• minimizes consumption of public IP addresses\n\nWhich configuration meets the requirements? (Choose one answer)",
+    "question": "Refer to the exhibit. HQ C needs to use a configuration that:\n\u2022 handles up to 150,000 concurrent connections\n\u2022 minimizes consumption of public IP addresses\n\nWhich configuration meets the requirements? (Choose one answer)",
     "options": [
       "A. ip pool NATPOOL 209.165.201.1 209.165.201.5 netmask 255.255.255.248\nip nat inside source list HQC interface GigabitEthernet0/0 overload",
       "B. ip pool NATPOOL 209.165.200.225 209.165.200.226 netmask 255.255.255.252\nip nat outside source list HQC pool NATPOOL overload",
@@ -1832,17 +1832,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/100.webp"
   },
   {
-    "id": 193,
+    "id": 101,
     "questionNo": "Question #101",
-    "question": "Refer to the exhibit. Which prefix did router R1 learn from an OSPF neighbor? (Choose one answer)",
+    "question": "Refer to the exhibit. During initial configuration testing, the Windows workstation PC1 cannot connect with the 172.16.2.0/24 network. Which set of actions corrects the configuration? (Choose one answer)",
     "options": [
-      "A. 172.16.1.0/24",
-      "B. 192.168.1.0/24",
-      "C. 192.168.2.0/24",
-      "D. 10.0.0.0/8"
+      "A. Change the IP address to 172.16.1.9 and change the default gateway to 172.16.1.7.",
+      "B. Change the IP address to 172.16.1.9 and change the DNS server to 172.16.1.2 only.",
+      "C. Change the IP address to 172.16.1.6 and change the DNS servers to 172.16.1.2 and 172.16.1.3.",
+      "D. Change the IP address to 172.16.1.6 and change the subnet mask to 255.255.255.248."
     ],
     "correctOption": [
-      1
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -1850,17 +1850,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/101.webp"
   },
   {
-    "id": 182,
+    "id": 102,
     "questionNo": "Question #102",
-    "question": "Refer to the exhibit. Which route will router R1 choose for traffic destined to 10.1.1.5? (Choose one answer)",
+    "question": "Refer to the exhibit. An engineer must translate the PC1 IP address to 10.199.77.100 and permit PC1 to ping the loopback 0 interface on router R2. Which configuration must be used? (Choose one answer)",
     "options": [
-      "A. OSPF route 10.1.1.0/24 [110/2]",
-      "B. EIGRP route 10.1.1.0/28 [90/25600]",
-      "C. Static route 10.1.0.0/16 [1/0]",
-      "D. Connected route 10.0.0.0/8 [0/0]"
+      "A. Interface FastEthernet0/0 ip nat outside, Interface FastEthernet1/0 ip nat inside, ip nat inside source static 172.16.29.78 10.199.77.100",
+      "B. Interface FastEthernet0/0 ip nat outside, Interface FastEthernet1/0 ip nat inside, ip nat inside source static 172.16.29.78 10.199.77.100, ip route 172.16.29.78 255.255.255.255 10.199.77.100",
+      "C. Interface FastEthernet0/0 ip nat inside, Interface FastEthernet1/0 ip nat outside, ip nat inside source static 10.199.77.100 172.16.29.78",
+      "D. Interface FastEthernet0/0 ip nat inside, Interface FastEthernet1/0 ip nat outside, ip nat inside source static 172.16.29.78 10.199.77.100, ip route 10.199.77.100 255.255.255.255 10.139.91.1"
     ],
     "correctOption": [
-      1
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -1868,15 +1868,15 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/102.webp"
   },
   {
-    "id": 170,
+    "id": 103,
     "questionNo": "Question #103",
-    "question": "Refer to the exhibit. Which two statements about the OSPF configuration are true? (Choose two answers)",
+    "question": "Refer to the exhibit. An engineer executed the script and added commands that were not necessary for SSH and now must remove the commands. Which two commands must be executed to correct the configuration? (Choose two answers)",
     "options": [
-      "A. The router is operating in Area 1 exclusively.",
-      "B. The router ID is 10.1.1.1.",
-      "C. GigabitEthernet0/0 is participating in OSPF Area 0.",
-      "D. The OSPF process ID is 1.",
-      "E. FastEthernet0/1 is configured as an OSPF stub network."
+      "A. no login local",
+      "B. no ip domain name cisco.com",
+      "C. no ip name-server 198.51.100.210",
+      "D. no service password-encryption",
+      "E. no hostname CPE"
     ],
     "correctOption": [
       2,
@@ -1888,17 +1888,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/103.webp"
   },
   {
-    "id": 181,
+    "id": 104,
     "questionNo": "Question #104",
-    "question": "Refer to the exhibit. What is the administrative distance and metric for the OSPF route? (Choose one answer)",
+    "question": "Refer to the exhibit. The service-password encryption command has been issued. Configure the following: Create the username as CCUser. Create the password as NA!2$cc. Encrypt the password. Which configuration meets the requirements? (Choose one answer)",
     "options": [
-      "A. AD 110, Metric 2",
-      "B. AD 90, Metric 110",
-      "C. AD 120, Metric 2",
-      "D. AD 1, Metric 0"
+      "A. username CCUser privilege 15 password NA!2$cc",
+      "B. username CCUser privilege 10 password NA!2$cc",
+      "C. username CCUser secret NA!2$cc",
+      "D. username CCUser password NA!2$cc, enable secret NA!2$cc"
     ],
     "correctOption": [
-      0
+      2
     ],
     "points": 10,
     "cliSnippet": null,
@@ -1906,14 +1906,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/104.webp"
   },
   {
-    "id": 176,
+    "id": 105,
     "questionNo": "Question #105",
-    "question": "Refer to the exhibit. Which route will be selected to forward traffic destined to 10.1.1.1?",
+    "question": "Refer to the exhibit. A packet is being sent across router R1 to host 172.16.0.14. What is the destination route for the packet? (Choose one answer)",
     "options": [
-      "A. 10.0.0.0/8 via 192.168.1.1",
-      "B. 10.1.0.0/16 via 192.168.2.1",
-      "C. 10.1.1.0/24 via 192.168.3.1",
-      "D. 10.1.1.0/28 via 192.168.4.1"
+      "A. 209.165.200.254 via Serial0/0/0",
+      "B. 209.165.200.250 via Serial0/0/0",
+      "C. 209.165.200.254 via Serial0/0/1",
+      "D. 209.165.200.246 via Serial0/1/0"
     ],
     "correctOption": [
       3
@@ -1924,9 +1924,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/105.webp"
   },
   {
-    "id": 188,
+    "id": 106,
     "questionNo": "Question #106",
-    "question": "Refer to the exhibit. Which router or router group are configured as NTP clients? (Choose one answer)",
+    "question": "Refer to the exhibit. Which router or router group are NTP clients? (Choose one answer)",
     "options": [
       "A. R1",
       "B. R1, R2, and R3",
@@ -1942,9 +1942,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/106.webp"
   },
   {
-    "id": 151,
+    "id": 107,
     "questionNo": "Question #107",
-    "question": "Which role do predictive AI models play in network management? (Choose one answer)",
+    "question": "Which role do predictive Al models play in network load balancing? (Choose one answer)",
     "options": [
       "A. They anticipate future traffic spikes.",
       "B. They automate the assignment of IP addresses to devices.",
@@ -1960,14 +1960,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/107.webp"
   },
   {
-    "id": 194,
+    "id": 108,
     "questionNo": "Question #108",
-    "question": "Refer to the exhibit. An engineer was asked to update wireless LAN controller configuration on a newly deployed SSID Office. What can the engineer determine about this configuration? (Choose one answer)",
+    "question": "Refer to the exhibit. An engineer was asked to update wireless LAN controller configuration on a newly deployed SSID \"Office\". However, the configuration was not well documented or commented. What can the engineer determine about this configuration? (Choose one answer)",
     "options": [
-      "A. There is an extended delay that helps in minimizing the time it takes for client devices to stay connected after roaming.",
-      "B. There is an advanced security algorithm into the service to add an extra level of quality assurance.",
-      "C. There is a seamless transition mechanism (802.11r FT) used to expedite roaming for compatible devices by authenticating them before potential roaming occurs.",
-      "D. There is an additional protection level that helps secure the data frames between wireless clients."
+      "A. There is an extended delay that helps in minimizing the time it takes for client devices to stay connected after roaming activity for Apple and Android devices.",
+      "B. There is an advanced secure algorithm into the service to add an extra level of quality assurance for wireless delivery networks.",
+      "C. There is a seamless transition mechanism used to expedite roaming for compatible devices by authenticating them before potential roaming occurs.",
+      "D. There is an additional protection level that helps secure the data frames exchanged between wireless clients and the access points for all wireless devices."
     ],
     "correctOption": [
       2
@@ -1978,15 +1978,15 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/108.webp"
   },
   {
-    "id": 162,
+    "id": 109,
     "questionNo": "Question #109",
-    "question": "Which two benefits are provided by implementing Cisco DNA Center in an enterprise network? (Choose two answers)",
+    "question": "What are two examples of multifactor authentication? (Choose two answers)",
     "options": [
-      "A. centralized policy-based network management and automation",
-      "B. replacement of all physical Layer 3 routers with software daemons",
-      "C. mandatory manual configuration of individual device CLI syntax",
-      "D. elimination of all access layer switches",
-      "E. end-to-end network visibility and AI-driven assurance"
+      "A. unique user knowledge",
+      "B. passwords that expire",
+      "C. single sign-on",
+      "D. shared password repository",
+      "E. soft tokens"
     ],
     "correctOption": [
       0,
@@ -1998,12 +1998,12 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/109.webp"
   },
   {
-    "id": 190,
+    "id": 110,
     "questionNo": "Question #110",
-    "question": "Refer to the exhibit. Users will be using a configured secret key and SSID and must have a secured key hashing algorithm configured. The AAA server must not be used for the user authentication method. Which action completes the task? (Choose one answer)",
+    "question": "Refer to the exhibit. Users will be using a configured secret key and SSID and must have a secured key hashing algorithm configured. The server must not be used for the user authentication method. Which action completes the task? (Choose one answer)",
     "options": [
-      "A. Set CCMP128(AES).",
-      "B. Configure PSK:SHA2.",
+      "A. set CCMP128(AES).",
+      "B. Configure PSK-SHA2.",
       "C. Configure PSK Format HEX with key string.",
       "D. Enable AutoConfig PSK."
     ],
@@ -2016,7 +2016,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/110.webp"
   },
   {
-    "id": 153,
+    "id": 111,
     "questionNo": "Question #111",
     "question": "Which cable type must be used when connecting a router and switch together? (Choose one answer)",
     "options": [
@@ -2034,14 +2034,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/111.webp"
   },
   {
-    "id": 161,
+    "id": 112,
     "questionNo": "Question #112",
-    "question": "Which command sets the default gateway on a Cisco Layer 2 switch? (Choose one answer)",
+    "question": "How does automation leverage data models to reduce the operational complexity of a managed network? (Choose one answer)",
     "options": [
-      "A. ip default-gateway <ip-address>",
-      "B. ip route 0.0.0.0 0.0.0.0 <ip-address>",
-      "C. default-information originate",
-      "D. ip default-network <ip-address>"
+      "A. allows the controller to be vendor-agnostic",
+      "B. streamlines monitoring using SNMP and other polling tools",
+      "C. categorizes traffic and provides insights",
+      "D. reduces the response time for specific requests to devices with many interfaces"
     ],
     "correctOption": [
       0
@@ -2052,14 +2052,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/112.webp"
   },
   {
-    "id": 169,
+    "id": 113,
     "questionNo": "Question #113",
-    "question": "What is the function of the JSON format in network automation? (Choose one answer)",
+    "question": "Which type of VPN connection is used when an employee accesses a secure server from a public Wi-Fi? (Choose one answer)",
     "options": [
-      "A. to execute binary firmware upgrades on switches",
-      "B. to compile Python code into executable scripts",
-      "C. to configure physical interface clock rates",
-      "D. to provide a lightweight, human-readable data interchange format for APIs"
+      "A. site-to-site",
+      "B. router-to-router",
+      "C. open",
+      "D. remote"
     ],
     "correctOption": [
       3
@@ -2070,14 +2070,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/113.webp"
   },
   {
-    "id": 168,
+    "id": 114,
     "questionNo": "Question #114",
-    "question": "Which component of a REST API request specifies the operation to be performed (such as GET, POST, PUT, DELETE)? (Choose one answer)",
+    "question": "Which IP header field is changed by a Cisco device when QoS marking is enabled? (Choose one answer)",
     "options": [
-      "A. HTTP verb / method",
-      "B. URI path parameter",
-      "C. JSON payload",
-      "D. User-Agent header"
+      "A. DSCP",
+      "B. Type of Service",
+      "C. Header Checksum",
+      "D. ECN"
     ],
     "correctOption": [
       0
@@ -2088,7 +2088,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/114.webp"
   },
   {
-    "id": 191,
+    "id": 115,
     "questionNo": "Question #115",
     "question": "Refer to the exhibit. The loopback IP of R3 has been learned via the two interfaces on R1. R1 is configured with a reference bandwidth of 10 Gbps. Based on the metric calculations, which next hop IP would be used for outgoing routing? (Choose one answer)",
     "options": [
@@ -2106,14 +2106,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/115.webp"
   },
   {
-    "id": 196,
+    "id": 116,
     "questionNo": "Question #116",
-    "question": "Refer to the exhibit. PC-2 gets Connection refused by remote host when trying to Telnet. Without permitting Telnet from PC-1, what must be done to allow the traffic? (Choose one answer)",
+    "question": "Refer to the exhibit. The access list denies Telnet access from PC-1 to RTR-1 and should allow it from other hosts. PC-2 gets \"% Connection refused by remote host\" when trying to Telnet. Without permitting Telnet from PC-1, what must be done to allow the traffic? (Choose one answer)",
     "options": [
-      "A. Remove the access-class command from line vty.",
+      "A. Remove the access-list 10 in command from line vty 4.",
       "B. Add the access-list 10 permit any command to the existing ACL.",
       "C. Add the ip access-group 10 out command to interface g0/0.",
-      "D. Remove the password command from line vty."
+      "D. Remove the password command from line vty 4."
     ],
     "correctOption": [
       1
@@ -2124,17 +2124,19 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/116.webp"
   },
   {
-    "id": 164,
+    "id": 117,
     "questionNo": "Question #117",
-    "question": "What is the purpose of an Access Control List (ACL) wildcard mask? (Choose one answer)",
+    "question": "What are two functions of a firewall within an enterprise? (Choose two answers)",
     "options": [
-      "A. to specify which bits of an IP address must be matched (0) or ignored (1)",
-      "B. to encrypt the matching IP packets",
-      "C. to define the QoS priority level of matching traffic",
-      "D. to calculate the OSPF cost for the interface"
+      "A. It serves as an endpoint for a site-to-site VPN.",
+      "B. It resolves domain names to IP addresses.",
+      "C. It enables wireless devices to connect to the network.",
+      "D. It enables traffic filtering based on URLs.",
+      "E. It offers Layer 2 services between hosts."
     ],
     "correctOption": [
-      0
+      0,
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2142,14 +2144,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/117.webp"
   },
   {
-    "id": 160,
+    "id": 118,
     "questionNo": "Question #118",
-    "question": "What is the purpose of dynamic ARP inspection (DAI)? (Choose one answer)",
+    "question": "Why implement VRRP? (Choose one answer)",
     "options": [
-      "A. to prevent DHCP starvation attacks on access ports",
-      "B. to validate ARP packets against the DHCP snooping binding database to prevent ARP poisoning",
-      "C. to dynamically assign IP addresses to hosts without DHCP",
-      "D. to block multicast traffic across untrusted trunk ports"
+      "A. to detect link failures without the overhead of Bidirectional Forwarding Detection",
+      "B. to provide end users with a virtual gateway in a multivendor network",
+      "C. to hand over to end users the autodiscovery of virtual gateways",
+      "D. to leverage a weighting scheme to provide uninterrupted service"
     ],
     "correctOption": [
       1
@@ -2160,17 +2162,19 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/118.webp"
   },
   {
-    "id": 159,
+    "id": 119,
     "questionNo": "Question #119",
-    "question": "Which WAN technology uses labels to make forwarding decisions across a service provider network? (Choose one answer)",
+    "question": "What are two characteristics of a controller-based network? (Choose two answers)",
     "options": [
-      "A. MPLS",
-      "B. Frame Relay",
-      "C. Metro Ethernet",
-      "D. HDLC"
+      "A. It decentralizes the control plane, which allows each device to make its own forwarding decisions.",
+      "B. It uses Telnet to report system issues.",
+      "C. It uses northbound and southbound APIs to communicate between architectural layers.",
+      "D. It moves the control plane to a central point.",
+      "E. The administrator can make configuration updates from the CLI."
     ],
     "correctOption": [
-      0
+      2,
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2178,32 +2182,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/119.webp"
   },
   {
-    "id": 158,
+    "id": 120,
     "questionNo": "Question #120",
-    "question": "What is the function of the Spanning Tree Protocol (STP) Root Bridge? (Choose one answer)",
+    "question": "Which architecture is best for small offices with minimal wireless needs and no central management? (Choose one answer)",
     "options": [
-      "A. It acts as the central reference point for all spanning-tree path calculations.",
-      "B. It assigns dynamic IP addresses to connected switches.",
-      "C. It forwards all broadcast traffic without applying ACLs.",
-      "D. It disables all access ports across the Layer 2 domain."
-    ],
-    "correctOption": [
-      0
-    ],
-    "points": 10,
-    "cliSnippet": null,
-    "exhibitImage": null,
-    "originalSourceImage": "original_sources/120.webp"
-  },
-  {
-    "id": 195,
-    "questionNo": "Question #121",
-    "question": "Which SNMP version introduced support for message authentication using MD5/SHA and data encryption using DES/AES? (Choose one answer)",
-    "options": [
-      "A. SNMPv1",
-      "B. SNMPv2c",
-      "C. SNMPv3",
-      "D. SNMPv4"
+      "A. mesh network",
+      "B. cloud-based AP",
+      "C. autonomous AP",
+      "D. split MAC"
     ],
     "correctOption": [
       2
@@ -2211,15 +2197,33 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
+    "originalSourceImage": "original_sources/120.webp"
+  },
+  {
+    "id": 121,
+    "questionNo": "Question #121",
+    "question": "An engineer is configuring remote access to a router from IP subnet 10.139.58.0/28. The domain name, crypto keys, and SSH have been configured. Which configuration enables the traffic on the destination router? (Choose one answer)",
+    "options": [
+      "A. interface FastEthernet0/0 ip address 10.122.49.1 255.255.255.252 ip access-group List in ip access-list standard List permit tcp 10.139.58.0 0.0.0.7 eq 22 host 10.122.49.1",
+      "B. interface FastEthernet0/0 ip address 10.122.49.1 255.255.255.248 ip access-group 10 in ip access-list standard 10 permit udp 10.139.58.0 0.0.0.7 host 10.122.49.1 eq 22",
+      "C. interface FastEthernet0/0 ip address 10.122.49.1 255.255.255.240 access-group 120 in ip access-list extended 120 permit tcp 10.139.58.0 255.255.255.248 any eq 22",
+      "D. interface FastEthernet0/0 ip address 10.122.49.1 255.255.255.252 ip access-group 110 in ip access-list extended 110 permit tcp 10.139.58.0 0.0.0.15 host 10.122.49.1 eq 22"
+    ],
+    "correctOption": [
+      3
+    ],
+    "points": 10,
+    "cliSnippet": null,
+    "exhibitImage": null,
     "originalSourceImage": "original_sources/121.webp"
   },
   {
-    "id": 152,
+    "id": 122,
     "questionNo": "Question #122",
     "question": "Which cipher is supported for wireless encryption only with the WPA2 standard? (Choose one answer)",
     "options": [
-      "A. AES (CCMP)",
-      "B. RC4 (TKIP)",
+      "A. AES",
+      "B. RC4",
       "C. SHA",
       "D. DES"
     ],
@@ -2232,14 +2236,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/122.webp"
   },
   {
-    "id": 155,
+    "id": 123,
     "questionNo": "Question #123",
-    "question": "Which port is used by HTTPS for secure web management and REST API communication? (Choose one answer)",
+    "question": "Which benefit does automation provide in network management? (Choose one answer)",
     "options": [
-      "A. TCP 80",
-      "B. TCP 443",
-      "C. UDP 69",
-      "D. TCP 22"
+      "A. It decreases CPU and memory load on networking devices.",
+      "B. It reduces the complexity of network management systems.",
+      "C. It increases the performance of networking devices.",
+      "D. It reduces network failures due to human error."
     ],
     "correctOption": [
       1
@@ -2250,14 +2254,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/123.webp"
   },
   {
-    "id": 189,
+    "id": 124,
     "questionNo": "Question #124",
-    "question": "Which type of NAT allows a single public IP address to be used by multiple internal private hosts by distinguishing sessions with unique port numbers? (Choose one answer)",
+    "question": "Refer to the exhibit. What is the subnet mask for route 172.16.4.0? (Choose one answer)",
     "options": [
-      "A. Static NAT",
-      "B. Dynamic NAT Pool",
-      "C. Port Address Translation (PAT) / NAT Overload",
-      "D. Dual NAT"
+      "A. 255.255.255.192",
+      "B. 255.255.240.0",
+      "C. 255.255.248.0",
+      "D. 255.255.254.0"
     ],
     "correctOption": [
       2
@@ -2268,9 +2272,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/124.webp"
   },
   {
-    "id": 157,
+    "id": 125,
     "questionNo": "Question #125",
-    "question": "How must a switch interface be configured to carry traffic for multiple VLANs? (Choose one answer)",
+    "question": "How must a switch interface be configured when an AP is in FlexConnect mode? (Choose one answer)",
     "options": [
       "A. EtherChannel",
       "B. trunk port",
@@ -2286,14 +2290,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/125.webp"
   },
   {
-    "id": 167,
+    "id": 126,
     "questionNo": "Question #126",
-    "question": "Which port state in Rapid Spanning Tree Protocol (RSTP) replaces both the Listening and Blocking states of 802.1D? (Choose one answer)",
+    "question": "What is a capability of FTP in network management operations? (Choose one answer)",
     "options": [
-      "A. Discarding",
-      "B. Learning",
-      "C. Forwarding",
-      "D. Disabled"
+      "A. uses separate control and data connections to move files between server and client",
+      "B. devices are directly connected and use UDP to pass file information",
+      "C. encrypts data before sending between data resources",
+      "D. offers proprietary support at the session layer when transferring data"
     ],
     "correctOption": [
       0
@@ -2304,7 +2308,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/126.webp"
   },
   {
-    "id": 154,
+    "id": 127,
     "questionNo": "Question #127",
     "question": "What does a host do when a URL is entered in a browser? (Choose one answer)",
     "options": [
@@ -2322,17 +2326,19 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/127.webp"
   },
   {
-    "id": 175,
+    "id": 128,
     "questionNo": "Question #128",
-    "question": "Which WAN technology uses point-to-point tunneling protocol to securely connect remote workers over the Internet? (Choose one answer)",
+    "question": "What are two behaviors of a point-to-point WAN topology? (Choose two answers)",
     "options": [
-      "A. MPLS",
-      "B. IPsec VPN",
-      "C. DWDM",
-      "D. Leased line"
+      "A. It delivers redundancy between the central office and branch offices.",
+      "B. It leverages a dedicated connection.",
+      "C. It uses a single router to route traffic between sites.",
+      "D. It connects remote networks through a single line.",
+      "E. It requires dynamic routing protocols to establish connectivity between the two endpoints."
     ],
     "correctOption": [
-      1
+      1,
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2340,14 +2346,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/128.webp"
   },
   {
-    "id": 163,
+    "id": 129,
     "questionNo": "Question #129",
-    "question": "Which IPv6 address type is automatically configured on an interface using the fe80::/10 prefix? (Choose one answer)",
+    "question": "How do generative Al models support network design testing? (Choose one answer)",
     "options": [
-      "A. Global Unicast",
-      "B. Link-Local",
-      "C. Unique Local",
-      "D. Multicast"
+      "A. They deploy network firmware updates.",
+      "B. They adapt network configurations based on test results.",
+      "C. They compute optimal data storage solutions.",
+      "D. They enhance data packet delivery speeds."
     ],
     "correctOption": [
       1
@@ -2358,9 +2364,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/129.webp"
   },
   {
-    "id": 186,
+    "id": 130,
     "questionNo": "Question #130",
-    "question": "Refer to the exhibit. What is the subnet mask of the route to the 10.10.13.160 network? (Choose one answer)",
+    "question": "Refer to the exhibit. What is the subnet mask of the route to the 10.10.13.160 prefix? (Choose one answer)",
     "options": [
       "A. 255.255.255.128",
       "B. 255.255.255.248",
@@ -2376,14 +2382,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/130.webp"
   },
   {
-    "id": 156,
+    "id": 131,
     "questionNo": "Question #131",
-    "question": "Which standard defines the Power over Ethernet Plus (PoE+) specification providing up to 30W of power? (Choose one answer)",
+    "question": "Which IPsec encryption mode is used for site-to-site VPNs? (Choose one answer)",
     "options": [
-      "A. IEEE 802.3af",
-      "B. IEEE 802.3at",
-      "C. IEEE 802.3bt",
-      "D. IEEE 802.11ax"
+      "A. transport",
+      "B. tunnel",
+      "C. main",
+      "D. aggressive"
     ],
     "correctOption": [
       1
@@ -2394,14 +2400,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/131.webp"
   },
   {
-    "id": 180,
+    "id": 132,
     "questionNo": "Question #132",
-    "question": "Refer to the exhibit. Which command completes the configuration to establish an EtherChannel using LACP between two Cisco switches? (Choose one answer)",
+    "question": "Refer to the exhibit. What is the effect of this configuration? (Choose one answer)",
     "options": [
-      "A. channel-group 1 mode active",
-      "B. channel-group 1 mode on",
-      "C. channel-group 1 mode auto",
-      "D. channel-group 1 mode desirable"
+      "A. The switch discards all ingress ARP traffic with invalid MAC-to-IP address bindings.",
+      "B. Egress traffic is passed only if the destination is a DHCP server.",
+      "C. All ingress and egress traffic is dropped because the interface is untrusted.",
+      "D. All ARP packets are dropped by the switch."
     ],
     "correctOption": [
       0
@@ -2412,9 +2418,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/132.webp"
   },
   {
-    "id": 179,
+    "id": 133,
     "questionNo": "Question #133",
-    "question": "Refer to the exhibit. What are the steps an engineer must take to provide the highest encryption and authentication using domain credentials from LDAP? (Choose two answers)",
+    "question": "Refer to the exhibit. What are the two steps an engineer must take to provide the highest encryption and authentication using domain credentials from LDAP? (Choose two answers)",
     "options": [
       "A. Select Static-WEP + 802.1X on Layer 2 Security.",
       "B. Select WPA+WPA2 on Layer 2 Security.",
@@ -2432,17 +2438,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/133.webp"
   },
   {
-    "id": 174,
+    "id": 134,
     "questionNo": "Question #134",
-    "question": "What is the default STP forward delay timer value? (Choose one answer)",
+    "question": "Which event has occurred if a router sends a notice level message to a syslog server? (Choose one answer)",
     "options": [
-      "A. 2 seconds",
-      "B. 15 seconds",
-      "C. 20 seconds",
-      "D. 30 seconds"
+      "A. An interface line has changed status.",
+      "B. An ICMP connection has been built.",
+      "C. A TCP connection has been torn down.",
+      "D. A certificate has expired."
     ],
     "correctOption": [
-      1
+      0
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2450,14 +2456,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/134.webp"
   },
   {
-    "id": 185,
+    "id": 135,
     "questionNo": "Question #135",
-    "question": "Which security attack occurs when an unauthorized rogue DHCP server provides incorrect IP configurations and default gateway to clients? (Choose one answer)",
+    "question": "Which technology must be implemented to configure network device monitoring with the highest security? (Choose one answer)",
     "options": [
-      "A. MAC Flooding",
-      "B. DHCP Spoofing / Man-in-the-Middle",
-      "C. VLAN Hopping",
-      "D. SYN Flood"
+      "A. syslog",
+      "B. SNMPv3",
+      "C. NetFlow",
+      "D. IP SLA"
     ],
     "correctOption": [
       1
@@ -2468,14 +2474,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/135.webp"
   },
   {
-    "id": 198,
+    "id": 136,
     "questionNo": "Question #136",
-    "question": "Refer to the exhibit. Which command must be used to complete the configuration of NAT using port-overload for the LAN on router A to reach the Internet? (Choose one answer)",
+    "question": "Refer to the exhibit. Which command must be used to complete the configuration of NAT using port overload for the LAN on router A to reach the internet? (Choose one answer)",
     "options": [
-      "A. ip nat inside source list 1 interface GigabitEthernet0/0/0",
-      "B. ip nat inside source list 1 interface serial 0/0/0 overload",
-      "C. ip nat pool PUBLIC 209.165.201.1 209.165.201.30 netmask 255.255.255.224",
-      "D. ip nat inside source static 192.168.1.1 209.165.201.1"
+      "A. RouterA(config)#access-group 100 permit ip 209.165.202.0 0.0.0.31 any",
+      "B. RouterA(config)#access-list 100 permit ip 192.168.1.0 0.0.0.255 any",
+      "C. RouterA(config)#ip nat pool PUBLIC 0.0.0.0 0.0.0.0 mask 255.255.255.255",
+      "D. RouterA(config)#ip nat inside source static 192.168.1.0 198.1.0.0"
     ],
     "correctOption": [
       1
@@ -2486,14 +2492,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/136.webp"
   },
   {
-    "id": 199,
+    "id": 137,
     "questionNo": "Question #137",
-    "question": "Refer to the exhibit. Which command is required to enable password encryption for all cleartext passwords stored in the running configuration? (Choose one answer)",
+    "question": "Refer to the exhibit. A VTY password has been set to Labtest32! for remote access. Which commands are required to allow only SSH access and to hide passwords in the running configuration? (Choose one answer)",
     "options": [
-      "A. service password-encryption",
-      "B. enable secret 5 cisco",
-      "C. service password-encryption; transport input ssh",
-      "D. crypto key generate rsa"
+      "A. SW1#(config-line)#login local\nSW1#(config-line)#exit\nSW1(config)#enable secret test!2E",
+      "B. SW1#(config-line)#exit\nSW1(config)#aaa new-model",
+      "C. SW1#(config-line)#transport input ssh\nSW1#(config-line)#exit\nSW1(config)#service password-encryption",
+      "D. SW1#(config-line)#login local\nSW1#(config-line)#exit\nSW1(config)#crypto key generate rsa"
     ],
     "correctOption": [
       2
@@ -2504,14 +2510,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/137.webp"
   },
   {
-    "id": 173,
+    "id": 138,
     "questionNo": "Question #138",
-    "question": "Which command enables IPv6 routing globally on a Cisco router? (Choose one answer)",
+    "question": "What is a benefit of a point-to-point leased line? (Choose one answer)",
     "options": [
-      "A. ipv6 unicast-routing",
-      "B. ipv6 enable",
-      "C. ipv6 route ::/0",
-      "D. ipv6 cef"
+      "A. simplicity of configuration",
+      "B. full-mesh capability",
+      "C. low cost",
+      "D. flexibility of design"
     ],
     "correctOption": [
       0
@@ -2522,14 +2528,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/138.webp"
   },
   {
-    "id": 184,
+    "id": 139,
     "questionNo": "Question #139",
-    "question": "Which component of an IPv6 global unicast address identifies the specific subnet within an enterprise organization? (Choose one answer)",
+    "question": "How does encryption protect the wireless network? (Choose one answer)",
     "options": [
-      "A. Subnet ID (16 bits)",
-      "B. Global Routing Prefix (48 bits)",
-      "C. Interface ID (64 bits)",
-      "D. Link-Local Prefix (10 bits)"
+      "A. via an algorithm to change wireless data so that only the access point and client understand it",
+      "B. via a policy to prevent unauthorized users from communicating on the wireless network",
+      "C. via specific ciphers to detect and prevent zero-day network attacks",
+      "D. via integrity checks to identify wireless forgery attacks in the frame"
     ],
     "correctOption": [
       0
@@ -2540,14 +2546,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/139.webp"
   },
   {
-    "id": 197,
+    "id": 140,
     "questionNo": "Question #140",
-    "question": "Refer to the exhibit. When does a DHCP client first attempt to renew its IP address lease with the DHCP server? (Choose one answer)",
+    "question": "Refer to the exhibit. Which address will the client contact to renew their IP address when the current lease expires? (Choose one answer)",
     "options": [
-      "A. when 25% of the lease time remains",
-      "B. when 87.5% (T2) of the lease duration expires",
-      "C. when 50% (T1) of the lease duration expires",
-      "D. when 100% of the lease expires"
+      "A. 192.168.25.1",
+      "B. 192.168.25.103",
+      "C. 192.168.25.100",
+      "D. 192.168.25.254"
     ],
     "correctOption": [
       2
@@ -2558,14 +2564,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/140.webp"
   },
   {
-    "id": 200,
+    "id": 141,
     "questionNo": "Question #141",
     "question": "Refer to the exhibit. Which additional configuration must be applied to allow administrators to authenticate directly to global configuration mode via Telnet using a local username and password? (Choose one answer)",
     "options": [
-      "A. username admin privilege 15 secret p@ss1234; line vty 0 4; login local",
-      "B. privilege 15 secret p@ss1234; line vty 0 4",
-      "C. enable secret p@ss1234; line vty 0 4; login",
-      "D. username admin password cisco; line vty 0 4"
+      "A. R1(config)#username admin privilege 15 secret p@ss1234\nR1(config-if)#line vty 0 4\nR1(config-line)#login local",
+      "B. R1(config)#username admin secret p@ss1234\nR1(config-if)#line vty 0 4\nR1(config-line)#login local\nR1(config)#enable secret p@ss1234",
+      "C. R1(config)#username admin\nR1(config-if)#line vty 0 4\nR1(config-line)#password p@ss1234\nR1(config-line)#transport input telnet",
+      "D. R1(config)#username admin\nR1(config-if)#line vty 0 4\nR1(config-line)#password p@ss1234"
     ],
     "correctOption": [
       0
@@ -2576,17 +2582,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/141.webp"
   },
   {
-    "id": 187,
+    "id": 142,
     "questionNo": "Question #142",
-    "question": "Which command is used on Cisco IOS switches to display all active dynamic MAC address entries? (Choose one answer)",
+    "question": "Which HTTP header is used by a client to tell a web server what type of data format it can accept in the server's response? (Choose one answer)",
     "options": [
-      "A. show mac address-table dynamic",
-      "B. show arp dynamic",
-      "C. show ip route mac",
-      "D. show interface mac-address"
+      "A. User-Agent",
+      "B. Accept",
+      "C. Authorization",
+      "D. Content-Type"
     ],
     "correctOption": [
-      0
+      1
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2594,12 +2600,12 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/142.webp"
   },
   {
-    "id": 192,
+    "id": 143,
     "questionNo": "Question #143",
     "question": "Which interface condition is occurring in this output? (Choose one answer)",
     "options": [
       "A. bad NIC",
-      "B. high throughput / heavy load",
+      "B. high throughput",
       "C. broadcast storm",
       "D. duplex mismatch"
     ],
@@ -2607,19 +2613,19 @@ export const ccnaQuestions = [
       1
     ],
     "points": 10,
-    "cliSnippet": "Router# show interfaces GigabitEthernet0/1\nGigabitEthernet0/1 is up, line protocol is up\n  Hardware is Gigabit Ethernet, address is 000c.29eb.1234 (bia 000c.29eb.1234)\n  Internet address is 10.1.1.1/24\n  MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\n     reliability 255/255, txload 1/255, rxload 1/255\n  Encapsulation ARPA, loopback not set\n  Keepalive set (10 sec)\n  Half-duplex, 100Mb/s, media type is RJ45\n  output flow-control is unsupported, input flow-control is unsupported\n  ARP type: ARPA, ARP Timeout 04:00:00\n  Last input 00:00:02, output 00:00:01, output hang never\n  Last clearing of \"show interface\" counters never\n  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0\n  Queueing strategy: fifo\n  Output queue: 0/40 (size/max)\n  5 minute input rate 1000 bits/sec, 2 packets/sec\n  5 minute output rate 2000 bits/sec, 3 packets/sec\n     145823 packets input, 10245892 bytes, 0 no buffer\n     Received 412 broadcasts (0 IP multicasts)\n     0 runts, 0 giants, 0 throttles\n     0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n     0 watchdog, 0 multicast, 0 pause input\n     185291 packets output, 15478923 bytes, 0 underruns\n     0 output errors, 8421 collisions, 2 interface resets\n     8421 late collisions, 2415 deferred, 0 lost carrier, 0 no carrier",
+    "cliSnippet": null,
     "exhibitImage": null,
     "originalSourceImage": "original_sources/143.webp"
   },
   {
-    "id": 166,
+    "id": 144,
     "questionNo": "Question #144",
-    "question": "Refer to the exhibit. What is the effect of the switchport port-security violation restrict command? (Choose one answer)",
+    "question": "Refer to the exhibit. What is the structural role of 'apple' in the JSON data shown in the exhibit? (Choose one answer)",
     "options": [
-      "A. The port is immediately error-disabled and shuts down.",
-      "B. Frames with unauthorized MAC addresses are forwarded without logging.",
-      "C. Frames with unauthorized MAC addresses are dropped, an SNMP trap is generated, and the violation counter increments.",
-      "D. The port resets and flushes the MAC address table."
+      "A. string",
+      "B. object",
+      "C. key",
+      "D. number"
     ],
     "correctOption": [
       2
@@ -2630,17 +2636,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/144.webp"
   },
   {
-    "id": 178,
+    "id": 145,
     "questionNo": "Question #145",
-    "question": "Which layer of the TCP/IP model corresponds to the OSI Session, Presentation, and Application layers? (Choose one answer)",
+    "question": "How must a switch interface be configured when an AP is in FlexConnect mode with multiple SSIDs mapped to different VLANs? (Choose one answer)",
     "options": [
-      "A. Network Access",
-      "B. Internet",
-      "C. Transport",
-      "D. Application"
+      "A. trunk port",
+      "B. PoE port",
+      "C. EtherChannel",
+      "D. access port"
     ],
     "correctOption": [
-      3
+      0
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2648,14 +2654,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/145.webp"
   },
   {
-    "id": 172,
+    "id": 146,
     "questionNo": "Question #146",
-    "question": "Which IPv6 address represents the loopback address? (Choose one answer)",
+    "question": "Which value is set in the IP header when a Cisco device applies QoS marking? (Choose one answer)",
     "options": [
-      "A. ::1",
-      "B. ::",
-      "C. fe80::1",
-      "D. ff02::1"
+      "A. DSCP",
+      "B. Type of Service",
+      "C. Header Checksum",
+      "D. ECN"
     ],
     "correctOption": [
       0
@@ -2666,14 +2672,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/146.webp"
   },
   {
-    "id": 165,
+    "id": 147,
     "questionNo": "Question #147",
-    "question": "Which type of routing protocol uses the Bellman-Ford algorithm? (Choose one answer)",
+    "question": "Which cipher is used for encryption with the WPA2 standard? (Choose one answer)",
     "options": [
-      "A. Link-state",
-      "B. Distance-vector",
-      "C. Path-vector",
-      "D. Hybrid"
+      "A. RC4",
+      "B. AES",
+      "C. DES",
+      "D. SHA"
     ],
     "correctOption": [
       1
@@ -2684,17 +2690,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/147.webp"
   },
   {
-    "id": 183,
+    "id": 148,
     "questionNo": "Question #148",
-    "question": "What is the purpose of the Cisco Discovery Protocol (CDP)? (Choose one answer)",
+    "question": "What differentiates the TCP and UDP protocols? (Choose one answer)",
     "options": [
-      "A. to dynamically route packets between different autonomous systems",
-      "B. to share information about directly connected Cisco devices such as device ID and capabilities",
-      "C. to assign IP addresses automatically to newly connected hosts",
-      "D. to detect and block broadcast storms across Layer 2 links"
+      "A. TCP immediately transmits data without waiting for a handshake, and UDP awaits a response from the receiver before sending additional data.",
+      "B. TCP tracks segments being transmitted or received by assigning segment numbers, and UDP adjusts data flow according to network conditions.",
+      "C. TCP sends data at a constant rate with error checking on upper protocol layers, and UDP provides error-checking and sequencing.",
+      "D. TCP establishes a connection with the device on the other end before transferring, and UDP transfers without establishing a connection."
     ],
     "correctOption": [
-      1
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2702,17 +2708,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/148.webp"
   },
   {
-    "id": 177,
+    "id": 149,
     "questionNo": "Question #149",
-    "question": "Which protocol is used by network devices to synchronize their system clocks with a reference time source? (Choose one answer)",
+    "question": "Why does an administrator choose to implement a remote access IPsec VPN? (Choose one answer)",
     "options": [
-      "A. SNMP",
-      "B. NTP",
-      "C. PTP",
-      "D. Syslog"
+      "A. to establish an encrypted tunnel between a remote user and a private network over the internet",
+      "B. to allow access to an enterprise network using any internet-enabled location via a web browser using SSL",
+      "C. to enable remote users to access network shares without authentication",
+      "D. to provide a secure link between an HTTPS server, authentication subsystem, and an end-user"
     ],
     "correctOption": [
-      1
+      0
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2720,14 +2726,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/149.webp"
   },
   {
-    "id": 171,
+    "id": 150,
     "questionNo": "Question #150",
-    "question": "Which QoS mechanism drops incoming traffic exceeding the configured CIR while passing conforming traffic? (Choose one answer)",
+    "question": "How are API keys used to enforce rate limiting? (Choose one answer)",
     "options": [
-      "A. Queuing",
-      "B. Shaping",
-      "C. Policing",
-      "D. Marking"
+      "A. to define the network path the API request should take",
+      "B. to encrypt data sent in the API request",
+      "C. to uniquely identify each client application",
+      "D. to specify the type of data format the client prefers to receive"
     ],
     "correctOption": [
       2
@@ -2738,7 +2744,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/150.webp"
   },
   {
-    "id": 137,
+    "id": 151,
     "questionNo": "Question #151",
     "question": "Refer to the exhibit. Packets received by the router from BGP enter via a serial interface at 209.165.201.1. Each route is present within the routing table. Which interface is used to forward traffic with a destination IP of 10.1.1.19? (Choose one answer)",
     "options": [
@@ -2756,17 +2762,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/151.webp"
   },
   {
-    "id": 118,
+    "id": 152,
     "questionNo": "Question #152",
-    "question": "Which protocol should be used to transfer large files on a company intranet that allows UDP port 69 through the firewall? (Choose one answer)",
+    "question": "Which protocol should be used to transfer large files on a company intranet that allows UDP 69 through the firewall? (Choose one answer)",
     "options": [
-      "A. FTP",
-      "B. TFTP",
-      "C. SFTP",
+      "A. TFTP",
+      "B. SMTP",
+      "C. FTP",
       "D. REST API"
     ],
     "correctOption": [
-      1
+      0
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2774,17 +2780,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/152.webp"
   },
   {
-    "id": 110,
+    "id": 153,
     "questionNo": "Question #153",
-    "question": "Which component of an SDN architecture translates business requirements into network configurations? (Choose one answer)",
+    "question": "Which protocol does Ansible use to push modules to nodes in a network? (Choose one answer)",
     "options": [
-      "A. northbound API",
-      "B. application layer",
-      "C. southbound API",
-      "D. data plane"
+      "A. SNMP",
+      "B. Telnet",
+      "C. SSH",
+      "D. Kerberos"
     ],
     "correctOption": [
-      1
+      2
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2792,12 +2798,12 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/153.webp"
   },
   {
-    "id": 117,
+    "id": 154,
     "questionNo": "Question #154",
-    "question": "Which function generally performed by a traditional network device is replaced by an SDN controller? (Choose one answer)",
+    "question": "Which function generally performed by a traditional network device is replaced by a software-defined controller? (Choose one answer)",
     "options": [
       "A. encapsulation and decapsulation of packets in a data-link frame",
-      "B. building routing tables and determining the forwarding path",
+      "B. building route tables and updating the forwarding table",
       "C. changing the source or destination address during NAT operations",
       "D. encryption and decryption for VPN link processing"
     ],
@@ -2810,13 +2816,13 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/154.webp"
   },
   {
-    "id": 103,
+    "id": 155,
     "questionNo": "Question #155",
     "question": "Which advantage does machine learning offer for network security? (Choose one answer)",
     "options": [
       "A. It controls VPN access permissions.",
       "B. It manages firewall rule sets.",
-      "C. It improves real-time threat detection by identifying anomaly patterns.",
+      "C. It improves real-time threat detection.",
       "D. It enforces password complexity requirements."
     ],
     "correctOption": [
@@ -2828,14 +2834,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/155.webp"
   },
   {
-    "id": 116,
+    "id": 156,
     "questionNo": "Question #156",
-    "question": "Why would a network administrator implement an FHRP? (Choose one answer)",
+    "question": "Why would a network administrator implement the HSRP protocol? (Choose one answer)",
     "options": [
-      "A. to provide default gateway redundancy in the case of a router failure",
-      "B. to allow an interface to be configured with multiple default gateway IPs",
-      "C. to load balance traffic across switches at Layer 2",
-      "D. to dynamically assign IP addresses to hosts"
+      "A. to provide network redundancy in the case of a router failure",
+      "B. to allow hosts to use a shared virtual IP address for load-balancing traffic across multiple routers",
+      "C. to use an open standard protocol that is configured on Cisco and third-party routers",
+      "D. to allow clients to be configured with multiple default gateway IPs"
     ],
     "correctOption": [
       0
@@ -2846,14 +2852,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/156.webp"
   },
   {
-    "id": 109,
+    "id": 157,
     "questionNo": "Question #157",
-    "question": "Which security measure is considered a physical security control in an organization? (Choose one answer)",
+    "question": "Which action implements physical access control as part of the security program of an organization? (Choose one answer)",
     "options": [
       "A. backing up syslogs at a remote location",
-      "B. setting up cameras to monitor key infrastructure",
+      "B. setting up IP cameras to monitor key infrastructure",
       "C. configuring a password for the console port",
-      "D. configuring enable secret passwords on network devices"
+      "D. configuring enable passwords on network devices"
     ],
     "correctOption": [
       1
@@ -2864,14 +2870,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/157.webp"
   },
   {
-    "id": 105,
+    "id": 158,
     "questionNo": "Question #158",
-    "question": "Which cloud model allows the customer to install its own operating system on a virtual machine? (Choose one answer)",
+    "question": "Which cloud provided service allows an organization to install its own operating system on a virtual machine? (Choose one answer)",
     "options": [
-      "A. PaaS",
-      "B. IaaS",
-      "C. SaaS",
-      "D. CaaS"
+      "A. network-as-a-service",
+      "B. infrastructure-as-a-service",
+      "C. platform-as-a-service",
+      "D. software-as-a-service"
     ],
     "correctOption": [
       1
@@ -2882,7 +2888,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/158.webp"
   },
   {
-    "id": 140,
+    "id": 159,
     "questionNo": "Question #159",
     "question": "Refer to the exhibit. To which device does Router1 send packets that are destined to host 10.10.13.165? (Choose one answer)",
     "options": [
@@ -2900,14 +2906,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/159.webp"
   },
   {
-    "id": 108,
+    "id": 160,
     "questionNo": "Question #160",
-    "question": "Which protocol is used to securely manage network devices over an encrypted connection? (Choose one answer)",
+    "question": "Which security protocol is appropriate for a WPA3 implementation? (Choose one answer)",
     "options": [
-      "A. Telnet",
-      "B. SSH",
-      "C. HTTP",
-      "D. SNMPv1"
+      "A. CCMP",
+      "B. GCMP",
+      "C. TKIP",
+      "D. MD5"
     ],
     "correctOption": [
       1
@@ -2918,9 +2924,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/160.webp"
   },
   {
-    "id": 107,
+    "id": 161,
     "questionNo": "Question #161",
-    "question": "Which command must be configured for port security with a manually assigned MAC address of aabb.cc00.1234 for a VoIP handset on VLAN 4? (Choose one answer)",
+    "question": "Which command must be configured to enable port security with a manually assigned MAC address of aabb.cc00.1234 for a VoIP handset on VLAN 4? (Choose one answer)",
     "options": [
       "A. mac-address-table static aabb.cc00.1234 vlan 4 interface fa0/1",
       "B. switchport port-security mac-address aabb.cc00.1234 vlan 4",
@@ -2936,15 +2942,15 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/161.webp"
   },
   {
-    "id": 124,
+    "id": 162,
     "questionNo": "Question #162",
-    "question": "Which two protocols operate at the transport layer of the OSI model? (Choose two answers)",
+    "question": "Which two transport layer protocols carry syslog messages? (Choose two answers)",
     "options": [
       "A. TCP",
-      "B. IP",
+      "B. ARP",
       "C. UDP",
-      "D. ICMP",
-      "E. ARP"
+      "D. IP",
+      "E. RTP"
     ],
     "correctOption": [
       0,
@@ -2956,14 +2962,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/162.webp"
   },
   {
-    "id": 115,
+    "id": 163,
     "questionNo": "Question #163",
     "question": "Which interface enables communication between a program on the controller and a program on the networking device? (Choose one answer)",
     "options": [
-      "A. southbound API",
-      "B. northbound API",
-      "C. software virtual interface",
-      "D. tunnel interface"
+      "A. southbound",
+      "B. northbound",
+      "C. software virtual",
+      "D. tunnel"
     ],
     "correctOption": [
       0
@@ -2974,17 +2980,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/163.webp"
   },
   {
-    "id": 106,
+    "id": 164,
     "questionNo": "Question #164",
-    "question": "How is VLAN hopping mitigated? (Choose one answer)",
+    "question": "How are VLAN hopping attacks mitigated? (Choose one answer)",
     "options": [
-      "A. by disabling Spanning Tree Protocol on trunk ports",
-      "B. by disabling Dynamic Trunking Protocol (DTP) and setting unused ports as access in an unused VLAN",
-      "C. by configuring port security with dynamic MAC learning",
-      "D. by configuring Private VLANs on access switches"
+      "A. configure extended VLANS",
+      "B. activate all ports and place in the default VLAN",
+      "C. manually implement trunk ports and disable DTP",
+      "D. enable dynamic ARP inspection"
     ],
     "correctOption": [
-      1
+      2
     ],
     "points": 10,
     "cliSnippet": null,
@@ -2992,17 +2998,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/164.webp"
   },
   {
-    "id": 101,
+    "id": 165,
     "questionNo": "Question #165",
-    "question": "What is a characteristic of spine-and-leaf architecture? (Choose one answer)",
+    "question": "An network engineer starts to implement a new wireless LAN by configuring the authentication server and creating the dynamic interface. What must be performed next to complete the basic configuration? (Choose one answer)",
     "options": [
-      "A. Leaf switches are interconnected with each other.",
-      "B. Every leaf switch is connected to every spine switch.",
-      "C. Spine switches connect directly to access layer switches.",
-      "D. It is primarily designed for North-South perimeter traffic."
+      "A. Enable Telnet and RADIUS access on the management interface.",
+      "B. Install the management interface and add the management IP.",
+      "C. Configure high availability and redundancy for the access points.",
+      "D. Create the new WLAN and bind the dynamic interface to it."
     ],
     "correctOption": [
-      1
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3010,13 +3016,13 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/165.webp"
   },
   {
-    "id": 102,
+    "id": 166,
     "questionNo": "Question #166",
     "question": "What is the difference between SNMP traps and SNMP polling? (Choose one answer)",
     "options": [
       "A. SNMP traps are initiated using a push model at the network device, and SNMP polling is initiated at the server.",
       "B. SNMP traps are used for proactive monitoring, and SNMP polling is used for reactive monitoring.",
-      "C. SNMP traps are initiated by the network server, and network devices initiate SNMP polling.",
+      "C. SNMP traps are initiated by the network management system, and network devices initiate SNMP polling.",
       "D. SNMP traps send periodic updates via the MIB, and SNMP polling sends data on demand."
     ],
     "correctOption": [
@@ -3028,14 +3034,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/166.webp"
   },
   {
-    "id": 141,
+    "id": 167,
     "questionNo": "Question #167",
     "question": "Refer to the exhibit. What is the administrative distance for the advertised prefix that includes the host IP address 192.168.20.1? (Choose one answer)",
     "options": [
-      "A. 110",
+      "A. 1",
       "B. 24",
-      "C. 90",
-      "D. 1"
+      "C. 0",
+      "D. 192.168.10.2"
     ],
     "correctOption": [
       0
@@ -3046,14 +3052,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/167.webp"
   },
   {
-    "id": 121,
+    "id": 168,
     "questionNo": "Question #168",
-    "question": "What is an advantage of using a dynamic routing protocol instead of static routing? (Choose one answer)",
+    "question": "Which SNMP message type is reliable and requires an acknowledgment response from the SNMP manager? (Choose one answer)",
     "options": [
-      "A. lower CPU and memory utilization on routers",
-      "B. higher security due to absence of routing advertisements",
-      "C. complete administrative control over path selection",
-      "D. automatic discovery and rerouting around network topology changes"
+      "A. Get",
+      "B. Traps",
+      "C. Set",
+      "D. Inform"
     ],
     "correctOption": [
       3
@@ -3064,15 +3070,15 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/168.webp"
   },
   {
-    "id": 146,
+    "id": 169,
     "questionNo": "Question #169",
-    "question": "Refer to the exhibit. A Cisco engineer creates a new WLAN called lantest. Which two actions must be performed so that only high-speed 2.4-GHz clients connect? (Choose two answers)",
+    "question": "Refer to the exhibit. A Cisco engineer creates a new WLAN called lantest. Which two actions must be performed so that only high-speed 2.4-Ghz clients connect? (Choose two answers)",
     "options": [
       "A. Enable the Broadcast SSID option.",
-      "B. Set the Interface/Interface Group to an interface other than guest.",
+      "B. Set the Interface/Interface Group(G) to an interface other than guest.",
       "C. Set the Radio Policy option to 802.11a Only.",
       "D. Set the Radio Policy option to 802.11g Only.",
-      "E. Check the Status Enabled option."
+      "E. Enable the Status option."
     ],
     "correctOption": [
       3,
@@ -3084,14 +3090,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/169.webp"
   },
   {
-    "id": 114,
+    "id": 170,
     "questionNo": "Question #170",
     "question": "How does a DNS server improve network efficiency when resolving domain names? (Choose one answer)",
     "options": [
-      "A. by caching resolved queries to reduce resolution time for subsequent requests",
-      "B. by compressing DNS records to decrease packet payload size",
-      "C. by broadcasting requests to all local subnets simultaneously",
-      "D. by storing all global DNS records in local memory"
+      "A. by caching DNS records to reduce the number of external queries",
+      "B. by using round-robin scheduling to balance the load across multiple servers",
+      "C. by compressing DNS records to decrease their size",
+      "D. by permanently storing all DNS records for faster access"
     ],
     "correctOption": [
       0
@@ -3102,7 +3108,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/170.webp"
   },
   {
-    "id": 120,
+    "id": 171,
     "questionNo": "Question #171",
     "question": "Which is a fact related to FTP? (Choose one answer)",
     "options": [
@@ -3120,14 +3126,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/171.webp"
   },
   {
-    "id": 104,
+    "id": 172,
     "questionNo": "Question #172",
-    "question": "Which interface on the WLC is used exclusively as a DHCP relay and client web authentication? (Choose one answer)",
+    "question": "Which interface on the WLC is used exclusively as a DHCP relay? (Choose one answer)",
     "options": [
-      "A. service port interface",
-      "B. virtual interface",
-      "C. distribution system interface",
-      "D. AP-manager interface"
+      "A. service",
+      "B. virtual",
+      "C. distribution.",
+      "D. AP-manager"
     ],
     "correctOption": [
       1
@@ -3138,7 +3144,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/172.webp"
   },
   {
-    "id": 123,
+    "id": 173,
     "questionNo": "Question #173",
     "question": "Refer to the exhibit. Which entry is the longest prefix match for host IP address 192.168.10.5? (Choose one answer)",
     "options": [
@@ -3156,12 +3162,12 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/173.webp"
   },
   {
-    "id": 113,
+    "id": 174,
     "questionNo": "Question #174",
     "question": "Refer to the exhibit. What is the effect of the configuration? (Choose one answer)",
     "options": [
-      "A. Traffic initiated from IP range 10.0.0.0 - 10.255.255.255 is translated on Serial0.",
-      "B. Traffic sourced from range 10.0.0.0 - 10.0.0.255 is allowed on Serial0.",
+      "A. Traffic initiated from IP range 10.0.0.0 - 10.255.255.255 is translated on Serial0",
+      "B. Traffic sourced from IP range 10.0.0.0 - 10.0.0.255 is allowed on Serial0.",
       "C. The configuration will only permit traffic that is already established from the 10.0.0.0/24 subnet.",
       "D. The router will automatically create a corresponding outbound ACL to permit return traffic."
     ],
@@ -3174,9 +3180,9 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/174.webp"
   },
   {
-    "id": 119,
+    "id": 175,
     "questionNo": "Question #175",
-    "question": "Refer to the exhibit. PC A is communicating with another device at IP address 10.227.225.255. Through which router does router Y route the traffic? (Choose one answer)",
+    "question": "Refer to the exhibit. PC-A is communicating with another device at IP address 10.220.100.250. Through which router does traffic travel? (Choose one answer)",
     "options": [
       "A. router A",
       "B. router B",
@@ -3192,13 +3198,13 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/175.webp"
   },
   {
-    "id": 112,
+    "id": 176,
     "questionNo": "Question #176",
     "question": "Refer to the exhibit. A packet sourced from 10.10.10.32 is destined for the Internet. What is the administrative distance for the destination route? (Choose one answer)",
     "options": [
       "A. 0",
       "B. 1",
-      "C. 110",
+      "C. 2",
       "D. 32"
     ],
     "correctOption": [
@@ -3210,13 +3216,13 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/176.webp"
   },
   {
-    "id": 111,
+    "id": 177,
     "questionNo": "Question #177",
     "question": "Which feature is mandatory for a wireless network using WPA3-Personal mode? (Choose one answer)",
     "options": [
       "A. Fast Transition",
       "B. Opportunistic Wireless Encryption",
-      "C. Protected Management Frames (PMF)",
+      "C. Protected Management Frame",
       "D. Enhanced Open"
     ],
     "correctOption": [
@@ -3228,14 +3234,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/177.webp"
   },
   {
-    "id": 143,
+    "id": 178,
     "questionNo": "Question #178",
     "question": "Refer to the exhibit. Which configuration enables DHCP addressing for hosts connected to interface FastEthernet0/1 on router R4? (Choose one answer)",
     "options": [
-      "A. interface FastEthernet0/0\nip helper-address 10.0.1.1\n!\naccess-list 100 permit host 10.0.1.1 host 10.148.2.1 eq bootps",
-      "B. interface FastEthernet0/1\nip helper-address 10.0.1.1\n!\naccess-list 100 permit udp host 10.0.1.1 eq bootps host 10.148.2.1",
-      "C. interface FastEthernet0/0\nip helper-address 10.0.1.1\n!\naccess-list 100 permit udp host 10.0.1.1 eq bootps host 10.148.2.1",
-      "D. interface FastEthernet0/1\nip helper-address 10.0.1.1\n!\naccess-list 100 permit tcp host 10.0.1.1 eq 67 host 10.148.2.1"
+      "A. interface FastEthernet0/0\n ip helper-address 10.0.1.1\n!\naccess-list 100 permit host 10.0.1.1 host 10.148.2.1 eq bootps",
+      "B. interface FastEthernet0/1\n ip helper-address 10.0.1.1\n!\naccess-list 100 permit udp host 10.0.1.1 eq bootps host 10.148.2.1",
+      "C. interface FastEthernet0/0\n ip helper-address 10.0.1.1\n!\naccess-list 100 permit udp host 10.0.1.1 eq bootps host 10.148.2.1",
+      "D. interface FastEthernet0/1\n ip helper-address 10.0.1.1\n!\naccess-list 100 permit tcp host 10.0.1.1 eq 67 host 10.148.2.1"
     ],
     "correctOption": [
       1
@@ -3246,7 +3252,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/178.webp"
   },
   {
-    "id": 128,
+    "id": 179,
     "questionNo": "Question #179",
     "question": "What is a characteristic of encryption in wireless networks? (Choose one answer)",
     "options": [
@@ -3264,7 +3270,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/179.webp"
   },
   {
-    "id": 139,
+    "id": 180,
     "questionNo": "Question #180",
     "question": "Refer to the exhibit. What data structure do the square brackets in the JSON example represent? (Choose one answer)",
     "options": [
@@ -3282,14 +3288,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/180.webp"
   },
   {
-    "id": 150,
+    "id": 181,
     "questionNo": "Question #181",
     "question": "After a recent security breach and a RADIUS failure, an engineer must secure the console port of each enterprise router with a local username and password. Which configuration must the engineer apply to accomplish this task? (Choose one answer)",
     "options": [
-      "A. aaa new-model; aaa authorization exec default local; aaa authentication login default radius; username localuser privilege 15 secret plaintextpassword",
-      "B. aaa new-model; line con 0; password plaintextpassword; privilege level 15",
-      "C. username localuser secret plaintextpassword; line con 0; no login local; privilege level 15",
-      "D. username localuser secret plaintextpassword; line con 0; login local; privilege level 15"
+      "A. aaa new-model\naaa authorization exec default local\naaa authentication login default radius\nusername localuser privilege 15 secret plaintextpassword",
+      "B. aaa new-model\nline con 0\npassword plaintextpassword\nprivilege level 15",
+      "C. username localuser secret plaintextpassword\nline con 0\nno login local\nprivilege level 15",
+      "D. username localuser secret plaintextpassword\nline con 0\nlogin authentication default\nprivilege level 15"
     ],
     "correctOption": [
       3
@@ -3300,17 +3306,19 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/181.webp"
   },
   {
-    "id": 131,
+    "id": 182,
     "questionNo": "Question #182",
-    "question": "What is the default administrative distance of an internal EIGRP route? (Choose one answer)",
+    "question": "Which two encoding methods are supported by REST APIs? (Choose two answers)",
     "options": [
-      "A. 90",
-      "B. 110",
-      "C. 120",
-      "D. 170"
+      "A. XML",
+      "B. YAML",
+      "C. CSV",
+      "D. Plain text",
+      "E. JSON"
     ],
     "correctOption": [
-      0
+      0,
+      4
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3318,14 +3326,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/182.webp"
   },
   {
-    "id": 145,
+    "id": 183,
     "questionNo": "Question #183",
-    "question": "Refer to the exhibit. If the network environment is operating normally, which type of device must be connected to interface FastEthernet0/1? (Choose one answer)",
+    "question": "Refer to the exhibit. If the network environment is operating normally, which type of device must be connected to interface fastethernet 0/1? (Choose one answer)",
     "options": [
       "A. access point",
       "B. DHCP client",
-      "C. rogue switch",
-      "D. router / trusted switch"
+      "C. PC",
+      "D. router"
     ],
     "correctOption": [
       3
@@ -3336,17 +3344,19 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/183.webp"
   },
   {
-    "id": 127,
+    "id": 184,
     "questionNo": "Question #184",
-    "question": "Which function does Spanning Tree Protocol (STP) perform in a Layer 2 network? (Choose one answer)",
+    "question": "Which two values or settings must be entered when configuring a new WLAN in the Cisco Wireless LAN Controller GUI? (Choose two answers)",
     "options": [
-      "A. prevents routing loops by exchanging routing tables",
-      "B. prevents Layer 2 switching loops by placing redundant ports into a blocking state",
-      "C. aggregates physical links into a single logical channel",
-      "D. assigns VLAN tags to Ethernet frames"
+      "A. SSID",
+      "B. QoS settings",
+      "C. management interface settings",
+      "D. profile name",
+      "E. IP address of one or more access points"
     ],
     "correctOption": [
-      1
+      0,
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3354,17 +3364,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/184.webp"
   },
   {
-    "id": 126,
+    "id": 185,
     "questionNo": "Question #185",
-    "question": "What is the role of an autonomous access point? (Choose one answer)",
+    "question": "How does Al contribute to network traffic analysis? (Choose one answer)",
     "options": [
-      "A. It relies on a WLC for client authentication and RF management.",
-      "B. It provides a lightweight tunnel using CAPWAP.",
-      "C. It performs all wireless and security management functions independently.",
-      "D. It operates exclusively in monitor mode."
+      "A. It analyzes patterns for anomaly detection.",
+      "B. It guarantees zero network downtime.",
+      "C. It eliminates network threats.",
+      "D. It makes ethical judgements on private data surveillance."
     ],
     "correctOption": [
-      2
+      0
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3372,7 +3382,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/185.webp"
   },
   {
-    "id": 125,
+    "id": 186,
     "questionNo": "Question #186",
     "question": "Which feature when used on a WLC allows it to bundle its distribution system ports into one 802.3ad group? (Choose one answer)",
     "options": [
@@ -3390,14 +3400,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/186.webp"
   },
   {
-    "id": 135,
+    "id": 187,
     "questionNo": "Question #187",
-    "question": "Which function does a DNS query perform? (Choose one answer)",
+    "question": "Which function does an iterative DNS query serve in the domain name resolution process? (Choose one answer)",
     "options": [
-      "A. allows a DNS client to request the IP address associated with a domain name",
-      "B. updates records dynamically across multiple servers",
-      "C. encrypts communications between DNS servers",
-      "D. obtains information directly from all root DNS servers within the scope"
+      "A. Allow a DNS client to contact several DNS servers until the correct information is found.",
+      "B. Update records dynamically across multiple DNS servers at the same time.",
+      "C. Encrypt communication automatically between DNS clients and servers.",
+      "D. Obtain information directly from all root DNS servers configured within the scope."
     ],
     "correctOption": [
       0
@@ -3408,12 +3418,12 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/187.webp"
   },
   {
-    "id": 144,
+    "id": 188,
     "questionNo": "Question #188",
     "question": "Refer to the exhibit. Which functionalities will this SSID have while being used by wireless clients? (Choose one answer)",
     "options": [
       "A. decreases network security against offline dictionary attacks and encourages easy access to the network",
-      "B. increases network security against man-in-the-middle attacks and discourages denial of service attacks",
+      "B. increases network security against man in the middle attacks and discourages denial of service attacks",
       "C. decreases network security against air sniffing attacks and discourages the use of complex passwords",
       "D. increases network security against offline dictionary attacks and discourages time-consuming brute force attacks"
     ],
@@ -3426,7 +3436,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/188.webp"
   },
   {
-    "id": 134,
+    "id": 189,
     "questionNo": "Question #189",
     "question": "Refer to the exhibit. Which configuration is needed to configure a WLAN with WPA2 only and with a password that is 63 characters long? (Choose one answer)",
     "options": [
@@ -3444,14 +3454,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/189.webp"
   },
   {
-    "id": 148,
+    "id": 190,
     "questionNo": "Question #190",
     "question": "Refer to the exhibit. Users on VLAN 100 can reach sites on the Internet. Which action must the administrator take to establish connectivity to the Internet for users in VLAN 200? (Choose one answer)",
     "options": [
       "A. Define a NAT pool on the router.",
       "B. Configure the ip nat outside command on another interface for VLAN 200.",
       "C. Configure static NAT translations for VLAN 200.",
-      "D. Update the access list NAT_INSIDE_RANGES to include the 10.10.20.0/24 subnet."
+      "D. Update the NAT_INSIDE_RANGES ACL."
     ],
     "correctOption": [
       3
@@ -3462,12 +3472,12 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/190.webp"
   },
   {
-    "id": 142,
+    "id": 191,
     "questionNo": "Question #191",
     "question": "Refer to the exhibit. Which route does R1 select for traffic that is destined to 192.168.16.27? (Choose one answer)",
     "options": [
-      "A. 192.168.16.0/24",
-      "B. 192.168.16.0/25",
+      "A. 192.168.16.0/21",
+      "B. 192.168.16.0/24",
       "C. 192.168.16.0/26",
       "D. 192.168.16.0/27"
     ],
@@ -3480,7 +3490,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/191.webp"
   },
   {
-    "id": 133,
+    "id": 192,
     "questionNo": "Question #192",
     "question": "Refer to the exhibit. Which network prefix was learned via EIGRP? (Choose one answer)",
     "options": [
@@ -3498,7 +3508,7 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/192.webp"
   },
   {
-    "id": 149,
+    "id": 193,
     "questionNo": "Question #193",
     "question": "Refer to the exhibit. What is the next hop for a packet destined for 10.1.1.1? (Choose one answer)",
     "options": [
@@ -3516,14 +3526,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/193.webp"
   },
   {
-    "id": 132,
+    "id": 194,
     "questionNo": "Question #194",
-    "question": "Which command enables BPDU Guard globally on all PortFast-enabled ports on a Cisco switch? (Choose one answer)",
+    "question": "What is a difference between TACACS+ and RADIUS? (Choose one answer)",
     "options": [
-      "A. spanning-tree portfast bpduguard default",
-      "B. spanning-tree bpduguard enable",
-      "C. spanning-tree portfast bpdufilter default",
-      "D. spanning-tree loopguard default"
+      "A. TACACS+ separates authentication and authorization, and RADIUS merges them.",
+      "B. TACACS+ logs only start, stop, and interim commands, but RADIUS logs all commands that are entered by the administrator.",
+      "C. TACACS+ is used for dial-up access, and RADIUS encrypts the entire packet for security.",
+      "D. TACACS+ encrypts only password information, and RADIUS encrypts the entire payload."
     ],
     "correctOption": [
       0
@@ -3534,14 +3544,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/194.webp"
   },
   {
-    "id": 130,
+    "id": 195,
     "questionNo": "Question #195",
-    "question": "Which routing protocol metric is calculated based on bandwidth and delay by default? (Choose one answer)",
+    "question": "What is a function of a northbound API in an SDN environment? (Choose one answer)",
     "options": [
-      "A. EIGRP",
-      "B. OSPF",
-      "C. RIP",
-      "D. BGP"
+      "A. It facilitates communication between controllers and orchestration platforms.",
+      "B. It upgrades software and restores files.",
+      "C. It relies on global provisioning and configuration.",
+      "D. It supports distributed processing for configuration."
     ],
     "correctOption": [
       0
@@ -3552,14 +3562,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/195.webp"
   },
   {
-    "id": 129,
+    "id": 196,
     "questionNo": "Question #196",
-    "question": "Which mechanism is used by CDP to discover directly connected Cisco devices? (Choose one answer)",
+    "question": "How do predictive Al models enhance network resource allocation? (Choose one answer)",
     "options": [
-      "A. periodic multicast advertisements sent to MAC 0100.0ccc.cccc",
-      "B. broadcast queries sent on the local subnet",
-      "C. unicast SNMP requests sent to neighboring IP addresses",
-      "D. LLDP advertisements sent to all interfaces"
+      "A. They anticipate future traffic spikes.",
+      "B. They automate the assignment of IP addresses to devices.",
+      "C. They generate real-time reports on current bandwidth usage.",
+      "D. They select correct cabling types for deployment."
     ],
     "correctOption": [
       0
@@ -3570,32 +3580,14 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/196.webp"
   },
   {
-    "id": 138,
+    "id": 197,
     "questionNo": "Question #197",
-    "question": "Which plane is centralized in a controller-based software-defined network? (Choose one answer)",
+    "question": "Which plane is centralized by an SDN controller? (Choose one answer)",
     "options": [
-      "A. data plane",
-      "B. management plane",
-      "C. control plane",
-      "D. forwarding plane"
-    ],
-    "correctOption": [
-      2
-    ],
-    "points": 10,
-    "cliSnippet": null,
-    "exhibitImage": null,
-    "originalSourceImage": "original_sources/197.webp"
-  },
-  {
-    "id": 136,
-    "questionNo": "Question #198",
-    "question": "How does automation affect network management processes? (Choose one answer)",
-    "options": [
-      "A. It transitions network management from reactive troubleshooting to proactive policy enforcement.",
-      "B. It eliminates the need for monitoring syslog messages.",
-      "C. It restricts device access to GUI interfaces only.",
-      "D. It removes the necessity for testing changes before deployment."
+      "A. control-plane",
+      "B. data-plane",
+      "C. management-plane",
+      "D. services-plane"
     ],
     "correctOption": [
       0
@@ -3603,10 +3595,28 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
+    "originalSourceImage": "original_sources/197.webp"
+  },
+  {
+    "id": 198,
+    "questionNo": "Question #198",
+    "question": "How does automation affect network management processes? (Choose one answer)",
+    "options": [
+      "A. It provides a reactive support model.",
+      "B. It interoperates with ISE to define and manage patch and update schedules.",
+      "C. It improves the efficiency of system lifecycle management.",
+      "D. It performs configuration updates based on user profiles."
+    ],
+    "correctOption": [
+      2
+    ],
+    "points": 10,
+    "cliSnippet": null,
+    "exhibitImage": null,
     "originalSourceImage": "original_sources/198.webp"
   },
   {
-    "id": 147,
+    "id": 199,
     "questionNo": "Question #199",
     "question": "Refer to the exhibit. What is represented by the curly brackets in line 3 within this JSON schema? (Choose one answer)",
     "options": [
@@ -3624,17 +3634,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/199.webp"
   },
   {
-    "id": 122,
+    "id": 200,
     "questionNo": "Question #200",
     "question": "How does automation reduce the operational complexity of a managed network? (Choose one answer)",
     "options": [
-      "A. It streamlines monitoring using SNMP and other polling tools.",
-      "B. It categorizes network traffic and provides real-time telemetry insights.",
-      "C. It reduces repetitive manual configuration tasks across multiple devices.",
-      "D. It allows all controller code to be vendor-agnostic."
+      "A. streamlines monitoring using SNMP and other polling tools",
+      "B. categorizes traffic and provides insights",
+      "C. reduces the response time for specific requests to devices with many interfaces",
+      "D. allows the controller to be vendor-agnostic"
     ],
     "correctOption": [
-      2
+      3
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3642,17 +3652,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/200.webp"
   },
   {
-    "id": 203,
+    "id": 201,
     "questionNo": "Question #201",
-    "question": "Which routing protocol uses Dijkstra Shortest Path First (SPF) algorithm? (Choose one answer)",
+    "question": "How do generative Al models support network design testing? (Choose one answer)",
     "options": [
-      "A. RIP",
-      "B. EIGRP",
-      "C. OSPF",
-      "D. BGP"
+      "A. They model pre-deployment network scenarios.",
+      "B. They deploy network firmware updates.",
+      "C. They enhance data packet delivery speeds.",
+      "D. They compute optimal data storage solutions."
     ],
     "correctOption": [
-      2
+      0
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3660,32 +3670,32 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/201.webp"
   },
   {
-    "id": 207,
+    "id": 202,
     "questionNo": "Question #202",
-    "question": "What is the function of the Spanning Tree Protocol PortFast feature? (Choose one answer)",
+    "question": "Which interface condition is occurring in this output? (Choose one answer)",
     "options": [
-      "A. to increase link bandwidth by bonding multiple physical cables",
-      "B. to encrypt Spanning Tree Bridge Protocol Data Units (BPDUs)",
-      "C. to allow access ports to transition immediately from blocking to forwarding state",
-      "D. to dynamically assign ports to the native VLAN"
+      "A. bad NIC",
+      "B. duplex mismatch",
+      "C. queueing",
+      "D. broadcast storm"
     ],
     "correctOption": [
       2
     ],
     "points": 10,
-    "cliSnippet": null,
+    "cliSnippet": "R33# show interface fa0/0\nFastEthernet0/0 is up, line protocol is up\nHardware is DEC21140, address is ca02.7788.0000 (bia ca02.7788.0000)\nDescription: finance_subnet\nInternet address is 10.32.102.2/30\nMTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\nreliability 255/255, txload 1/255, rxload 1/255\nEncapsulation ARPA, loopback not set\nKeepalive set (60 sec)\nFull-duplex, 100 Mb/s, 100BaseTX/FX\nARP type: ARPA, ARP Timeout 04:00:00\nLast input 00:00:01, output 00:00:00, output hang never\nLast clearing of \"show interface\" counters 00:00:18\nInput queue: 185/300/0/0 (size/max/drops/flushes); Total output drops: 140\nQueueing strategy: fifo\nOutput queue: 125/300 (size/max)\n30 second input rate 0 bits/sec, 0 packets/sec\n30 second output rate 0 bits/sec, 0 packets/sec\n7331 packets input, 7101162 bytes\nReceived 267 broadcasts (0 IP multicasts)\n0 runts, 0 giants, 0 throttles\n0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n0 watchdog\n0 input packets with dribble condition detected\n3927 packets output, 1440403 bytes, 0 underruns\n0 output errors, 0 collisions, 0 interface resets\n0 unknown protocol drops\n0 babbles, 0 late collision, 0 deferred\n0 lost carrier, 0 no carrier\n0 output buffer failures, 0 output buffers swapped out",
     "exhibitImage": null,
     "originalSourceImage": "original_sources/202.webp"
   },
   {
-    "id": 201,
+    "id": 203,
     "questionNo": "Question #203",
-    "question": "Which protocol is used by network management applications to securely collect device state and health metrics over UDP port 161? (Choose one answer)",
+    "question": "What is a characteristic of encryption in wireless networks? (Choose one answer)",
     "options": [
-      "A. NetFlow",
-      "B. Syslog",
-      "C. IPFIX",
-      "D. SNMP"
+      "A. Intercepts data threats before they attack a network",
+      "B. Uses integrity checks to identify forgery attacks",
+      "C. Uses a unidirectional handshake for authentication",
+      "D. Prevents intercepted data from being easily read"
     ],
     "correctOption": [
       3
@@ -3696,17 +3706,17 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/203.webp"
   },
   {
-    "id": 202,
+    "id": 204,
     "questionNo": "Question #204",
-    "question": "What is the purpose of the 802.1Q tag in Ethernet frames? (Choose one answer)",
+    "question": "What is a characteristic of a Layer 2 switch? (Choose one answer)",
     "options": [
-      "A. to identify the VLAN to which the frame belongs on trunk links",
-      "B. to perform CRC error checking on the physical medium",
-      "C. to establish Spanning Tree Protocol root bridge priority",
-      "D. to assign IP addresses dynamically to connected devices"
+      "A. transfers all frames received to every connected device",
+      "B. forwards Ethernet frames using hardware-based MAC address tables",
+      "C. prioritizes traffic using deep packet inspection",
+      "D. Limits MAC address learning for faster transmission"
     ],
     "correctOption": [
-      0
+      1
     ],
     "points": 10,
     "cliSnippet": null,
@@ -3714,33 +3724,33 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/204.webp"
   },
   {
-    "id": 206,
+    "id": 205,
     "questionNo": "Question #205",
-    "question": "Which mechanism prevents unauthorized DHCP servers on a local network by classifying switch ports as trusted or untrusted? (Choose one answer)",
+    "question": "Which interface condition is occurring in this output? (Choose one answer)",
     "options": [
-      "A. Dynamic ARP Inspection",
-      "B. Port Security",
-      "C. DHCP Snooping",
-      "D. IP Source Guard"
+      "A. duplex mismatch",
+      "B. broadcast storm",
+      "C. queueing",
+      "D. bad NIC"
     ],
     "correctOption": [
       2
     ],
     "points": 10,
-    "cliSnippet": null,
+    "cliSnippet": "R24# show interface fa0/0\nFastEthernet0/0 is up, line protocol is up\nHardware is DEC21140, address is ca02.7788.0000 (bia ca02.7788.0000)\nDescription: losangeles_subnet\nInternet address is 10.32.102.2/30\nMTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\nreliability 255/255, txload 1/255, rxload 1/255\nEncapsulation ARPA, loopback not set\nKeepalive set (60 sec)\nFull-duplex, 100 Mb/s, 100BaseTX/FX\nARP type: ARPA, ARP Timeout 04:00:00\nLast input 00:00:01, output 00:00:00, output hang never\nLast clearing of \"show interface\" counters 00:00:18\nInput queue: 200/300/0/0 (size/max/drops/flushes); Total output drops: 100\nQueueing strategy: fifo\nOutput queue: 75/300 (size/max)\n30 second input rate 0 bits/sec, 0 packets/sec\n30 second output rate 0 bits/sec, 0 packets/sec\n7331 packets input, 7101162 bytes\nReceived 267 broadcasts (0 IP multicasts)\n0 runts, 0 giants, 0 throttles\n0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n0 watchdog\n0 input packets with dribble condition detected\n3927 packets output, 1440403 bytes, 0 underruns\n0 output errors, 0 collisions, 0 interface resets\n0 unknown protocol drops\n0 babbles, 0 late collision, 0 deferred\n0 lost carrier, 0 no carrier\n0 output buffer failures, 0 output buffers swapped out",
     "exhibitImage": null,
     "originalSourceImage": "original_sources/205.webp"
   },
   {
-    "id": 204,
+    "id": 206,
     "questionNo": "Question #206",
-    "question": "Refer to the exhibit. Which two statements about the interface status are true? (Choose two answers)",
+    "question": "Refer to the exhibit. An engineer is updating the management access configuration of switch SW1 to allow secured, encrypted remote configuration. Which two commands or command sequences must the engineer apply to the switch? (Choose two answers)",
     "options": [
-      "A. The line protocol is up and operating normally.",
-      "B. The interface is administratively down.",
-      "C. The MTU is set to 1500 bytes.",
-      "D. The interface is operating in half-duplex mode.",
-      "E. Input errors are exceeding threshold limits."
+      "A. SW1(config)# ip ssh version 2",
+      "B. SW1(config)# username NEW secret R3mote123",
+      "C. SW1(config)# line vty 0 15\nSW1(config-line)# transport input ssh",
+      "D. SW1(config)# crypto key generate rsa",
+      "E. SW1(config)# interface f0/1\nSW1(config-if)# switchport mode trunk"
     ],
     "correctOption": [
       0,
@@ -3752,20 +3762,20 @@ export const ccnaQuestions = [
     "originalSourceImage": "original_sources/206.webp"
   },
   {
-    "id": 205,
+    "id": 207,
     "questionNo": "Question #207",
-    "question": "Which interface condition is indicated by a high number of CRC errors on an Ethernet switch port? (Choose one answer)",
+    "question": "Which interface condition is occurring in this output? (Choose one answer)",
     "options": [
-      "A. broadcast storm",
-      "B. duplex mismatch",
-      "C. faulty cabling / electrical interference / bad hardware",
-      "D. routing loop"
+      "A. duplex mismatch",
+      "B. queueing",
+      "C. high throughput",
+      "D. bad NIC"
     ],
     "correctOption": [
       2
     ],
     "points": 10,
-    "cliSnippet": null,
+    "cliSnippet": "R18# show interface fa0/0\nFastEthernet0/0 is up, line protocol is up\nHardware is DEC21140, address is ca02.7788.0000 (bia ca02.7788.0000)\nDescription: dallas_subnet\nInternet address is 10.32.102.2/30\nMTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,\nreliability 255/255, txload 255/255, rxload 255/255\nEncapsulation ARPA, loopback not set\nKeepalive set (60 sec)\nFull-duplex, 100 Mb/s, 100BaseTX/FX\nARP type: ARPA, ARP Timeout 04:00:00\nLast input 00:00:01, output 00:00:00, output hang never\nLast clearing of \"show interface\" counters 00:00:18\nInput queue: 0/300/0/0 (size/max/drops/flushes); Total output drops: 0\nQueueing strategy: fifo\nOutput queue: 0/300 (size/max)\n30 second input rate 98000000 bits/sec, 40 packets/sec\n30 second output rate 95000000 bits/sec, 40 packets/sec\n7331 packets input, 7101162 bytes\nReceived 267 broadcasts (0 IP multicasts)\n0 runts, 0 giants, 0 throttles\n0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored\n0 watchdog\n0 input packets with dribble condition detected\n3927 packets output, 1440403 bytes, 0 underruns\n0 output errors, 0 collisions, 0 interface resets\n0 unknown protocol drops\n0 babbles, 0 late collision, 0 deferred\n0 lost carrier, 0 no carrier\n0 output buffer failures, 0 output buffers swapped out",
     "exhibitImage": null,
     "originalSourceImage": "original_sources/207.webp"
   },
