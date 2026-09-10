@@ -24,15 +24,6 @@ const DEFAULT_STUDY_SETTINGS = {
   timerMode: "not_timed",
 };
 
-const getSettingsKey = (user) =>
-  user?.id ? `ccna_study_settings_${user.id}` : "ccna_study_settings_guest";
-
-const getSelectedBankKey = (user) =>
-  user?.id ? `ccna_selected_bank_${user.id}` : "ccna_selected_bank_guest";
-
-const getExamModeKey = (user) =>
-  user?.id ? `ccna_exam_mode_${user.id}` : "ccna_exam_mode_guest";
-
 function ExamDashboard({
   totalQuestionsCount,
   onStartExam,
@@ -55,24 +46,8 @@ function ExamDashboard({
   onLogout,
   onOpenUpgrade,
 }) {
-  const [selectedBank, setSelectedBank] = useState(() => {
-    try {
-      const key = getSelectedBankKey(currentUser);
-      const stored = localStorage.getItem(key) || localStorage.getItem("ccna_selected_bank_guest");
-      return stored || "bank_a";
-    } catch {
-      return "bank_a";
-    }
-  });
-  const [examMode, setExamMode] = useState(() => {
-    try {
-      const key = getExamModeKey(currentUser);
-      const stored = localStorage.getItem(key) || localStorage.getItem("ccna_exam_mode_guest");
-      return stored || "study";
-    } catch {
-      return "study";
-    }
-  });
+  const [selectedBank, setSelectedBank] = useState("bank_a");
+  const [examMode, setExamMode] = useState("study");
   const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -95,69 +70,24 @@ function ExamDashboard({
     onConfirm: () => {},
   });
 
-  // Persistent settings state across all exam banks & user sessions
-  const [settings, setSettings] = useState(() => {
-    try {
-      const key = getSettingsKey(currentUser);
-      const stored = localStorage.getItem(key) || localStorage.getItem("ccna_study_settings_guest");
-      return stored ? { ...DEFAULT_STUDY_SETTINGS, ...JSON.parse(stored) } : DEFAULT_STUDY_SETTINGS;
-    } catch {
-      return DEFAULT_STUDY_SETTINGS;
-    }
-  });
-
+  // Settings state in memory only (pure server & component authority, zero localStorage)
+  const [settings, setSettings] = useState(DEFAULT_STUDY_SETTINGS);
   const [availablePlans, setAvailablePlans] = useState([]);
 
   useEffect(() => {
-    fetch('/api/plans')
+    fetch('/api/plans', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data && data.plans) {
           setAvailablePlans(data.plans);
-          try {
-            localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
-          } catch {}
         }
       })
       .catch((err) => console.warn('Could not load dynamic plans:', err));
   }, []);
 
-  // Sync settings when user logs in or changes
-  useEffect(() => {
-    try {
-      const key = getSettingsKey(currentUser);
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        setSettings({ ...DEFAULT_STUDY_SETTINGS, ...JSON.parse(stored) });
-      }
-      const bankKey = getSelectedBankKey(currentUser);
-      const storedBank = localStorage.getItem(bankKey) || localStorage.getItem("ccna_selected_bank_guest");
-      if (storedBank) {
-        setSelectedBank(storedBank);
-      }
-      const modeKey = getExamModeKey(currentUser);
-      const storedMode = localStorage.getItem(modeKey) || localStorage.getItem("ccna_exam_mode_guest");
-      if (storedMode) {
-        setExamMode(storedMode);
-      }
-    } catch (e) {
-      console.warn("Load user settings error:", e);
-    }
-  }, [currentUser]);
-
-  // Persist settings whenever modified
+  // Update settings in memory
   const handleUpdateSettings = (updater) => {
-    setSettings((prev) => {
-      const updated = typeof updater === "function" ? updater(prev) : updater;
-      try {
-        const key = getSettingsKey(currentUser);
-        localStorage.setItem(key, JSON.stringify(updated));
-        localStorage.setItem("ccna_study_settings_guest", JSON.stringify(updated));
-      } catch (e) {
-        console.warn("Save user settings error:", e);
-      }
-      return updated;
-    });
+    setSettings((prev) => (typeof updater === "function" ? updater(prev) : updater));
   };
 
   const getBankFilteredQuestions = () => {
@@ -245,11 +175,6 @@ function ExamDashboard({
       return;
     }
     setSelectedBank(bankKey);
-    try {
-      const key = getSelectedBankKey(currentUser);
-      localStorage.setItem(key, bankKey);
-      localStorage.setItem("ccna_selected_bank_guest", bankKey);
-    } catch (e) {}
   };
 
   const handleModeSelect = (mode) => {
@@ -263,11 +188,6 @@ function ExamDashboard({
       return;
     }
     setExamMode(mode);
-    try {
-      const key = getExamModeKey(currentUser);
-      localStorage.setItem(key, mode);
-      localStorage.setItem("ccna_exam_mode_guest", mode);
-    } catch (e) {}
   };
 
   const effectiveSettings = isSimulation
@@ -374,10 +294,6 @@ function ExamDashboard({
     if (Array.isArray(pastExams) && pastExams.some((p) => p.id === s.id || p.sessionId === s.id || p.activeSessionId === s.id)) {
       return false;
     }
-    try {
-      const finishedIds = JSON.parse(localStorage.getItem("ccna_finished_session_ids") || "[]");
-      if (Array.isArray(finishedIds) && finishedIds.includes(s.id)) return false;
-    } catch {}
     const answersList = Array.isArray(s.answers) ? s.answers : [];
     const answeredCount = answersList.filter((a) => a !== null && a !== undefined && a !== "").length;
     if (answeredCount >= s.questions.length && s.questions.length > 0) {

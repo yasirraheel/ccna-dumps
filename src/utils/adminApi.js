@@ -20,10 +20,15 @@ export const getAdminHeaders = () => {
   };
 };
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+
 export const adminFetch = (url, options = {}) => {
+  const finalUrl = url.startsWith('http')
+    ? url
+    : `${API_BASE_URL.replace(/\/api$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
   const headers = {
     ...getAdminHeaders(),
     ...(options.headers || {})
   };
-  return fetch(url, { ...options, headers });
+  return fetch(finalUrl, { ...options, headers });
 };

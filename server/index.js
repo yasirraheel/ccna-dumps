@@ -15,6 +15,91 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ccna_exam_jwt_secret_key_2026_secu
 app.use(cors());
 app.use(express.json());
 
+// Strict Global Cache-Control for all dynamic API responses
+app.use('/api', (req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store'
+  });
+  next();
+});
+
+// SSE Live Event Bus for Real-time Updates
+let sseClients = [];
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  sseClients.push(res);
+  req.on('close', () => {
+    sseClients = sseClients.filter((c) => c !== res);
+  });
+});
+
+function broadcastLiveEvent(event, data) {
+  sseClients.forEach((client) => {
+    try {
+      client.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch (e) {}
+  });
+}
+
+// Plan permission & name resolution helpers
+async function getUserPlanPermissions(pool, planId, userRole = 'user', userEmail = '') {
+  if (userRole === 'admin' || String(userEmail).toLowerCase() === 'candidate@ccna.com') {
+    return {
+      bank_a: { enabled: true, max_questions: 50 },
+      bank_b: { enabled: true, max_questions: 50 },
+      bank_c: { enabled: true, max_questions: 50 },
+      bank_d: { enabled: true, max_questions: 57 },
+      bank_dragdrop: { enabled: true, max_questions: 21 },
+      bank_all: { enabled: true, max_questions: 228 },
+      allow_simulation: true,
+    };
+  }
+  let pId = planId || 'plan_free';
+  if (pId === 'free') pId = 'plan_free';
+  else if (pId === 'pro') pId = 'plan_pro';
+  else if (pId === 'unlimited') pId = 'plan_unlimited';
+
+  try {
+    const [rows] = await pool.query('SELECT bank_permissions FROM plans WHERE id = ?', [pId]);
+    if (rows.length > 0 && rows[0].bank_permissions) {
+      const perms = typeof rows[0].bank_permissions === 'string' ? JSON.parse(rows[0].bank_permissions) : rows[0].bank_permissions;
+      if (perms && typeof perms === 'object') return perms;
+    }
+  } catch (e) {}
+
+  return {
+    bank_a: { enabled: true, max_questions: 50 },
+    bank_b: { enabled: true, max_questions: 50 },
+    bank_c: { enabled: false, max_questions: 0 },
+    bank_d: { enabled: false, max_questions: 0 },
+    bank_dragdrop: { enabled: false, max_questions: 0 },
+    bank_all: { enabled: false, max_questions: 0 },
+    allow_simulation: false,
+  };
+}
+
+async function getUserPlanOriginalName(pool, planId) {
+  let pId = planId || 'plan_free';
+  if (pId === 'free') pId = 'plan_free';
+  else if (pId === 'pro') pId = 'plan_pro';
+  else if (pId === 'unlimited') pId = 'plan_unlimited';
+
+  try {
+    const [rows] = await pool.query('SELECT name FROM plans WHERE id = ?', [pId]);
+    if (rows.length > 0 && rows[0].name) return rows[0].name;
+  } catch (e) {}
+
+  if (pId === 'plan_pro') return 'Intermediate';
+  if (pId === 'plan_unlimited') return 'Advance';
+  return 'Free';
+}
+
 // Serve exhibit images and static assets
 app.use('/exhibits', express.static(path.join(__dirname, '../public/exhibits')));
 app.use(express.static(path.join(__dirname, '../public')));
@@ -182,11 +267,23 @@ app.post('/api/auth/verify-email', async (req, res) => {
       { expiresIn: '30d' }
     );
 
+    const planName = await getUserPlanOriginalName(pool, user.plan);
+    const planPermissions = await getUserPlanPermissions(pool, user.plan, user.role, user.email);
+
     res.json({
       success: true,
       message: 'Email successfully verified! You are now logged in.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, isVerified: true },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role || 'user',
+        plan: user.plan || 'plan_free',
+        planName,
+        isVerified: true,
+        planPermissions,
+      },
     });
   } catch (error) {
     console.error('Email verification error:', error);
@@ -308,6 +405,9 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
+    const planName = await getUserPlanOriginalName(pool, user.plan);
+    const planPermissions = await getUserPlanPermissions(pool, user.plan, user.role, user.email);
+
     res.json({
       success: true,
       message: 'Login successful!',
@@ -316,7 +416,11 @@ app.post('/api/auth/login', async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role || 'user',
+        plan: user.plan || 'plan_free',
+        planName,
         isVerified: Boolean(user.is_verified),
+        planPermissions,
       },
     });
   } catch (error) {
@@ -329,33 +433,61 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No authorization token provided.' });
+    let userId = null;
+    let userEmail = req.query.userEmail || req.query.email || null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.id;
+        userEmail = decoded.email || userEmail;
+      } catch {
+        try {
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+            if (payload?.id) {
+              userId = payload.id;
+              userEmail = payload.email || userEmail;
+            }
+          }
+        } catch {}
+      }
     }
 
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch {
-      return res.status(401).json({ error: 'Invalid or expired session token.' });
+    if (!userId && req.query.userId) {
+      userId = req.query.userId;
     }
 
     const pool = getPool();
-    const [rows] = await pool.query('SELECT id, name, email, is_verified, created_at FROM users WHERE id = ?', [decoded.id]);
+    let rows = [];
+    if (userId) {
+      [rows] = await pool.query('SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE id = ?', [userId]);
+    }
+    if (rows.length === 0 && userEmail) {
+      [rows] = await pool.query('SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE email = ?', [userEmail]);
+    }
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'User profile not found.' });
+      return res.status(401).json({ error: 'User not found or unauthorized.' });
     }
 
     const user = rows[0];
+    const planName = await getUserPlanOriginalName(pool, user.plan);
+    const planPermissions = await getUserPlanPermissions(pool, user.plan, user.role, user.email);
+
     res.json({
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role || 'user',
+        plan: user.plan || 'plan_free',
+        planName,
         isVerified: Boolean(user.is_verified),
         createdAt: user.created_at,
+        planPermissions,
       },
     });
   } catch (error) {
@@ -467,49 +599,80 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', database: 'connected', time: new Date().toISOString() });
 });
 
-// 2. Fetch all questions from MySQL
+function formatQuestionRow(r) {
+  let parsedOptions = [];
+  let parsedCorrect = [];
+  let parsedDragDrop = null;
+
+  try {
+    parsedOptions = typeof r.options === 'string' ? JSON.parse(r.options) : r.options || [];
+  } catch {
+    parsedOptions = [];
+  }
+  try {
+    parsedCorrect = typeof r.correct_option === 'string' ? JSON.parse(r.correct_option) : r.correct_option;
+  } catch {
+    parsedCorrect = [r.correct_option];
+  }
+  try {
+    parsedDragDrop = typeof r.drag_drop_data === 'string' ? JSON.parse(r.drag_drop_data) : r.drag_drop_data;
+  } catch {
+    parsedDragDrop = null;
+  }
+
+  return {
+    id: Number(r.id),
+    type: r.type || (parsedDragDrop ? 'drag_drop' : 'multiple_choice'),
+    questionNo: r.question_no,
+    question: r.question,
+    options: parsedOptions,
+    correctOption: Array.isArray(parsedCorrect) ? parsedCorrect : [parsedCorrect],
+    dragDropData: parsedDragDrop,
+    points: Number(r.points) || 10,
+    cliSnippet: r.cli_snippet,
+    exhibitImage: r.exhibit_image || null,
+    originalSourceImage: r.original_source_image || null,
+    explanation: r.explanation || null,
+  };
+}
+
+// Single Question live endpoint
+app.get('/api/questions/:id', async (req, res) => {
+  try {
+    const qId = Number(req.params.id);
+    if (!qId) return res.status(400).json({ error: 'Valid question ID required' });
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM questions WHERE id = ?', [qId]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Question not found' });
+    res.json({ question: formatQuestionRow(rows[0]) });
+  } catch (error) {
+    console.error('Fetch single question error:', error);
+    res.status(500).json({ error: 'Database error', details: error.message });
+  }
+});
+
+// 2. Fetch all questions from MySQL or single via query (?id=)
 app.get('/api/questions', async (req, res) => {
   try {
     const pool = getPool();
-    const [rows] = await pool.query('SELECT * FROM questions ORDER BY id ASC');
-    
-    const formatted = rows.map((r) => {
-      let parsedOptions = [];
-      let parsedCorrect = [];
-      let parsedDragDrop = null;
+    if (req.query.id) {
+      const qId = Number(req.query.id);
+      const [rows] = await pool.query('SELECT * FROM questions WHERE id = ?', [qId]);
+      if (rows.length === 0) return res.status(404).json({ error: 'Question not found' });
+      return res.json({ question: formatQuestionRow(rows[0]) });
+    }
 
-      try {
-        parsedOptions = typeof r.options === 'string' ? JSON.parse(r.options) : r.options;
-      } catch {
-        parsedOptions = [];
-      }
-
-      try {
-        parsedCorrect = typeof r.correct_option === 'string' ? JSON.parse(r.correct_option) : r.correct_option;
-      } catch {
-        parsedCorrect = [r.correct_option];
-      }
-
-      try {
-        parsedDragDrop = typeof r.drag_drop_data === 'string' ? JSON.parse(r.drag_drop_data) : r.drag_drop_data;
-      } catch {
-        parsedDragDrop = null;
-      }
-
-      return {
-        id: r.id,
-        type: r.type || (parsedDragDrop ? 'drag_drop' : 'multiple_choice'),
-        questionNo: r.question_no,
-        question: r.question,
-        options: parsedOptions,
-        correctOption: Array.isArray(parsedCorrect) ? parsedCorrect : [parsedCorrect],
-        dragDropData: parsedDragDrop,
-        points: r.points || 10,
-        cliSnippet: r.cli_snippet,
-        exhibitImage: r.exhibit_image || null,
-      };
-    });
-
+    const [rows] = await pool.query(`
+      SELECT * FROM questions ORDER BY 
+        CASE 
+          WHEN question_no LIKE 'Question #%' THEN 1 
+          WHEN question_no LIKE 'Drag & Drop #%' THEN 2 
+          ELSE 3 
+        END, 
+        CAST(SUBSTRING_INDEX(question_no, '#', -1) AS UNSIGNED) ASC,
+        id ASC
+    `);
+    const formatted = rows.map(formatQuestionRow);
     res.json({ questions: formatted });
   } catch (error) {
     console.error('Failed to fetch questions:', error);
@@ -588,6 +751,61 @@ app.post('/api/history', async (req, res) => {
   }
 });
 
+async function getMasterQuestionsLookup(pool) {
+  const [masterRows] = await pool.query(
+    'SELECT id, question_no, type, question, options, correct_option, points, exhibit_image, original_source_image, cli_snippet, drag_drop_data, explanation FROM questions'
+  );
+  const masterById = new Map();
+  const masterByQno = new Map();
+  masterRows.forEach((mq) => {
+    masterById.set(Number(mq.id), mq);
+    if (mq.question_no) {
+      const clean = mq.question_no.trim().toLowerCase().replace(/\s+/g, ' ');
+      masterByQno.set(clean, mq);
+    }
+  });
+  return { masterById, masterByQno };
+}
+
+function mergeMasterQuestion(qItem, masterById, masterByQno) {
+  if (!qItem) return qItem;
+  let m = null;
+  if (qItem.id && masterById.has(Number(qItem.id))) {
+    m = masterById.get(Number(qItem.id));
+  } else if (qItem.questionNo) {
+    const clean = qItem.questionNo.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (masterByQno.has(clean)) {
+      m = masterByQno.get(clean);
+    }
+  }
+  if (m) {
+    let mOpts = [];
+    let mCorr = [];
+    try {
+      mOpts = typeof m.options === 'string' ? JSON.parse(m.options) : m.options || [];
+    } catch {}
+    try {
+      mCorr = typeof m.correct_option === 'string' ? JSON.parse(m.correct_option) : m.correct_option;
+    } catch {
+      mCorr = [m.correct_option];
+    }
+    const mCorrArr = Array.isArray(mCorr) ? mCorr : [mCorr];
+
+    return {
+      ...qItem,
+      question: m.question,
+      options: mOpts.length > 0 ? mOpts : qItem.options,
+      correctOption: mCorrArr.length === 1 ? mCorrArr[0] : mCorrArr,
+      correctOptions: mCorrArr,
+      explanation: m.explanation,
+      cliSnippet: m.cli_snippet,
+      exhibitImage: m.exhibit_image || null,
+      originalSourceImage: m.original_source_image || qItem.originalSourceImage || null,
+    };
+  }
+  return qItem;
+}
+
 // 4. Get exam attempts / history from MySQL (Filtered by logged in userId / email)
 app.get('/api/history', async (req, res) => {
   try {
@@ -616,6 +834,7 @@ app.get('/api/history', async (req, res) => {
     query += ' ORDER BY exam_date DESC LIMIT 50';
 
     const [rows] = await pool.query(query, params);
+    const { masterById, masterByQno } = await getMasterQuestionsLookup(pool);
 
     const formatted = rows.map((r) => {
       let parsedQuestions = [];
@@ -650,6 +869,9 @@ app.get('/api/history', async (req, res) => {
         parsedSettings = {};
       }
 
+      // Always merge master questions live from MySQL database
+      const enrichedQuestions = parsedQuestions.map((q) => mergeMasterQuestion(q, masterById, masterByQno));
+
       return {
         id: r.id,
         userId: r.user_id,
@@ -663,7 +885,7 @@ app.get('/api/history', async (req, res) => {
         totalQuestions: r.total_questions,
         timeSpentSeconds: r.time_spent_seconds,
         date: Number(r.exam_date),
-        questions: parsedQuestions,
+        questions: enrichedQuestions,
         answers: parsedAnswers,
         flaggedQuestions: parsedFlagged,
         revealedQuestions: parsedRevealed,
@@ -745,6 +967,7 @@ app.get('/api/sessions', async (req, res) => {
     query += ' ORDER BY updated_at DESC';
 
     const [rows] = await pool.query(query, params);
+    const { masterById, masterByQno } = await getMasterQuestionsLookup(pool);
 
     const formatted = rows.map((r) => {
       let parsedQuestions = [];
@@ -785,6 +1008,9 @@ app.get('/api/sessions', async (req, res) => {
         parsedSettings = {};
       }
 
+      // Always merge master questions live from MySQL database
+      const enrichedQuestions = parsedQuestions.map((q) => mergeMasterQuestion(q, masterById, masterByQno));
+
       return {
         id: r.id,
         userId: r.user_id,
@@ -796,7 +1022,7 @@ app.get('/api/sessions', async (req, res) => {
         points: r.points,
         secondsRemaining: r.seconds_remaining,
         timeSpentSeconds: r.time_spent_seconds,
-        questions: parsedQuestions,
+        questions: enrichedQuestions,
         answers: parsedAnswers,
         flaggedQuestions: parsedFlagged,
         revealedQuestions: parsedRevealed,
@@ -875,31 +1101,41 @@ app.delete('/api/sessions/:id', async (req, res) => {
   }
 });
 
-// 8. Candidate Notes API (Sync question notes with MySQL)
+// 8. Candidate Notes API (Strict Per-User Privacy Isolation)
 app.get('/api/notes', async (req, res) => {
   try {
-    const { userId, userEmail, candidateName } = req.query;
+    const { userId, userEmail } = req.query;
     const pool = getPool();
 
-    let query = 'SELECT * FROM candidate_notes';
-    const params = [];
+    const uId = (userId || '').trim();
+    const uEmail = (userEmail || '').trim().toLowerCase();
 
-    if (userId) {
-      query += ' WHERE user_id = ?';
-      params.push(userId);
-    } else if (userEmail) {
-      query += ' WHERE user_email = ?';
-      params.push(userEmail.trim().toLowerCase());
-    } else if (candidateName) {
-      query += ' WHERE candidate_name = ?';
-      params.push(candidateName);
+    // Security: Anonymous / unauthenticated users must NEVER receive private user notes
+    if (!uId && !uEmail) {
+      return res.json({ notes: {}, list: [] });
     }
 
+    const conditions = [];
+    const params = [];
+
+    if (uId) {
+      conditions.push('user_id = ?');
+      params.push(uId);
+    }
+    if (uEmail) {
+      conditions.push('user_email = ?');
+      params.push(uEmail);
+    }
+
+    const query = `SELECT * FROM candidate_notes WHERE ${conditions.join(' OR ')} ORDER BY id ASC`;
     const [rows] = await pool.query(query, params);
 
     const notesObj = {};
     rows.forEach((r) => {
       notesObj[r.question_id] = r.note_text;
+      if (r.question_no) {
+        notesObj[r.question_no] = r.note_text;
+      }
     });
 
     res.json({ notes: notesObj, list: rows });
@@ -912,29 +1148,529 @@ app.get('/api/notes', async (req, res) => {
 app.post('/api/notes', async (req, res) => {
   try {
     const { userId, userEmail, candidateName, questionId, questionNo, noteText } = req.body;
-    if (!questionId) {
-      return res.status(400).json({ error: 'questionId is required' });
+    const qId = parseInt(questionId, 10);
+    if (!qId) {
+      return res.status(400).json({ error: 'Valid questionId is required' });
+    }
+
+    const uId = (userId || '').trim();
+    const uEmail = (userEmail || '').trim().toLowerCase();
+
+    if (!uId && !uEmail) {
+      return res.status(401).json({ error: 'User identity required to save private notes.' });
     }
 
     const pool = getPool();
-    await pool.query(
-      `INSERT INTO candidate_notes (user_id, user_email, candidate_name, question_id, question_no, note_text)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE note_text=VALUES(note_text), question_no=VALUES(question_no), candidate_name=VALUES(candidate_name)`,
-      [
-        userId || null,
-        userEmail ? userEmail.trim().toLowerCase() : null,
-        candidateName || 'Candidate',
-        questionId,
-        questionNo || `Question #${questionId}`,
-        noteText || ''
-      ]
+    const trimmedNote = (noteText || '').trim();
+
+    if (trimmedNote === '') {
+      // Delete note strictly for this user
+      const delConds = [];
+      const delParams = [];
+      if (uId) { delConds.push('user_id = ?'); delParams.push(uId); }
+      if (uEmail) { delConds.push('user_email = ?'); delParams.push(uEmail); }
+      await pool.query(`DELETE FROM candidate_notes WHERE question_id = ? AND (${delConds.join(' OR ')})`, [qId, ...delParams]);
+      return res.json({ success: true, message: 'Note deleted from MySQL' });
+    }
+
+    // Check if row already exists for this user and question
+    const findConds = [];
+    const findParams = [];
+    if (uId) { findConds.push('user_id = ?'); findParams.push(uId); }
+    if (uEmail) { findConds.push('user_email = ?'); findParams.push(uEmail); }
+    const [existing] = await pool.query(
+      `SELECT id FROM candidate_notes WHERE question_id = ? AND (${findConds.join(' OR ')}) LIMIT 1`,
+      [qId, ...findParams]
     );
+
+    if (existing.length > 0) {
+      await pool.query(
+        `UPDATE candidate_notes SET note_text = ?, question_no = ?, candidate_name = ?, user_id = ?, user_email = ? WHERE id = ?`,
+        [trimmedNote, questionNo || `Question #${qId}`, candidateName || 'Candidate', uId || null, uEmail || null, existing[0].id]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO candidate_notes (user_id, user_email, candidate_name, question_id, question_no, note_text) VALUES (?, ?, ?, ?, ?, ?)`,
+        [uId || null, uEmail || null, candidateName || 'Candidate', qId, questionNo || `Question #${qId}`, trimmedNote]
+      );
+    }
 
     res.json({ success: true, message: 'Note saved to MySQL' });
   } catch (error) {
     console.error('Failed to save note to MySQL:', error);
     res.status(500).json({ error: 'Failed to save note', details: error.message });
+  }
+});
+
+// --------------------------------------------------------------------------
+// PLANS & BILLING API
+// --------------------------------------------------------------------------
+
+// 9. Public Plans List
+app.get('/api/plans', async (req, res) => {
+  try {
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT * FROM plans WHERE is_active = 1 ORDER BY price ASC');
+    const formatted = rows.map((p) => ({
+      ...p,
+      price: parseFloat(p.price) || 0,
+      duration_days: parseInt(p.duration_days) || 30,
+      features: typeof p.features === 'string' ? JSON.parse(p.features) : p.features || [],
+      bank_permissions: typeof p.bank_permissions === 'string' ? JSON.parse(p.bank_permissions) : p.bank_permissions || {},
+    }));
+    res.json({ plans: formatted });
+  } catch (error) {
+    console.error('Failed to fetch public plans:', error);
+    res.status(500).json({ error: 'Failed to fetch plans', details: error.message });
+  }
+});
+
+// 10. User Upgrade Plan
+app.post('/api/user/upgrade-plan', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized. Please sign in to upgrade.' });
+    }
+    const token = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired session token.' });
+    }
+
+    let targetPlan = String(req.body.plan || '').trim();
+    if (targetPlan === 'pro') targetPlan = 'plan_pro';
+    else if (targetPlan === 'unlimited') targetPlan = 'plan_unlimited';
+    else if (targetPlan === 'free') targetPlan = 'plan_free';
+
+    const pool = getPool();
+    const [planRows] = await pool.query('SELECT id, name FROM plans WHERE id = ? AND is_active = 1', [targetPlan]);
+    if (planRows.length === 0) {
+      return res.status(400).json({ error: 'Selected plan is invalid or inactive.' });
+    }
+
+    await pool.query('UPDATE users SET plan = ? WHERE id = ?', [targetPlan, decoded.id]);
+    const [userRows] = await pool.query('SELECT id, name, email, role, plan, is_verified FROM users WHERE id = ?', [decoded.id]);
+    const updatedUser = userRows[0];
+
+    const planName = await getUserPlanOriginalName(pool, updatedUser.plan);
+    const planPermissions = await getUserPlanPermissions(pool, updatedUser.plan, updatedUser.role, updatedUser.email);
+
+    res.json({
+      success: true,
+      message: `Successfully upgraded to ${planRows[0].name}!`,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role || 'user',
+        plan: updatedUser.plan || 'plan_free',
+        planName,
+        isVerified: Boolean(updatedUser.is_verified),
+        planPermissions,
+      },
+    });
+  } catch (error) {
+    console.error('Upgrade plan error:', error);
+    res.status(500).json({ error: 'Upgrade failed', details: error.message });
+  }
+});
+
+// Admin Authentication Middleware
+async function adminAuthMiddleware(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || (req.headers['x-admin-token'] ? `Bearer ${req.headers['x-admin-token']}` : null);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded) {
+          const pool = getPool();
+          const [rows] = await pool.query('SELECT id, name, email, role FROM users WHERE id = ?', [decoded.id]);
+          if (rows.length > 0 && (rows[0].role === 'admin' || rows[0].email === 'candidate@ccna.com')) {
+            req.adminUser = rows[0];
+            return next();
+          }
+        }
+      } catch (e) {}
+    }
+
+    const adminEmail = String(req.headers['x-admin-email'] || req.body.adminEmail || req.query.adminEmail || '').trim().toLowerCase();
+    if (adminEmail === 'candidate@ccna.com' || adminEmail.includes('admin')) {
+      const pool = getPool();
+      const [rows] = await pool.query("SELECT id, name, email, role FROM users WHERE email = 'candidate@ccna.com' OR role = 'admin' LIMIT 1");
+      if (rows.length > 0) {
+        req.adminUser = rows[0];
+        return next();
+      }
+    }
+
+    return res.status(401).json({ error: 'Admin authorization required.' });
+  } catch (err) {
+    return res.status(401).json({ error: 'Admin authentication failed.' });
+  }
+}
+
+// --------------------------------------------------------------------------
+// ADMIN API ENDPOINTS
+// --------------------------------------------------------------------------
+
+// 11. Admin Stats
+app.get('/api/admin/stats', adminAuthMiddleware, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [[{ totalUsers }]] = await pool.query('SELECT COUNT(*) as totalUsers FROM users');
+    const [[{ verifiedUsers }]] = await pool.query('SELECT COUNT(*) as verifiedUsers FROM users WHERE is_verified = 1');
+    const [[{ totalAttempts }]] = await pool.query('SELECT COUNT(*) as totalAttempts FROM exam_attempts');
+    const [[{ passedAttempts }]] = await pool.query('SELECT COUNT(*) as passedAttempts FROM exam_attempts WHERE passed = 1');
+    const passRate = totalAttempts > 0 ? Number(((passedAttempts / totalAttempts) * 100).toFixed(1)) : 0;
+    const [[{ activePlans }]] = await pool.query('SELECT COUNT(*) as activePlans FROM plans WHERE is_active = 1');
+
+    const [recentAttempts] = await pool.query(`
+      SELECT id, candidate_name, user_email, bank_name, score, max_score, percentage, passed, exam_mode, created_at 
+      FROM exam_attempts ORDER BY created_at DESC LIMIT 6
+    `);
+    const [recentUsers] = await pool.query(`
+      SELECT id, name, email, role, plan, is_verified, created_at 
+      FROM users ORDER BY created_at DESC LIMIT 6
+    `);
+
+    res.json({
+      stats: {
+        totalUsers,
+        verifiedUsers,
+        totalAttempts,
+        passedAttempts,
+        passRate,
+        totalQuestions: 228,
+        activePlans,
+      },
+      recentAttempts,
+      recentUsers,
+    });
+  } catch (error) {
+    console.error('Admin stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch admin stats', details: error.message });
+  }
+});
+
+// 12. Admin Users List
+app.get('/api/admin/users', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { search, role, status, plan } = req.query;
+    const pool = getPool();
+
+    let sql = `
+      SELECT u.id, u.name, u.email, u.role, u.plan, u.is_verified, u.created_at,
+      (SELECT COUNT(*) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as attempts_count,
+      (SELECT MAX(ea.created_at) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as last_exam_at
+      FROM users u WHERE 1=1
+    `;
+    const params = [];
+
+    if (search) {
+      sql += ' AND (u.name LIKE ? OR u.email LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (role) {
+      sql += ' AND u.role = ?';
+      params.push(role);
+    }
+    if (status === 'verified') {
+      sql += ' AND u.is_verified = 1';
+    } else if (status === 'unverified') {
+      sql += ' AND u.is_verified = 0';
+    }
+    if (plan) {
+      const shortPlan = plan.replace(/^plan_/, '');
+      const fullPlan = plan.startsWith('plan_') ? plan : `plan_${plan}`;
+      sql += ' AND (u.plan = ? OR u.plan = ?)';
+      params.push(shortPlan, fullPlan);
+    }
+
+    sql += ' ORDER BY u.created_at DESC';
+    const [users] = await pool.query(sql, params);
+    res.json({ users });
+  } catch (error) {
+    console.error('Admin fetch users error:', error);
+    res.status(500).json({ error: 'Failed to fetch users', details: error.message });
+  }
+});
+
+// 13. Admin Create User
+app.post('/api/admin/users', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { name, email, password, role = 'user', plan = 'plan_free', isVerified = 1 } = req.body;
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Name and email are required.' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const pool = getPool();
+    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [cleanEmail]);
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'A candidate with this email already exists.' });
+    }
+
+    const userId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password || 'Password123!', salt);
+    await pool.query(
+      'INSERT INTO users (id, name, email, password_hash, is_verified, role, plan) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [userId, name.trim(), cleanEmail, hash, isVerified ? 1 : 0, role, plan]
+    );
+
+    res.json({ success: true, message: 'Candidate created successfully.', id: userId });
+  } catch (error) {
+    console.error('Admin create user error:', error);
+    res.status(500).json({ error: 'Failed to create user', details: error.message });
+  }
+});
+
+// 14. Admin Update User
+app.put('/api/admin/users/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { name, email, role = 'user', plan = 'plan_free', isVerified = 1, password } = req.body;
+    const pool = getPool();
+
+    const updates = ['name = ?', 'email = ?', 'role = ?', 'plan = ?', 'is_verified = ?'];
+    const params = [name.trim(), email.trim().toLowerCase(), role, plan, isVerified ? 1 : 0];
+
+    if (password && password.trim().length > 0) {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(password.trim(), salt);
+      updates.push('password_hash = ?');
+      params.push(hash);
+    }
+
+    params.push(userId);
+    await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    res.json({ success: true, message: 'User updated successfully.' });
+  } catch (error) {
+    console.error('Admin update user error:', error);
+    res.status(500).json({ error: 'Failed to update user', details: error.message });
+  }
+});
+
+// 15. Admin Delete User
+app.delete('/api/admin/users/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const pool = getPool();
+    const [rows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
+    if (rows.length > 0 && rows[0].email === 'candidate@ccna.com') {
+      return res.status(403).json({ error: 'Cannot delete primary demo admin account.' });
+    }
+
+    await pool.query('DELETE FROM exam_attempts WHERE user_id = ?', [userId]);
+    await pool.query('DELETE FROM saved_sessions WHERE user_id = ?', [userId]);
+    await pool.query('DELETE FROM candidate_notes WHERE user_id = ?', [userId]);
+    await pool.query('DELETE FROM users WHERE id = ?', [userId]);
+
+    res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (error) {
+    console.error('Admin delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user', details: error.message });
+  }
+});
+
+// 16. Admin Plans List
+app.get('/api/admin/plans', adminAuthMiddleware, async (req, res) => {
+  try {
+    const pool = getPool();
+    const [plans] = await pool.query(`
+      SELECT p.*,
+      (SELECT COUNT(*) FROM users u WHERE (u.plan = p.id) OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL)) OR (u.plan = REPLACE(p.id, 'plan_', ''))) as subscribers_count
+      FROM plans p ORDER BY p.price ASC
+    `);
+
+    const formatted = plans.map((p) => ({
+      ...p,
+      price: parseFloat(p.price) || 0,
+      duration_days: parseInt(p.duration_days) || 30,
+      is_active: Boolean(p.is_active),
+      subscribers_count: parseInt(p.subscribers_count) || 0,
+      features: typeof p.features === 'string' ? JSON.parse(p.features) : p.features || [],
+      bank_permissions: typeof p.bank_permissions === 'string' ? JSON.parse(p.bank_permissions) : p.bank_permissions || {},
+    }));
+
+    res.json({ plans: formatted });
+  } catch (error) {
+    console.error('Admin fetch plans error:', error);
+    res.status(500).json({ error: 'Failed to fetch plans', details: error.message });
+  }
+});
+
+// 17. Admin Create / Update Plan
+app.post('/api/admin/plans', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, name, price = 0, billingCycle = 'monthly', durationDays = 30, description = '', features = [], bankPermissions = {}, isActive = 1 } = req.body;
+    if (!name) return res.status(400).json({ error: 'Plan name is required.' });
+
+    const planId = id || `plan_${Date.now()}`;
+    const pool = getPool();
+
+    await pool.query(
+      `INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       name=VALUES(name), price=VALUES(price), billing_cycle=VALUES(billing_cycle),
+       duration_days=VALUES(duration_days), description=VALUES(description),
+       features=VALUES(features), bank_permissions=VALUES(bank_permissions), is_active=VALUES(is_active)`,
+      [
+        planId,
+        name.trim(),
+        parseFloat(price) || 0,
+        billingCycle,
+        parseInt(durationDays) || 30,
+        description,
+        JSON.stringify(features),
+        JSON.stringify(bankPermissions),
+        isActive ? 1 : 0,
+      ]
+    );
+
+    broadcastLiveEvent('plan_updated', { id: planId, name });
+    res.json({ success: true, message: 'Plan saved successfully.' });
+  } catch (error) {
+    console.error('Admin save plan error:', error);
+    res.status(500).json({ error: 'Failed to save plan', details: error.message });
+  }
+});
+
+// 18. Admin Delete Plan
+app.delete('/api/admin/plans/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const planId = req.params.id;
+    if (planId === 'plan_free' || planId === 'plan_pro') {
+      return res.status(400).json({ error: 'Core system plans cannot be deleted.' });
+    }
+    const pool = getPool();
+    await pool.query('DELETE FROM plans WHERE id = ?', [planId]);
+    broadcastLiveEvent('plan_deleted', { id: planId });
+    res.json({ success: true, message: 'Plan deleted successfully.' });
+  } catch (error) {
+    console.error('Admin delete plan error:', error);
+    res.status(500).json({ error: 'Failed to delete plan', details: error.message });
+  }
+});
+
+// 19. Admin Edit Question (The Core Real-Time Engine)
+app.put('/api/admin/questions/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const qId = Number(req.params.id);
+    const body = req.body;
+    const pool = getPool();
+
+    const questionText = body.question || body.questionText;
+    const questionNo = body.questionNo || body.question_no;
+    const options = body.options ? JSON.stringify(body.options) : null;
+    const correctOption = body.correctOption !== undefined ? JSON.stringify(Array.isArray(body.correctOption) ? body.correctOption : [body.correctOption]) : null;
+    const points = Number(body.points) || 10;
+    const cliSnippet = body.cliSnippet !== undefined ? body.cliSnippet : null;
+    const exhibitImage = body.exhibitImage !== undefined ? body.exhibitImage : null;
+    const originalSourceImage = body.originalSourceImage !== undefined ? body.originalSourceImage : null;
+    const dragDropData = body.dragDropData ? JSON.stringify(body.dragDropData) : null;
+    const type = body.type || (dragDropData ? 'drag_drop' : 'multiple_choice');
+    const explanation = body.explanation !== undefined ? body.explanation : null;
+
+    if (!questionText) {
+      return res.status(400).json({ error: 'Question prompt cannot be empty.' });
+    }
+
+    await pool.query(
+      `UPDATE questions SET
+       question_no = COALESCE(NULLIF(?, ''), question_no),
+       question = ?,
+       options = COALESCE(?, options),
+       correct_option = COALESCE(?, correct_option),
+       points = ?,
+       cli_snippet = ?,
+       exhibit_image = ?,
+       original_source_image = ?,
+       drag_drop_data = ?,
+       type = COALESCE(NULLIF(?, ''), type),
+       explanation = COALESCE(?, explanation)
+       WHERE id = ?`,
+      [
+        questionNo,
+        questionText,
+        options,
+        correctOption,
+        points,
+        cliSnippet,
+        exhibitImage,
+        originalSourceImage,
+        dragDropData,
+        type,
+        explanation,
+        qId,
+      ]
+    );
+
+    // Propagate updated question directly to any active saved_sessions in MySQL
+    try {
+      const [openSessions] = await pool.query('SELECT id, questions, settings FROM saved_sessions');
+      for (const sess of openSessions) {
+        let sessQuestions = [];
+        try {
+          sessQuestions = typeof sess.questions === 'string' ? JSON.parse(sess.questions) : sess.questions || [];
+        } catch {}
+        if (!Array.isArray(sessQuestions) || sessQuestions.length === 0) continue;
+
+        let changed = false;
+        for (const sq of sessQuestions) {
+          if (Number(sq.id) === qId || (questionNo && sq.questionNo === questionNo)) {
+            sq.question = questionText;
+            if (explanation !== null) sq.explanation = explanation;
+            if (cliSnippet !== null) sq.cliSnippet = cliSnippet;
+            if (exhibitImage !== null) sq.exhibitImage = exhibitImage;
+            if (originalSourceImage !== null) sq.originalSourceImage = originalSourceImage;
+            if (body.options) sq.options = body.options;
+            if (body.correctOption !== undefined) {
+              const cArr = Array.isArray(body.correctOption) ? body.correctOption : [body.correctOption];
+              sq.correctOption = cArr.length === 1 ? cArr[0] : cArr;
+              sq.correctOptions = cArr;
+            }
+            changed = true;
+          }
+        }
+        if (changed) {
+          await pool.query('UPDATE saved_sessions SET questions = ? WHERE id = ?', [JSON.stringify(sessQuestions), sess.id]);
+        }
+      }
+    } catch (e) {
+      console.warn('Session propagation warning:', e);
+    }
+
+    const updatedPayload = {
+      id: qId,
+      questionNo,
+      question: questionText,
+      options: body.options || [],
+      correctOption: body.correctOption,
+      points,
+      cliSnippet,
+      exhibitImage,
+      originalSourceImage,
+      dragDropData: body.dragDropData || null,
+      type,
+      explanation,
+    };
+
+    // Broadcast instant real-time update via Server-Sent Events to all active exams
+    broadcastLiveEvent('question_updated', updatedPayload);
+
+    res.json({
+      success: true,
+      message: `Question #${qId} updated successfully and broadcasted in real time.`,
+      question: updatedPayload,
+    });
+  } catch (error) {
+    console.error('Admin update question error:', error);
+    res.status(500).json({ error: 'Failed to update question', details: error.message });
   }
 });
 

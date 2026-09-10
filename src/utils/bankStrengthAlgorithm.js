@@ -176,26 +176,20 @@ export function calculateBankStats(bankKey, pastExams = [], currentUser = null) 
   }
   const recencyWeightedScore = totalWeight > 0 ? weightedScoreSum / totalWeight : averageScore;
 
-  // 2. Base strength: 70% weighted score + 30% pass consistency
-  let baseStrength = 0.70 * recencyWeightedScore + 0.30 * passRate;
+  // 2. Bank mastery percentage:
+  // Reflects the candidate's actual accuracy/performance score on this bank
+  // (recency-weighted across attempts, or exact attempt score if single attempt),
+  // ensuring the displayed percentage always matches the candidate's real exam score.
+  const strengthScore = Math.min(100, Math.max(0, Math.round(recencyWeightedScore)));
 
-  // 3. Trend bonus / penalty
+  // 3. Trend detection
   let trend = 0;
-  let trendBonus = 0;
   if (totalAttempts >= 2) {
     const prevAvg = scores.slice(0, -1).reduce((a, b) => a + b, 0) / (totalAttempts - 1);
     trend = latestScore - prevAvg;
-    if (trend > 10) {
-      trendBonus = 3; // Recent significant improvement
-    } else if (trend < -10) {
-      trendBonus = -3; // Recent drop
-    }
   }
 
-  // 4. Final Strength Score (clamped 0 to 100)
-  const strengthScore = Math.min(100, Math.max(0, Math.round(baseStrength + trendBonus)));
-
-  // 5. Tier & Intervention Status
+  // 4. Tier & Intervention Status
   // Conditions for needing intervention:
   // - Strength score < 70%
   // - OR latest attempt failed when user has 2+ attempts
@@ -208,7 +202,7 @@ export function calculateBankStats(bankKey, pastExams = [], currentUser = null) 
   let strengthLabel = "Moderate";
   let interventionMessage = "Approaching passing standard (82.5%). Practice recommended.";
 
-  if (strengthScore >= 85 && latestPassed) {
+  if (strengthScore >= PASSING_PERCENTAGE && latestPassed) {
     strengthTier = "strong";
     strengthTierClass = "tier-strong";
     strengthLabel = "Strong";

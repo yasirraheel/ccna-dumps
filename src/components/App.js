@@ -12,48 +12,38 @@ import MobileBottomBar from "./MobileBottomBar";
 import AdminLayout from "./Admin/AdminLayout";
 import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
-import { ccnaQuestions } from "../data/ccnaQuestions";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 import { enrichQuestionsList } from "../utils/questionSourceHelper";
-import { applyQuestionOverrides } from "../utils/questionSync";
+import { applyQuestionOverrides, getRealtimeChannel } from "../utils/questionSync";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api" : "/api");
-const SESSIONS_STORAGE_KEY = "ccna_saved_sessions_list";
-const HISTORY_STORAGE_KEY = "ccna_past_exams_list";
-const ACTIVE_RUNNING_SESSION_KEY = "ccna_active_running_session";
-const ACTIVE_RUNNING_SESSION_ID_KEY = "ccna_active_running_session_id";
-const FINISHED_SESSIONS_STORAGE_KEY = "ccna_finished_session_ids";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "/api";
+
+// In-memory set of finished session IDs - zero localStorage caching
+const finishedSessionIdsSet = new Set();
+
+export function markExamFinishedId(id) {
+  if (id) finishedSessionIdsSet.add(String(id));
+}
 
 export function isExamFinishedId(targetId) {
   if (!targetId) return false;
-  try {
-    const finishedIds = JSON.parse(localStorage.getItem(FINISHED_SESSIONS_STORAGE_KEY) || "[]");
-    if (Array.isArray(finishedIds) && finishedIds.includes(targetId)) return true;
-    const past = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
-    if (Array.isArray(past) && past.some((p) => p.id === targetId || p.sessionId === targetId || p.activeSessionId === targetId)) {
-      return true;
-    }
-  } catch {}
-  return false;
+  return finishedSessionIdsSet.has(String(targetId));
 }
 
-export function syncActiveSessionToLocalStorage(sessionData) {
+export function syncActiveSessionToServer(sessionData) {
   if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
     return;
   }
   try {
-    localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-    localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-    localStorage.removeItem(SESSIONS_STORAGE_KEY);
-    localStorage.removeItem("ccna_question_overrides");
-  } catch {}
-
-  try {
     fetch(`${API_BASE_URL}/sessions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      },
       body: JSON.stringify(sessionData),
       keepalive: true,
     })
@@ -71,37 +61,13 @@ export function syncActiveSessionToLocalStorage(sessionData) {
   } catch (e) {}
 }
 
+export const syncActiveSessionToLocalStorage = syncActiveSessionToServer;
+
 function getInitialExamState() {
-  const path = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
-  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const isExamUrl = path === "/exam" || path.startsWith("/exam") || search?.get("view") === "exam";
-  const urlId = search?.get("id") || search?.get("sessionId") || null;
-  const isReviewUrl = search?.get("review") === "1" || search?.get("mode") === "review";
-
-  try {
-    localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-    localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-    localStorage.removeItem(SESSIONS_STORAGE_KEY);
-    localStorage.removeItem("ccna_question_overrides");
-  } catch {}
-
-  // If visiting an exam URL whose session/exam has already finished and NOT in review mode:
-  if (isExamUrl && urlId && !isReviewUrl && isExamFinishedId(urlId)) {
-    try {
-      sessionStorage.setItem(
-        "ccna_redirect_notice",
-        JSON.stringify({
-          title: "Exam Already Finished",
-          message: "This exam session has already been completed and graded. Completed exams cannot be resumed. You can review your results, full explanations, and score report in Exam History.",
-        })
-      );
-    } catch {}
-  }
-
   return {
-    allQuestions: ccnaQuestions || [],
-    questions: ccnaQuestions || [],
-    status: isExamUrl ? "loading" : (ccnaQuestions?.length > 0 ? "ready" : "loading"),
+    allQuestions: [],
+    questions: [],
+    status: "loading",
     index: 0,
     answer: null,
     answers: [],
@@ -134,7 +100,7 @@ const initialState = getInitialExamState();
 function reducer(state, action) {
   switch (action.type) {
     case "dataReceived": {
-      const overriddenPayload = applyQuestionOverrides(action.payload);
+      const overriddenPayload = enrichQuestionsList(applyQuestionOverrides(action.payload));
       if (state.status === "active") {
         const isRandomized = Boolean(state.settings?.randomizeAnswers);
         const stripPrefix = (str) =>
@@ -185,6 +151,7 @@ function reducer(state, action) {
               cliSnippet: found.cliSnippet || q.cliSnippet,
               points: found.points || q.points || 10,
               dragDropData: found.dragDropData || q.dragDropData,
+              explanation: found.explanation || q.explanation,
             };
           }
 
@@ -196,6 +163,7 @@ function reducer(state, action) {
             correctOption: found.correctOption,
             correctOptions: found.correctOptions,
             question: found.question,
+            explanation: found.explanation || q.explanation,
           };
         });
         const updatedPoints = calculateTotalPoints(patchedRunning, state.answers);
@@ -206,6 +174,16 @@ function reducer(state, action) {
           points: updatedPoints,
         };
       }
+
+      if (state.status === "finished") {
+        // Exam is finished and user is viewing the score report.
+        // Never overwrite state.questions with allQuestions, preserving accurate score calculations!
+        return {
+          ...state,
+          allQuestions: overriddenPayload,
+        };
+      }
+
       const isExamRoute =
         typeof window !== "undefined" &&
         (window.location.pathname.toLowerCase().includes("/exam") ||
@@ -251,9 +229,6 @@ function reducer(state, action) {
 
       const startTime = Date.now();
       const newSessionId = `session_${startTime}`;
-      try {
-        localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, newSessionId);
-      } catch {}
 
       return {
         ...state,
@@ -307,9 +282,6 @@ function reducer(state, action) {
       }
 
       const finalSessionId = activeSessionId || `session_${initialStartTime}`;
-      try {
-        localStorage.setItem(ACTIVE_RUNNING_SESSION_ID_KEY, finalSessionId);
-      } catch {}
 
       const finalQuestions = applyQuestionOverrides(questions);
 
@@ -705,10 +677,6 @@ function reducer(state, action) {
     }
 
     case "finish": {
-      try {
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-      } catch {}
       const finalPoints = calculateTotalPoints(state.questions, state.answers);
       return {
         ...state,
@@ -721,7 +689,8 @@ function reducer(state, action) {
     }
 
     case "updateQuestion": {
-      const updatedQ = action.payload;
+      const updatedQ = action.payload?.question || action.payload;
+      if (!updatedQ) return state;
       const isMatch = (q) =>
         Boolean(
           q &&
@@ -783,10 +752,6 @@ function reducer(state, action) {
     }
 
     case "restart": {
-      try {
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-      } catch {}
       return {
         ...initialState,
         allQuestions: state.allQuestions,
@@ -800,12 +765,6 @@ function reducer(state, action) {
       if (state.isPaused) return state;
       const nextSeconds = state.secondsRemaining - 1;
       const isTimeUp = nextSeconds <= 0;
-      if (isTimeUp) {
-        try {
-          localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-          localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-        } catch {}
-      }
       return {
         ...state,
         secondsRemaining: isTimeUp ? 0 : nextSeconds,
@@ -1179,17 +1138,9 @@ export default function App() {
     return localStorage.getItem("ccna_candidate_name") || "Candidate";
   });
 
-  const [flaggedQuestions, setFlaggedQuestions] = useState(() => {
-    try {
-      const direct = localStorage.getItem(ACTIVE_RUNNING_SESSION_KEY);
-      if (direct) {
-        const s = JSON.parse(direct);
-        if (Array.isArray(s?.flaggedQuestions)) return s.flaggedQuestions;
-      }
-    } catch {}
-    return [];
-  });
+  const [flaggedQuestions, setFlaggedQuestions] = useState([]);
   const hasSavedRef = useRef(false);
+  const lastFinishedRecordRef = useRef(null);
   const candidateNameVal = currentUser?.name || candidateName;
 
   useEffect(() => {
@@ -1280,31 +1231,43 @@ export default function App() {
   // Validate session on launch
   useEffect(() => {
     const token = localStorage.getItem("ccna_auth_token");
-    if (token) {
-      fetch(`${API_BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+    })();
+    const userQuery = storedUser.id
+      ? `?userId=${encodeURIComponent(storedUser.id)}&userEmail=${encodeURIComponent(storedUser.email || "")}&_t=${Date.now()}`
+      : storedUser.email
+      ? `?userEmail=${encodeURIComponent(storedUser.email)}&_t=${Date.now()}`
+      : `?_t=${Date.now()}`;
+
+    const headers = {
+      "Accept": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    if (token || storedUser.email || storedUser.id) {
+      fetch(`${API_BASE_URL}/auth/me${userQuery}`, { headers })
         .then((res) => res.json())
         .then((data) => {
           if (data.user) {
             setCurrentUser(data.user);
             setCandidateName(data.user.name);
-            localStorage.setItem("ccna_auth_user", JSON.stringify(data.user));
+            try {
+              localStorage.setItem("ccna_auth_user", JSON.stringify(data.user));
+            } catch {}
           }
         })
         .catch(() => {});
     }
 
-    fetch(`${API_BASE_URL}/plans`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.plans) {
-          try {
-            localStorage.setItem("ccna_cached_plans", JSON.stringify(data.plans));
-          } catch {}
-        }
-      })
-      .catch(() => {});
+    fetch(`${API_BASE_URL}/plans`, {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      },
+    }).catch(() => {});
   }, []);
 
   const handleOpenAuth = (mode = "login") => {
@@ -1350,21 +1313,8 @@ export default function App() {
   // Multi-session state - pure server authority, zero localStorage caching
   const [savedSessions, setSavedSessions] = useState([]);
 
-  // Past completed exams history state
-  const [pastExams, setPastExams] = useState(() => {
-    try {
-      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed)
-        ? parsed.map((item) => ({
-            ...item,
-            questions: enrichQuestionsList(item.questions),
-          }))
-        : [];
-    } catch {
-      return [];
-    }
-  });
+  // Past completed exams history state - pure in-memory, populated directly from MySQL
+  const [pastExams, setPastExams] = useState([]);
 
   // 1. Fresh Dashboard Data Loader (always bypasses cache with timestamp)
   const [isDashboardLoading, setIsDashboardLoading] = useState(() => {
@@ -1374,19 +1324,26 @@ export default function App() {
 
   const loadFreshDashboardData = useCallback(() => {
     const cacheBuster = `_t=${Date.now()}`;
-    const token = localStorage.getItem("ccna_auth_token") || localStorage.getItem("ccna_token") || localStorage.getItem("token");
+    const token = localStorage.getItem("ccna_auth_token");
     const headers = {
+      "Accept": "application/json",
       "Cache-Control": "no-cache, no-store, must-revalidate",
-      "Pragma": "no-cache",
+      Pragma: "no-cache",
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const userQuery = currentUser?.id && currentUser?.email
-      ? `?userId=${encodeURIComponent(currentUser.id)}&userEmail=${encodeURIComponent(currentUser.email)}&${cacheBuster}`
-      : currentUser?.id
-      ? `?userId=${encodeURIComponent(currentUser.id)}&${cacheBuster}`
-      : currentUser?.email
-      ? `?userEmail=${encodeURIComponent(currentUser.email)}&${cacheBuster}`
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+    })();
+    const targetUserId = currentUser?.id || storedUser.id || "";
+    const targetUserEmail = currentUser?.email || storedUser.email || "";
+
+    const userQuery = targetUserId && targetUserEmail
+      ? `?userId=${encodeURIComponent(targetUserId)}&userEmail=${encodeURIComponent(targetUserEmail)}&${cacheBuster}`
+      : targetUserId
+      ? `?userId=${encodeURIComponent(targetUserId)}&${cacheBuster}`
+      : targetUserEmail
+      ? `?userEmail=${encodeURIComponent(targetUserEmail)}&${cacheBuster}`
       : `?${cacheBuster}`;
 
     setIsDashboardLoading(true);
@@ -1407,14 +1364,16 @@ export default function App() {
       .then((res) => res.json())
       .then((data) => {
         if (data.history && Array.isArray(data.history)) {
-          const enrichedHistory = data.history.map((item) => ({
-            ...item,
-            questions: enrichQuestionsList(item.questions),
-          }));
+          const enrichedHistory = data.history.map((item) => {
+            if (item.id) markExamFinishedId(item.id);
+            if (item.sessionId) markExamFinishedId(item.sessionId);
+            if (item.activeSessionId) markExamFinishedId(item.activeSessionId);
+            return {
+              ...item,
+              questions: enrichQuestionsList(item.questions),
+            };
+          });
           setPastExams(enrichedHistory);
-          try {
-            localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(enrichedHistory));
-          } catch {}
         }
       })
       .catch(() => {});
@@ -1431,13 +1390,7 @@ export default function App() {
             if (s.questions?.length > 0 && ansCount >= s.questions.length) return false;
             return true;
           });
-
           setSavedSessions(cleanSessions);
-          try {
-            localStorage.removeItem(SESSIONS_STORAGE_KEY);
-            localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-            localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-          } catch {}
         }
       })
       .catch(() => {});
@@ -1445,25 +1398,17 @@ export default function App() {
     // 1.4 Fresh Plans
     const pPlans = fetch(`${API_BASE_URL}/plans?${cacheBuster}`, { headers })
       .then((res) => res.json())
-      .then((data) => {
-        if (data && data.plans) {
-          try {
-            localStorage.setItem("ccna_cached_plans", JSON.stringify(data.plans));
-          } catch {}
-        }
-      })
       .catch(() => {});
 
-    // 1.5 Fresh user profile if token exists
+    // 1.5 Fresh user profile if token or user exists
     let pUser = Promise.resolve();
-    if (token) {
-      pUser = fetch(`${API_BASE_URL}/auth/me?${cacheBuster}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    if (token || currentUser?.email || currentUser?.id) {
+      pUser = fetch(`${API_BASE_URL}/auth/me${userQuery}`, { headers })
         .then((res) => res.json())
         .then((data) => {
           if (data.user) {
             setCurrentUser(data.user);
+            setCandidateName(data.user.name);
             try {
               localStorage.setItem("ccna_auth_user", JSON.stringify(data.user));
             } catch {}
@@ -1479,14 +1424,25 @@ export default function App() {
     });
   }, [currentUser?.id, currentUser?.email]);
 
-  // 1.1 Initial bundle load
+  // 1.1 Initial question load from server
   useEffect(() => {
-    if (ccnaQuestions && ccnaQuestions.length > 0) {
-      dispatch({ type: "dataReceived", payload: ccnaQuestions });
-    }
+    fetch(`${API_BASE_URL}/questions?_t=${Date.now()}`, {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const qList = Array.isArray(data) ? data : data?.questions || [];
+        if (qList.length > 0) {
+          dispatch({ type: "dataReceived", payload: qList });
+        }
+      })
+      .catch(() => {});
   }, []);
 
-  // 1.15 Listen for real-time question update broadcasts
+  // 1.15 Real-time updates: Listen to SSE, BroadcastChannel, and custom DOM events
   useEffect(() => {
     const handleLiveQuestionUpdate = (e) => {
       if (e?.detail) {
@@ -1494,17 +1450,66 @@ export default function App() {
       }
     };
     window.addEventListener("ccna_question_updated", handleLiveQuestionUpdate);
+
+    let evtSource = null;
+    try {
+      evtSource = new EventSource(`${API_BASE_URL}/events`);
+      evtSource.addEventListener("question_updated", (e) => {
+        try {
+          const q = JSON.parse(e.data);
+          if (q) {
+            dispatch({ type: "updateQuestion", payload: q });
+          }
+        } catch (err) {}
+      });
+      evtSource.addEventListener("plan_updated", () => {
+        loadFreshDashboardData();
+      });
+    } catch (e) {}
+
+    const ch = getRealtimeChannel();
+    const handleBroadcast = (e) => {
+      if (e?.data?.type === "question_updated" && e.data.question) {
+        dispatch({ type: "updateQuestion", payload: e.data.question });
+      }
+    };
+    if (ch) ch.addEventListener("message", handleBroadcast);
+
     return () => {
       window.removeEventListener("ccna_question_updated", handleLiveQuestionUpdate);
+      if (evtSource) evtSource.close();
+      if (ch) ch.removeEventListener("message", handleBroadcast);
     };
-  }, []);
+  }, [loadFreshDashboardData]);
 
-  // 1.2 Trigger fresh dashboard load on mount and whenever returning to dashboard / ready status
+  // Question navigation ("Next", "Previous", question palette) verifies/fetches questions live from the server
   useEffect(() => {
-    if (currentView === "dashboard" || status === "ready") {
+    if (status !== "active") return;
+    const currentQ = questions[index];
+    if (!currentQ) return;
+    const qId = currentQ.id || currentQ.questionNo;
+    if (!qId) return;
+
+    fetch(`${API_BASE_URL}/questions/${encodeURIComponent(qId)}?_t=${Date.now()}`, {
+      headers: { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache" },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const qObj = data?.question || data;
+        if (qObj && (qObj.id || qObj.questionNo)) {
+          dispatch({ type: "updateQuestion", payload: qObj });
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, index]);
+
+  // 1.2 Trigger fresh dashboard load on mount and whenever viewing dashboard / history / resume-exams
+  useEffect(() => {
+    if (currentView === "dashboard" || currentView === "history" || currentView === "resume-exams") {
       loadFreshDashboardData();
     }
-  }, [currentView, status, loadFreshDashboardData]);
+  }, [currentView, loadFreshDashboardData]);
 
   // *** EXAM TIMER COUNTDOWN ***
   useEffect(() => {
@@ -1579,12 +1584,6 @@ export default function App() {
         } else {
           updated = [finalSession, ...prev];
         }
-        try {
-          localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-          localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-          localStorage.removeItem(SESSIONS_STORAGE_KEY);
-          localStorage.removeItem("ccna_question_overrides");
-        } catch (e) {}
 
         // MySQL backend sync for active session tied to user
         fetch(`${API_BASE_URL}/sessions`, {
@@ -1671,41 +1670,21 @@ export default function App() {
         examMode,
       };
 
-      // Record this session ID as permanently finished
-      try {
-        const finishedList = JSON.parse(localStorage.getItem(FINISHED_SESSIONS_STORAGE_KEY) || "[]");
-        const arr = Array.isArray(finishedList) ? finishedList : [];
-        if (activeSessionId && !arr.includes(activeSessionId)) {
-          arr.push(activeSessionId);
-          localStorage.setItem(FINISHED_SESSIONS_STORAGE_KEY, JSON.stringify(arr.slice(-200)));
-        }
-      } catch {}
+      lastFinishedRecordRef.current = completedRecord;
 
-      setPastExams((prev) => {
-        const updated = [completedRecord, ...prev];
-        try {
-          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
-        } catch (e) {
-          console.warn("History save error:", e);
-        }
-        return updated;
-      });
+      // Record this session ID as permanently finished
+      if (activeSessionId) {
+        markExamFinishedId(activeSessionId);
+      }
+      if (completedRecord.id) {
+        markExamFinishedId(completedRecord.id);
+      }
+
+      setPastExams((prev) => [completedRecord, ...prev]);
 
       // Remove completed session from active sessions
-      try {
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-      } catch (e) {}
       if (activeSessionId) {
-        setSavedSessions((prev) => {
-          const updated = prev.filter((s) => s.id !== activeSessionId);
-          try {
-            localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated));
-          } catch (e) {
-            console.warn("Sessions clean error:", e);
-          }
-          return updated;
-        });
+        setSavedSessions((prev) => prev.filter((s) => s.id !== activeSessionId));
       }
 
       // MySQL backend sync: Save full attempt record linked to user
@@ -1754,8 +1733,23 @@ export default function App() {
   };
 
   const requireAuth = (callbackAction) => {
-    if (!currentUser || !currentUser.isVerified) {
-      setCurrentView(currentUser ? "auth-verify" : "auth-login");
+    const token = localStorage.getItem("ccna_auth_token");
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+    })();
+    const user = currentUser || (storedUser?.id ? storedUser : null);
+    const isVerified = Boolean(
+      user &&
+      (user.isVerified === true ||
+       user.isVerified === 1 ||
+       user.is_verified === 1 ||
+       user.is_verified === true ||
+       user.is_verified === "1" ||
+       user.role === "admin" ||
+       token)
+    );
+    if (!user || !isVerified) {
+      setCurrentView(user ? "auth-verify" : "auth-login");
       return false;
     }
     if (callbackAction) callbackAction();
@@ -1773,7 +1767,6 @@ export default function App() {
   };
 
   const handleResumeSession = (session) => {
-    if (!requireAuth()) return;
     if (!session) return;
 
     if (isExamFinishedId(session.id)) {
@@ -1926,7 +1919,11 @@ export default function App() {
     if (userObj.id) queryParams.set("userId", userObj.id);
     if (userObj.email) queryParams.set("userEmail", userObj.email);
 
-    const headers = { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache" };
+    const headers = {
+      "Accept": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+    };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     if (isReview) {
@@ -1959,25 +1956,17 @@ export default function App() {
         const session = urlSessionId ? list.find((s) => s.id === urlSessionId) : list[0];
         if (session && !isExamFinishedId(session.id)) {
           handleResumeSession(session);
-        } else {
+        } else if (!urlSessionId) {
           handleNavigate("dashboard");
         }
       })
-      .catch(() => {
-        handleNavigate("dashboard");
+      .catch((err) => {
+        console.warn("Could not resume session from server:", err);
       });
   }, []);
 
   const handleDeleteSession = (sessionId) => {
-    setSavedSessions((prev) => {
-      const updated = prev.filter((s, idx) => s.id !== sessionId && idx !== sessionId);
-      try {
-        localStorage.removeItem(SESSIONS_STORAGE_KEY);
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_KEY);
-        localStorage.removeItem(ACTIVE_RUNNING_SESSION_ID_KEY);
-      } catch (e) {}
-      return updated;
-    });
+    setSavedSessions((prev) => prev.filter((s, idx) => s.id !== sessionId && idx !== sessionId));
 
     if (sessionId) {
       fetch(`${API_BASE_URL}/sessions/${sessionId}`, { method: "DELETE" }).catch(() => {});
@@ -1986,17 +1975,13 @@ export default function App() {
 
   const handleClearHistory = async () => {
     setPastExams([]);
-    try {
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([]));
-    } catch {}
 
     const queryParams = new URLSearchParams();
     if (currentUser?.id) queryParams.append("userId", currentUser.id);
     if (currentUser?.email) queryParams.append("userEmail", currentUser.email);
     queryParams.append("_t", Date.now().toString());
 
-    const token = localStorage.getItem("ccna_auth_token") || localStorage.getItem("ccna_token") || localStorage.getItem("token");
+    const token = localStorage.getItem("ccna_auth_token");
     const headers = {
       "Content-Type": "application/json",
       "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -2016,27 +2001,13 @@ export default function App() {
     } catch (err) {
       console.warn("Failed to clear history on server:", err);
     }
-
-    setPastExams([]);
-    try {
-      localStorage.removeItem(HISTORY_STORAGE_KEY);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([]));
-    } catch {}
   };
 
   const handleDeleteHistoryRecord = async (recordId) => {
     if (!recordId) return;
-    setPastExams((prev) => {
-      const updated = prev.filter((r) => r.id !== recordId && r.sessionId !== recordId);
-      try {
-        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.warn("History delete error:", e);
-      }
-      return updated;
-    });
+    setPastExams((prev) => prev.filter((r) => r.id !== recordId && r.sessionId !== recordId));
 
-    const token = localStorage.getItem("ccna_auth_token") || localStorage.getItem("ccna_token") || localStorage.getItem("token");
+    const token = localStorage.getItem("ccna_auth_token");
     const headers = {
       "Cache-Control": "no-cache, no-store, must-revalidate",
       "Pragma": "no-cache",
@@ -2285,6 +2256,11 @@ export default function App() {
     );
   }
 
+  const storedAuthUser = (() => {
+    try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "null"); } catch { return null; }
+  })();
+  const effectiveUser = currentUser || storedAuthUser;
+
   return (
     <div className="cisco-simulator-root">
       <div className="simulator-app-container">
@@ -2314,20 +2290,20 @@ export default function App() {
               totalQuestionsCount={allQuestions.length}
               allQuestions={allQuestions}
               onStartExam={handleStartExam}
-              candidateName={currentUser?.name || candidateName}
+              candidateName={effectiveUser?.name || candidateName}
               setCandidateName={setCandidateName}
-              savedSession={currentUser && savedSessions.length > 0 ? savedSessions[0] : null}
-              savedSessions={currentUser ? savedSessions : []}
+              savedSession={savedSessions.length > 0 ? savedSessions[0] : null}
+              savedSessions={savedSessions}
               onResumeExam={handleResumeSession}
               onDiscardSavedSession={() => handleDeleteSession(savedSessions[0]?.id)}
               onNavigate={handleNavigate}
-              pastExams={currentUser ? pastExams : []}
+              pastExams={pastExams}
               onReviewExam={handleReviewCompletedExam}
               onRetakeExam={handleRetakeAllQuestions}
               onRetakeAll={handleRetakeAllQuestions}
               onRetakeFlagged={handleRetakeFlaggedOnly}
               onRetakeIncorrect={handleRetakeIncorrectOnly}
-              currentUser={currentUser}
+              currentUser={effectiveUser}
               onOpenAuth={handleOpenAuth}
               onLogout={handleLogout}
               onOpenUpgrade={handleOpenUpgrade}
@@ -2337,12 +2313,12 @@ export default function App() {
 
         {status === "ready" && currentView === "resume-exams" && (
           <ResumeExamsView
-            savedSessions={currentUser ? savedSessions : []}
+            savedSessions={savedSessions}
             onResumeSession={handleResumeSession}
             onDeleteSession={handleDeleteSession}
             onNavigate={handleNavigate}
-            candidateName={currentUser?.name || candidateName}
-            currentUser={currentUser}
+            candidateName={effectiveUser?.name || candidateName}
+            currentUser={effectiveUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
           />
@@ -2350,7 +2326,7 @@ export default function App() {
 
         {status === "ready" && currentView === "history" && (
           <ExamHistoryView
-            pastExams={currentUser ? pastExams : []}
+            pastExams={pastExams}
             onNavigate={handleNavigate}
             candidateName={candidateName}
             onClearHistory={handleClearHistory}
@@ -2359,7 +2335,7 @@ export default function App() {
             onRetakeFlagged={handleRetakeFlaggedOnly}
             onRetakeIncorrect={handleRetakeIncorrectOnly}
             onDeleteRecord={handleDeleteHistoryRecord}
-            currentUser={currentUser}
+            currentUser={effectiveUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
           />
@@ -2462,23 +2438,27 @@ export default function App() {
         {/* 3. FINISH / SCORE REPORT */}
         {status === "finished" && (
           <FinishScreen
-            points={points}
-            maxPossiblePoints={maxPossiblePoints}
+            points={lastFinishedRecordRef.current?.score ?? points}
+            maxPossiblePoints={lastFinishedRecordRef.current?.maxScore ?? maxPossiblePoints}
             highscore={highscore}
             candidateName={candidateName}
             dispatch={dispatch}
-            numQuestions={numQuestions}
-            answers={answers}
-            questions={questions}
-            flaggedQuestions={flaggedQuestions}
-            examMode={examMode}
-            selectedBankName={selectedBankName}
-            onClose={() => handleNavigate("dashboard")}
+            numQuestions={lastFinishedRecordRef.current?.totalQuestions ?? numQuestions}
+            answers={lastFinishedRecordRef.current?.answers ?? answers}
+            questions={lastFinishedRecordRef.current?.questions ?? questions}
+            flaggedQuestions={lastFinishedRecordRef.current?.flaggedQuestions ?? flaggedQuestions}
+            examMode={lastFinishedRecordRef.current?.examMode ?? examMode}
+            selectedBankName={lastFinishedRecordRef.current?.bankName ?? selectedBankName}
+            onClose={() => {
+              dispatch({ type: "restart" });
+              handleNavigate("dashboard");
+              loadFreshDashboardData();
+            }}
             backButtonLabel="⌂ Back to Exam Selection"
-            onReviewExam={() => handleReviewCompletedExam(null)}
-            onRetakeAll={() => handleRetakeAllQuestions(null)}
-            onRetakeFlagged={() => handleRetakeFlaggedOnly(null)}
-            onRetakeIncorrect={() => handleRetakeIncorrectOnly(null)}
+            onReviewExam={() => handleReviewCompletedExam(lastFinishedRecordRef.current || null)}
+            onRetakeAll={() => handleRetakeAllQuestions(lastFinishedRecordRef.current || null)}
+            onRetakeFlagged={() => handleRetakeFlaggedOnly(lastFinishedRecordRef.current || null)}
+            onRetakeIncorrect={() => handleRetakeIncorrectOnly(lastFinishedRecordRef.current || null)}
           />
         )}
 

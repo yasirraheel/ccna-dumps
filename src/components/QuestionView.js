@@ -5,7 +5,7 @@ import CustomConfirmModal from "./CustomConfirmModal";
 import QuestionNotesModal from "./QuestionNotesModal";
 import EditQuestionModal from "./Admin/EditQuestionModal";
 import MobileBottomBar from "./MobileBottomBar";
-import { resolveOriginalSourceImage } from "../utils/questionSourceHelper";
+import { resolveOriginalSourceImage, resolveExplanation } from "../utils/questionSourceHelper";
 import { calculateTotalPoints } from "../utils/examScoring";
 
 function renderFormattedPrompt(rawText) {
@@ -122,29 +122,14 @@ function QuestionView({
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
-  const [showOriginalSource, setShowOriginalSource] = useState(() => {
-    try {
-      return localStorage.getItem("ccna_show_original_source") === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [showOriginalSource, setShowOriginalSource] = useState(false);
 
   const handleToggleOriginalSource = () => {
-    setShowOriginalSource((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("ccna_show_original_source", String(next));
-      } catch {}
-      return next;
-    });
+    setShowOriginalSource((prev) => !prev);
   };
 
   const handleCloseOriginalSource = () => {
     setShowOriginalSource(false);
-    try {
-      localStorage.setItem("ccna_show_original_source", "false");
-    } catch {}
   };
 
   const [sourceZoom, setSourceZoom] = useState(1);
@@ -168,35 +153,68 @@ function QuestionView({
   const [isAllNotesModalOpen, setIsAllNotesModalOpen] = useState(false);
   const [currentNoteText, setCurrentNoteText] = useState("");
 
-  const [questionComments, setQuestionComments] = useState(() => {
-    try {
-      const stored = localStorage.getItem("ccna_question_comments");
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [questionComments, setQuestionComments] = useState({});
 
-  // Filter notes strictly to questions belonging to the currently active exam bank
+  // Fetch live candidate notes from MySQL database (strict per-user privacy isolation)
+  useEffect(() => {
+    const fetchLiveNotes = async () => {
+      try {
+        const storedUser = (() => {
+          try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+        })();
+        const uid = currentUser?.id || storedUser?.id;
+        const uemail = currentUser?.email || storedUser?.email;
+        const token = localStorage.getItem("ccna_auth_token") || "";
+
+        // If no user is authenticated, clear notes so guests/anonymous users never see private user notes
+        if (!uid && !uemail && !token) {
+          setQuestionComments({});
+          return;
+        }
+
+        const query = uid
+          ? `?userId=${encodeURIComponent(uid)}&userEmail=${encodeURIComponent(uemail || "")}&_t=${Date.now()}`
+          : uemail
+          ? `?userEmail=${encodeURIComponent(uemail)}&_t=${Date.now()}`
+          : `?_t=${Date.now()}`;
+
+        const headers = { Accept: "application/json", "Cache-Control": "no-cache" };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`/api/notes${query}`, { headers });
+        const data = await res.json();
+        if (data && data.notes) {
+          setQuestionComments(data.notes);
+        } else {
+          setQuestionComments({});
+        }
+      } catch (err) {
+        setQuestionComments({});
+      }
+    };
+    fetchLiveNotes();
+  }, [currentUser?.id, currentUser?.email]);
+
+  // Filter notes strictly to questions belonging to the currently active exam bank (no duplicates)
   const currentBankNotes = useMemo(() => {
     if (!Array.isArray(questions) || questions.length === 0) return {};
     const bankNotes = {};
-    const bankQIds = new Set(
-      questions
-        .map((q) => (q?.id !== undefined && q?.id !== null ? String(q.id) : null))
-        .filter(Boolean)
-    );
-    const bankQNos = new Set(
-      questions
-        .map((q) => (q?.questionNo ? String(q.questionNo) : null))
-        .filter(Boolean)
-    );
 
-    Object.entries(questionComments).forEach(([key, text]) => {
-      if (!text || !text.trim()) return;
-      const strKey = String(key);
-      if (bankQIds.has(strKey) || bankQNos.has(strKey)) {
-        bankNotes[key] = text;
+    questions.forEach((q) => {
+      if (!q) return;
+      const qId = q?.id !== undefined && q?.id !== null ? String(q.id) : null;
+      const qNo = q?.questionNo ? String(q.questionNo) : null;
+
+      const noteText =
+        (qId && questionComments[qId]) ||
+        (qNo && questionComments[qNo]) ||
+        "";
+
+      if (noteText && noteText.trim().length > 0) {
+        const canonicalKey = qId || qNo;
+        bankNotes[canonicalKey] = noteText.trim();
       }
     });
 
@@ -396,22 +414,23 @@ function QuestionView({
       delete updated[questionKey];
     }
     setQuestionComments(updated);
-    try {
-      localStorage.setItem("ccna_question_comments", JSON.stringify(updated));
-    } catch (e) {
-      console.warn("Save note error:", e);
-    }
 
     // MySQL sync with userId / userEmail
     if (question?.id) {
-      const notesApi = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api/notes" : "/api/notes";
-      fetch(notesApi, {
+      const storedUser = (() => {
+        try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+      })();
+      const token = localStorage.getItem("ccna_auth_token") || "";
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      fetch("/api/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
-          userId: currentUser?.id || null,
-          userEmail: currentUser?.email || null,
-          candidateName: currentUser?.name || candidateName || "Candidate",
+          userId: currentUser?.id || storedUser?.id || null,
+          userEmail: currentUser?.email || storedUser?.email || null,
+          candidateName: currentUser?.name || storedUser?.name || candidateName || "Candidate",
           questionId: question.id,
           questionNo: question.questionNo || `Question #${question.id}`,
           noteText: trimmed,
@@ -432,23 +451,24 @@ function QuestionView({
       setCurrentNoteText("");
       setIsNoteBoxOpen(false);
     }
-    try {
-      localStorage.setItem("ccna_question_comments", JSON.stringify(updated));
-    } catch (e) {
-      console.warn("Delete note error:", e);
-    }
 
     // MySQL sync
     const qId = Number(targetKey) || question?.id;
     if (qId) {
-      const notesApi = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:5000/api/notes" : "/api/notes";
-      fetch(notesApi, {
+      const storedUser = (() => {
+        try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+      })();
+      const token = localStorage.getItem("ccna_auth_token") || "";
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      fetch("/api/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
-          userId: currentUser?.id || null,
-          userEmail: currentUser?.email || null,
-          candidateName: currentUser?.name || candidateName || "Candidate",
+          userId: currentUser?.id || storedUser?.id || null,
+          userEmail: currentUser?.email || storedUser?.email || null,
+          candidateName: currentUser?.name || storedUser?.name || candidateName || "Candidate",
           questionId: qId,
           questionNo: question?.questionNo || `Question #${qId}`,
           noteText: "",
@@ -569,13 +589,6 @@ function QuestionView({
     return calculateTotalPoints(questions, filteredAnswers);
   }, [questions, answers, evaluatedIndices]);
 
-  const evaluatedMaxPoints = useMemo(() => {
-    if (!questions || evaluatedIndices.length === 0) return 0;
-    return evaluatedIndices.reduce((sum, idx) => {
-      const q = questions[idx];
-      return sum + (q?.points || 10);
-    }, 0);
-  }, [questions, evaluatedIndices]);
 
   // Points earned: strictly reflects evaluated questions (committed via Next or revealed via Show Answer)
   // Current active uncommitted question is strictly excluded so score NEVER updates on mere option selection
@@ -1338,7 +1351,7 @@ function QuestionView({
         )}
 
         {/* SHOW ANSWER INLINE BANNER */}
-        {(isReviewMode || ((isRevealed || isCommitted) && settings?.showAnswersInline !== false)) && !isDragDrop && (
+        {(isReviewMode || isRevealed || (isCommitted && settings?.showAnswersInline !== false)) && !isDragDrop && (
           <div className="boson-explanation-card">
             <div className="explanation-title">
               💡 <strong>Correct Answer & Explanation:</strong>
@@ -1358,6 +1371,17 @@ function QuestionView({
                   );
                 })}
               </div>
+
+              {(question.explanation || resolveExplanation(question)) && (
+                <div className="question-explanation-text" style={{ marginTop: "1.1rem", paddingTop: "0.95rem", borderTop: "1px solid rgba(255,255,255,0.18)" }}>
+                  <div style={{ fontWeight: 700, color: "#38bdf8", marginBottom: "0.5rem", fontSize: "1.3rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span>📖</span> Explanation & Key Concept:
+                  </div>
+                  <div style={{ color: "#f8fafc", fontSize: "1.35rem", lineHeight: "1.65", whiteSpace: "pre-line" }}>
+                    {question.explanation || resolveExplanation(question)}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

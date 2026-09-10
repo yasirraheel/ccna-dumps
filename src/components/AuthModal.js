@@ -586,6 +586,11 @@ function AuthModal({ isOpen, onClose, currentUser, onAuthSuccess, onLogout, init
                   We have sent a 6-digit verification code to{" "}
                   <strong>{pendingEmail}</strong>. Enter it below to activate your account.
                 </p>
+                {devOtpHint && (
+                  <p style={{ color: "#38bdf8", fontSize: "12px", marginTop: "4px" }}>
+                    Development OTP: <strong>{devOtpHint}</strong>
+                  </p>
+                )}
               </div>
 
               <div className="otp-boxes-wrapper" onPaste={handleOtpPaste}>

@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ccnaQuestions as ccnaQuestionsData } from '../../data/ccnaQuestions';
 import EditQuestionModal from './EditQuestionModal';
-import { applyQuestionOverrides } from '../../utils/questionSync';
+import { getRealtimeChannel } from '../../utils/questionSync';
 
 function AdminQuestions() {
   const [bankFilter, setBankFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [questionsList, setQuestionsList] = useState(() => applyQuestionOverrides(ccnaQuestionsData));
+  const [questionsList, setQuestionsList] = useState([]);
   const [toastMsg, setToastMsg] = useState('');
   const toastTimeoutRef = useRef(null);
 
@@ -19,15 +18,43 @@ function AdminQuestions() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/questions')
+    fetch('/api/questions', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         const qList = Array.isArray(data) ? data : data?.questions || [];
         if (qList.length > 0) {
-          setQuestionsList(applyQuestionOverrides(qList));
+          setQuestionsList(qList);
         }
       })
       .catch(() => {});
+
+    const handleQuestionUpdated = (e) => {
+      const updatedQ = e.detail;
+      if (!updatedQ) return;
+      setQuestionsList((prev) =>
+        prev.map((q) =>
+          ((updatedQ.id !== undefined && (q.id === updatedQ.id || String(q.id) === String(updatedQ.id))) ||
+           (updatedQ.questionNo && q.questionNo === updatedQ.questionNo))
+            ? { ...q, ...updatedQ }
+            : q
+        )
+      );
+    };
+
+    window.addEventListener("ccna_question_updated", handleQuestionUpdated);
+
+    const ch = getRealtimeChannel();
+    const handleBroadcast = (e) => {
+      if (e?.data?.type === "question_updated" && e.data.question) {
+        handleQuestionUpdated({ detail: e.data.question });
+      }
+    };
+    if (ch) ch.addEventListener("message", handleBroadcast);
+
+    return () => {
+      window.removeEventListener("ccna_question_updated", handleQuestionUpdated);
+      if (ch) ch.removeEventListener("message", handleBroadcast);
+    };
   }, []);
 
   const filterQuestions = () => {
@@ -83,7 +110,7 @@ function AdminQuestions() {
         <div className="admin-card-header">
           <div>
             <h3 className="admin-card-title">
-              <span>❓</span> Exam Question Bank ({filtered.length} of {ccnaQuestionsData.length})
+              <span>❓</span> Exam Question Bank ({filtered.length} of {questionsList.length})
             </h3>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
               Inspect and verify questions across Cisco 200-301 CCNA banks.
@@ -104,7 +131,7 @@ function AdminQuestions() {
               value={bankFilter}
               onChange={(e) => setBankFilter(e.target.value)}
             >
-              <option value="all">All Exam Banks ({ccnaQuestionsData.length})</option>
+              <option value="all">All Exam Banks ({questionsList.length})</option>
               <option value="bank_a">Exam A (Q 1-50)</option>
               <option value="bank_b">Exam B (Q 51-100)</option>
               <option value="bank_c">Exam C (Q 101-150)</option>

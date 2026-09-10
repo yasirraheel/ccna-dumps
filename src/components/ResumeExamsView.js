@@ -78,10 +78,6 @@ function ResumeExamsView({
   const validSessions = (savedSessions || []).filter((s) => {
     if (!s || !s.questions || !Array.isArray(s.questions) || s.questions.length === 0) return false;
     if (s.status === "finished" || s.isFinished) return false;
-    try {
-      const finishedIds = JSON.parse(localStorage.getItem("ccna_finished_session_ids") || "[]");
-      if (Array.isArray(finishedIds) && finishedIds.includes(s.id)) return false;
-    } catch {}
     const answersList = Array.isArray(s.answers) ? s.answers : [];
     const answeredCount = answersList.filter((a) => a !== null && a !== undefined && a !== "").length;
     if (answeredCount >= s.questions.length && s.questions.length > 0) return false;

@@ -31,24 +31,14 @@ function NavigationMenu({
     };
   }, []);
 
-  const [plans, setPlans] = useState(() => {
-    try {
-      const cached = localStorage.getItem('ccna_cached_plans');
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [plans, setPlans] = useState([]);
 
   useEffect(() => {
-    fetch('/api/plans')
+    fetch('/api/plans', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data && data.plans) {
           setPlans(data.plans);
-          try {
-            localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
-          } catch {}
         }
       })
       .catch(() => {});
@@ -229,9 +219,9 @@ function NavigationMenu({
               <div className="user-profile-meta">
                 <span className="user-profile-name">{displayName}</span>
                 <div className="nav-verified-badge">
-                  <span className={`nav-plan-pill ${getPlanDisplayInfo(currentUser).badgeClass}`}>
+                  <span className={`nav-plan-pill ${getPlanDisplayInfo(currentUser, plans).badgeClass}`}>
                     <span className="nav-plan-dot" />
-                    {getPlanDisplayInfo(currentUser).name}
+                    {getPlanDisplayInfo(currentUser, plans).name}
                   </span>
                 </div>
               </div>
@@ -244,7 +234,7 @@ function NavigationMenu({
                   <strong>{displayName}</strong>
                   <span className="user-dropdown-email">{currentUser.email}</span>
                   <div className="user-dropdown-plan-tag">
-                    Pass: <strong>{getPlanDisplayInfo(currentUser).name}</strong>
+                    Pass: <strong>{getPlanDisplayInfo(currentUser, plans).name}</strong>
                   </div>
                 </div>
                 <div className="user-dropdown-divider"></div>

@@ -108,16 +108,8 @@ export const getPlanDisplayInfo = (user, plans = []) => {
     return { name: user?.planName || 'Admin', badgeClass: 'plan-badge-admin', isProOrAbove: true };
   }
 
-  // 1. Check passed plans or cached dynamic plans
+  // 1. Check passed live plans
   let allPlans = Array.isArray(plans) && plans.length > 0 ? plans : [];
-  if (allPlans.length === 0) {
-    try {
-      const cached = localStorage.getItem('ccna_cached_plans');
-      if (cached) {
-        allPlans = JSON.parse(cached) || [];
-      }
-    } catch {}
-  }
 
   const userPlanKey = user?.plan;
   if (userPlanKey && allPlans.length > 0) {

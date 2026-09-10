@@ -108,6 +108,12 @@ async function initDB() {
     try {
       await pool.query(`ALTER TABLE exam_attempts ADD COLUMN exam_date BIGINT NOT NULL DEFAULT 0 AFTER time_spent_seconds;`);
     } catch {}
+    try {
+      await pool.query(`ALTER TABLE questions ADD COLUMN explanation LONGTEXT;`);
+    } catch {}
+    try {
+      await pool.query(`ALTER TABLE questions ADD COLUMN original_source_image VARCHAR(255);`);
+    } catch {}
 
     // 4. Active / In-Progress Saved Sessions table (tied to user_id/email)
     await pool.query(`
@@ -220,19 +226,25 @@ async function initDB() {
         console.log(`✅ Default Verified Test Account Ready: ${testEmail} (Password: ${testPassword})`);
       }
 
-      // Map any orphaned attempts/sessions to the test user
-      await pool.query(
-        'UPDATE exam_attempts SET user_id = ?, user_email = ?, candidate_name = ? WHERE user_id IS NULL OR user_id = ""',
-        [testUserId, testEmail, testName]
-      );
-      await pool.query(
-        'UPDATE saved_sessions SET user_id = ?, user_email = ?, candidate_name = ? WHERE user_id IS NULL OR user_id = ""',
-        [testUserId, testEmail, testName]
-      );
-      await pool.query(
-        'UPDATE candidate_notes SET user_id = ?, user_email = ?, candidate_name = ? WHERE user_id IS NULL OR user_id = ""',
-        [testUserId, testEmail, testName]
-      );
+      // Safely link any orphaned attempts/sessions to their respective user by matching email
+      await pool.query(`
+        UPDATE exam_attempts ea 
+        JOIN users u ON LOWER(ea.user_email) = LOWER(u.email) 
+        SET ea.user_id = u.id 
+        WHERE ea.user_id IS NULL OR ea.user_id = ""
+      `);
+      await pool.query(`
+        UPDATE saved_sessions ss 
+        JOIN users u ON LOWER(ss.user_email) = LOWER(u.email) 
+        SET ss.user_id = u.id 
+        WHERE ss.user_id IS NULL OR ss.user_id = ""
+      `);
+      await pool.query(`
+        UPDATE candidate_notes cn 
+        JOIN users u ON LOWER(cn.user_email) = LOWER(u.email) 
+        SET cn.user_id = u.id 
+        WHERE cn.user_id IS NULL OR cn.user_id = ""
+      `);
     } catch (e) {
       console.warn('Test user check/map:', e.message);
     }

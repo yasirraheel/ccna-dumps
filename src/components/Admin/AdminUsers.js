@@ -22,14 +22,7 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
     onConfirm: null,
   });
 
-  const [availablePlans, setAvailablePlans] = useState(() => {
-    try {
-      const cached = localStorage.getItem('ccna_cached_plans');
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [availablePlans, setAvailablePlans] = useState([]);
 
   const fetchAvailablePlans = async () => {
     try {
@@ -37,21 +30,15 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
       const data = await res.json();
       if (data && data.plans && Array.isArray(data.plans)) {
         setAvailablePlans(data.plans);
-        try {
-          localStorage.setItem('ccna_cached_plans', JSON.stringify(data.plans));
-        } catch {}
         return;
       }
     } catch (e) {}
 
     try {
-      const publicRes = await fetch('/api/plans');
+      const publicRes = await fetch('/api/plans', { cache: 'no-store' });
       const publicData = await publicRes.json();
       if (publicData && publicData.plans && Array.isArray(publicData.plans)) {
         setAvailablePlans(publicData.plans);
-        try {
-          localStorage.setItem('ccna_cached_plans', JSON.stringify(publicData.plans));
-        } catch {}
       }
     } catch (err) {
       console.warn('Could not load dynamic plans in AdminUsers:', err);

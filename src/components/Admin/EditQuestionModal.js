@@ -194,9 +194,6 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
       ...payload,
     };
 
-    // Immediately save override to localStorage & broadcast across tabs and exams
-    saveQuestionOverride(updatedPayload);
-
     setIsSubmitting(true);
 
     try {
@@ -211,24 +208,22 @@ function EditQuestionModal({ isOpen, question, onSaveSuccess, onClose }) {
         throw new Error(data.error || "Failed to update question on server.");
       }
 
-      setSuccessMsg("Question updated successfully! Changes applied across all exams.");
+      const serverUpdated = data.question ? { ...updatedPayload, ...data.question } : updatedPayload;
+
+      // Broadcast live update across tabs and active exams
+      saveQuestionOverride(serverUpdated);
+
+      setSuccessMsg("Question updated successfully in database! Changes applied in real time.");
       if (onSaveSuccess) {
-        onSaveSuccess(updatedPayload);
+        onSaveSuccess(serverUpdated);
       }
 
       setTimeout(() => {
         onClose();
       }, 1500);
     } catch (err) {
-      console.warn("Question save server warning:", err);
-      // Even if server request had an issue, local overrides are saved; notify user
-      setSuccessMsg("Question updated locally! Changes applied to all exams.");
-      if (onSaveSuccess) {
-        onSaveSuccess(updatedPayload);
-      }
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      console.error("Question save server error:", err);
+      setErrorMsg(err.message || "Failed to update question on server. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

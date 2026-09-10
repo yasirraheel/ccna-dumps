@@ -402,7 +402,7 @@ export const ccnaQuestions = [
   {
     "id": 37,
     "questionNo": "Question #23",
-    "question": "Refer to the exhibit. HQ C needs to use a configuration that:\n\u2022 handles up to 150,000 concurrent connections\n\u2022 minimizes consumption of public IP addresses\n\nWhich configuration meets the requirements? (Choose one answer)",
+    "question": "Refer to the exhibit. HQ C needs to use a configuration that:\n• handles up to 150,000 concurrent connections\n• minimizes consumption of public IP addresses\n\nWhich configuration meets the requirements? (Choose one answer)",
     "options": [
       "A. ip pool NATPOOL 209.165.201.1 209.165.201.5 netmask 255.255.255.248\nip nat inside source list HQC interface GigabitEthernet0/0 overload",
       "B. ip pool NATPOOL 209.165.200.225 209.165.200.226 netmask 255.255.255.252\nip nat outside source list HQC pool NATPOOL overload",
@@ -415,7 +415,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/23.png",
-    "originalSourceImage": "original_sources/23.webp"
+    "originalSourceImage": "original_sources/23.webp",
+    "explanation": "• Correct (D):\n  - Port Capacity Math: NAT Overload (PAT) multiplexes sessions using 16-bit Layer 4 port numbers (~65,536 theoretical, ~60,000 usable ports per IPv4 address). To reliably support 150,000 concurrent connections, the router requires at least 3 public IP addresses (150,000 / ~60,000 ≈ 2.5 -> minimum 3 IPs).\n  - Pool Definition: \"ip nat pool NATPOOL 209.165.201.1 209.165.201.3 netmask 255.255.255.248\" allocates exactly 3 public IPs (.1, .2, .3) from the assigned 209.165.201.0/29 subnet, minimizing public IP consumption while supporting up to 3 × ~64,000 ≈ 192,000 concurrent connections.\n  - Direction & Overload: Traffic initiated from inside hosts going out to the ISP requires \"ip nat inside source list <ACL> pool <POOL> overload\".\n\n• Incorrect (A): Uses invalid Cisco syntax (\"ip pool\" instead of \"ip nat pool\") and incorrectly specifies \"interface GigabitEthernet0/0 overload\", which uses only 1 single public IP (209.165.200.225), limiting capacity to ~64,000 sessions (failing the 150,000 requirement).\n• Incorrect (B): Uses invalid command syntax (\"ip pool\"), specifies \"ip nat outside source\" (wrong direction), and uses the point-to-point link IPs (209.165.200.225–226) instead of the assigned /29 pool.\n• Incorrect (C): Specifies \"ip nat outside source\" (wrong translation direction) and uses .248 as an ending host IP, which matches the subnet mask boundary, not a valid range of 3 addresses."
   },
   {
     "id": 36,
@@ -786,7 +787,7 @@ export const ccnaQuestions = [
   {
     "id": 43,
     "questionNo": "Question #44",
-    "question": "Refer to the exhibit. What is the correct next hop for router R1 to reach IP addresses 192.168.2.6 and 10.20.1.50? (Choose one answer)",
+    "question": "Refer to the exhibit. What is the correct next hop for router R1 to reach IP addresses 192.168.2.6 and 10.20.1.150? (Choose one answer)",
     "options": [
       "A. 172.16.1.1",
       "B. 172.16.1.3",
@@ -794,12 +795,13 @@ export const ccnaQuestions = [
       "D. 172.16.1.2"
     ],
     "correctOption": [
-      2
+      1
     ],
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/44.png",
-    "originalSourceImage": "original_sources/44.webp"
+    "originalSourceImage": "original_sources/44.webp",
+    "explanation": "🔍 Longest Prefix Match (LPM) Analysis & Dump Clarification:\n• For IP 10.20.1.150:\n  - 10.20.1.32/27 covers 10.20.1.32 - 10.20.1.63 (does NOT match 150).\n  - 10.20.1.0/26 covers 10.20.1.0 - 10.20.1.63 (does NOT match 150).\n  - 10.20.1.0/24 covers 10.20.1.0 - 10.20.1.255 (matches 150 via 172.16.1.2).\n  * Note on Vendor Dump Typo: In official Cisco exam dumps, 10.20.1.150 is a known typographical error for 10.20.1.50. If destination is 10.20.1.50, the longest prefix match is /27 (10.20.1.32/27), whose next-hop is 172.16.1.3 (Option B).\n• For IP 192.168.2.6:\n  - 192.168.2.80/29 covers 192.168.2.80 - 192.168.2.87 (does NOT match 6).\n  - 192.168.2.64/27 covers 192.168.2.64 - 192.168.2.95 (does NOT match 6).\n  - 192.168.2.0/24 covers 192.168.2.0 - 192.168.2.255 (matches 6 via 172.16.1.4).\n\n• Correct (B): Official exam dump answer key designates B (172.16.1.3) based on the /27 route preference (10.20.1.32/27 via 172.16.1.3).\n• Option A (172.16.1.1): Incorrect; 172.16.1.1 is R1's own local outgoing interface IP (Gi0/0), not a remote next-hop router.\n• Option C (172.16.1.4): Next hop for 192.168.2.0/24 (via R2) and 10.20.1.0/26.\n• Option D (172.16.1.2): Next hop for 10.20.1.0/24 and 192.168.2.64/27."
   },
   {
     "id": 25,
@@ -985,7 +987,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/54.png",
-    "originalSourceImage": "original_sources/54.webp"
+    "originalSourceImage": "original_sources/54.webp",
+    "explanation": "• Correct (A):\n  - OSPF Cost Formula: Cost = Reference Bandwidth / Interface Bandwidth.\n  - Configured Reference BW: 10 Gbps (10,000 Mbps).\n  - Top Link (R1 to R2): Bandwidth = 1 Gbps (1,000 Mbps). Cost = 10 Gbps / 1 Gbps = 10.\n  - Bottom Link (R1 to R2): Bandwidth = 10 Gbps (10,000 Mbps). Cost = 10 Gbps / 10 Gbps = 1.\n  - Path Selection: Because OSPF strictly prefers the path with the lowest cumulative metric, R1 chooses the bottom link with Cost = 1 over the top link with Cost = 10.\n  - Next Hop IP: The outgoing next-hop interface on R2 for the bottom link (10.12.0.4/30 subnet) is .6 (10.12.0.6, formatted as 10.12.6 in the dump).\n\n• Incorrect (B): 10.12.2 (10.12.0.2) is the next hop on the top link (1 Gbps), which has a higher OSPF cost (10 vs 1) and is therefore not preferred.\n• Incorrect (C & D): 10.12.5 (10.12.0.5) and 10.12.1 (10.12.0.1) are R1's own local outgoing interface IPs, not next-hop IP addresses on adjacent router R2."
   },
   {
     "id": 89,
@@ -1263,7 +1266,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/69.webp"
+    "originalSourceImage": "original_sources/69.webp",
+    "explanation": "• Correct (B): Machine learning (ML) security tools establish behavioral baselines of normal network traffic and user activities, allowing predictive algorithms to recognize complex anomalies and patterns that indicate zero-day intrusions, advanced persistent threats (APTs), and data exfiltration without relying purely on static signatures.\n\n• Incorrect (A): Monitoring for outdated software, missing patches, and known CVEs is performed by vulnerability assessment scanners and patch management tools, not ML breach detection.\n• Incorrect (C): Security clearance and authorization levels are administratively assigned via Identity & Access Management (IAM) policies, Role-Based Access Control (RBAC), and Active Directory/LDAP.\n• Incorrect (D): Security policies are defined, mandated, and updated by network security administrators and compliance governance teams, not dictated autonomously by machine learning models."
   },
   {
     "id": 81,
@@ -1445,7 +1449,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/79.png",
-    "originalSourceImage": "original_sources/79.webp"
+    "originalSourceImage": "original_sources/79.webp",
+    "explanation": "• Correct (C):\n  - In Cisco routing tables [X/Y], the first number X is Administrative Distance (trustworthiness/route preference) and Y is the protocol-specific metric.\n  - Although metrics cannot be mathematically compared across different routing protocols (RIP uses hop count, OSPF uses cost, EIGRP uses composite delay/bandwidth), Cisco CCNA questions frequently use the term \"metric\" or \"route preference\" when referring to protocol believability (Administrative Distance).\n  - Among dynamic routing protocols in the routing table:\n    - EIGRP internal has AD 90 (Most preferred / most trusted).\n    - OSPF has AD 110 (Moderately preferred).\n    - RIP has AD 120 (Highest AD number = least trusted / least preferred route).\n  - Therefore, routes learned via RIP are the least preferred dynamic routes.\n\n• Incorrect (A): EIGRP has an Administrative Distance of 90, making it the most preferred dynamic protocol shown.\n• Incorrect (B): OSPF has an Administrative Distance of 110, which is more preferred than RIP (120).\n• Incorrect (D): \"Local\" (L, AD 0) is an automatically generated route for router interfaces, not a dynamic routing protocol."
   },
   {
     "id": 92,
@@ -1975,7 +1980,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/108.png",
-    "originalSourceImage": "original_sources/108.webp"
+    "originalSourceImage": "original_sources/108.webp",
+    "explanation": "• Correct (C): 802.11r (Fast Transition / FT) enables seamless BSS transitions by allowing compatible clients to pre-authenticate with target APs before roaming, eliminating connection drops during voice/video calls.\n• A is incorrect: Fast Transition eliminates roaming delay; it does not add an extended delay.\n• B is incorrect: 802.11r is a roaming transition standard, not a QoS/quality assurance algorithm.\n• D is incorrect: Securing data/management frames is handled by 802.11w (PMF), not 802.11r."
   },
   {
     "id": 109,
@@ -1995,7 +2001,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/109.webp"
+    "originalSourceImage": "original_sources/109.webp",
+    "explanation": "• Correct (A & E): MFA requires authentication factors from at least two different categories:\n  - Unique user knowledge (A): \"Something you know\" (password, PIN, passphrase).\n  - Soft tokens (E): \"Something you have\" (authenticator app OTP code like Duo or Google Authenticator). Combining these two satisfies multi-factor authentication.\n• B is incorrect: Password expiration is a password policy, not a separate authentication factor category.\n• C is incorrect: Single Sign-On (SSO) is an access management mechanism, not an MFA factor.\n• D is incorrect: A shared password repository/vault merely manages stored passwords (\"something you know\")."
   },
   {
     "id": 110,
@@ -2013,7 +2020,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/110.png",
-    "originalSourceImage": "original_sources/110.webp"
+    "originalSourceImage": "original_sources/110.webp",
+    "explanation": "• Correct (B): Pre-Shared Key (PSK) authentication relies on a shared passphrase and SSID without requiring an external RADIUS/AAA server. Selecting PSK-SHA2 configures SHA-256 for secure key hashing and derivation (standard in WPA3 and enhanced WPA2), replacing vulnerable SHA-1.\n• A is incorrect: CCMP128(AES) is a symmetric payload encryption cipher, not a key hashing algorithm for authentication.\n• C is incorrect: Entering the PSK in HEX format only changes key representation, not the underlying hashing algorithm.\n• D is incorrect: AutoConfig PSK is not a standard Cisco WLC hashing mechanism."
   },
   {
     "id": 111,
@@ -2049,7 +2057,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/112.webp"
+    "originalSourceImage": "original_sources/112.webp",
+    "explanation": "• Correct (A): Structured, standardized data models (such as YANG - RFC 6020 / OpenConfig) define network device configuration and operational states in a universal, vendor-neutral structure. This allows SDN controllers and automation tools to manage multivendor hardware using the same scripts and APIs without needing vendor-proprietary syntax.\n• B is incorrect: Data models are used with modern programmatic APIs (NETCONF, RESTCONF), not legacy SNMP polling.\n• C is incorrect: Traffic categorization and insights are functions of NetFlow/telemetry analytics, not data modeling.\n• D is incorrect: Data models structure data representations; they do not alter hardware processing speeds."
   },
   {
     "id": 113,
@@ -2067,7 +2076,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/113.webp"
+    "originalSourceImage": "original_sources/113.webp",
+    "explanation": "• Correct (D): A remote-access VPN (such as Cisco AnyConnect using SSL/TLS or IPsec) connects an individual mobile teleworker/employee securely over the untrusted public Internet (or public Wi-Fi) into the corporate private enterprise network.\n• A is incorrect: Site-to-site VPN connects two fixed static physical sites (e.g., branch office to enterprise headquarters).\n• B is incorrect: Router-to-router is another term for a site-to-site gateway VPN between fixed network routers.\n• C is incorrect: An \"open\" unencrypted connection provides zero security on public Wi-Fi."
   },
   {
     "id": 114,
@@ -2085,7 +2095,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/114.webp"
+    "originalSourceImage": "original_sources/114.webp",
+    "explanation": "• Correct (A): In modern IP networks, Layer 3 QoS packet marking modifies the 6-bit DSCP (Differentiated Services Code Point) field inside the IPv4 DiffServ byte (or IPv6 Traffic Class byte) to classify traffic priority (e.g., EF for Voice, AF for Video, CS for network control).\n• B is incorrect: Type of Service (ToS) is the legacy 8-bit IPv4 octet; modern Cisco QoS specifically changes the 6-bit DSCP subfield.\n• C is incorrect: Header Checksum validates IP header integrity; it is not a QoS priority marking field.\n• D is incorrect: ECN (Explicit Congestion Notification) occupies the last 2 bits of the DiffServ field and is used to signal network congestion, not for QoS priority marking."
   },
   {
     "id": 115,
@@ -2121,7 +2132,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/116.png",
-    "originalSourceImage": "original_sources/116.webp"
+    "originalSourceImage": "original_sources/116.webp",
+    "explanation": "🔍 Scenario Clarification:\nThe administrator created an ACL on the VTY lines to deny Telnet from PC-1. However, all Cisco ACLs contain an invisible \"implicit deny any\" at the end. Because no permit rule was configured, all other hosts (including PC-2) are silently blocked when attempting to Telnet.\n\n• Correct (B): Adding \"access-list 10 permit any\" allows Telnet traffic from PC-2 and other legitimate hosts while keeping PC-1 denied above it.\n• A is incorrect: Removing the ACL from line vty 4 leaves other VTY lines (0-3) blocked or inconsistent.\n• C is incorrect: Standard ACL 10 filters by source IP; applying it to physical interface g0/0 filters transit data traffic rather than VTY remote management.\n• D is incorrect: Removing the VTY password disables Telnet login altogether."
   },
   {
     "id": 117,
@@ -2287,7 +2299,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/125.webp"
+    "originalSourceImage": "original_sources/125.webp",
+    "explanation": "• Correct (B): In Cisco FlexConnect mode with local switching, the Access Point locally switches client traffic from different SSIDs onto specific local VLANs. The switch interface must be configured as an 802.1Q trunk port (with the AP management VLAN as native) so it can carry multiple client VLANs simultaneously.\n• A is incorrect: EtherChannel bundles multiple physical links into one logical link; it is not required for FlexConnect AP connectivity.\n• C is incorrect: An access port carries only a single VLAN. If configured as an access port, the AP cannot locally switch multiple client VLANs.\n• D is incorrect: PoE (Power over Ethernet) supplies electrical power over the cable; it is a power delivery mechanism, not a switch interface port configuration mode."
   },
   {
     "id": 126,
@@ -2525,7 +2538,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/138.webp"
+    "originalSourceImage": "original_sources/138.webp",
+    "explanation": "• Correct (A): Dedicated point-to-point leased lines (e.g. T1/E1, HDLC, PPP) provide simple point-to-point configuration between two predefined endpoints without complex multi-tenant routing protocols or shared WAN switching.\n• B is incorrect: Leased lines provide only point-to-point links; building a full-mesh topology requires separate dedicated circuits between every pair of sites, which is cost-prohibitive.\n• C is incorrect: Leased lines carry high ongoing monthly carrier costs compared to shared packet-switched WAN technologies (like MPLS or Internet VPNs).\n• D is incorrect: Leased lines are rigid and inflexible; adding or moving sites requires installing new physical circuits."
   },
   {
     "id": 139,
@@ -2579,7 +2593,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/141.png",
-    "originalSourceImage": "original_sources/141.webp"
+    "originalSourceImage": "original_sources/141.webp",
+    "explanation": "• Correct (A):\n  - \"login local\" under line vty 0 4 directs the router to authenticate incoming Telnet sessions using the local user database.\n  - \"privilege 15\" on the username grants level 15 privileges upon authentication, dropping the admin directly into Privileged EXEC / global configuration mode without requiring a second \"enable\" password prompt.\n• B is incorrect: Without \"privilege 15\" configured on the user account, the user drops into unprivileged user EXEC mode (>) and still has to enter \"enable\".\n• C is incorrect: Uses simple line password authentication (\"password p@ss1234\") instead of local username authentication (\"login local\"), and does not assign privilege level 15.\n• D is incorrect: Does not use local username authentication and lacks privilege level 15."
   },
   {
     "id": 142,
@@ -2597,7 +2612,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": null,
-    "originalSourceImage": "original_sources/142.webp"
+    "originalSourceImage": "original_sources/142.webp",
+    "explanation": "• Correct (B): The HTTP \"Accept\" request header informs the server which data/MIME format the client expects and can process in the response (e.g., \"Accept: application/json\" or \"Accept: application/xml\").\n• D is incorrect: \"Content-Type\" specifies the media type of the content being sent in the current message body (such as a POST or PUT payload), not what format the client is willing to accept in response.\n• A is incorrect: \"User-Agent\" identifies the client application, operating system, and browser version.\n• C is incorrect: \"Authorization\" contains credentials or bearer tokens for authentication."
   },
   {
     "id": 143,
@@ -3249,7 +3265,8 @@ export const ccnaQuestions = [
     "points": 10,
     "cliSnippet": null,
     "exhibitImage": "exhibits/178.png",
-    "originalSourceImage": "original_sources/178.webp"
+    "originalSourceImage": "original_sources/178.webp",
+    "explanation": "• Correct (B):\n  - Helper Placement: DHCP clients broadcast DISCOVER messages on their local LAN interface. The \"ip helper-address <DHCP_SERVER_IP>\" command must be configured on the inbound client-facing interface receiving the broadcasts—which is interface FastEthernet0/1 (LAN_INTERFACE).\n  - ACL Configuration: The WAN interface (FastEthernet0/0) has an inbound access list (ip access-group 100 in). For return DHCP traffic from the DHCP server (10.0.1.1) to reach the router's relay agent, the ACL must permit inbound UDP packets sourced from DHCP server port 67 (bootps): \"permit udp host 10.0.1.1 eq bootps host 10.148.2.1\".\n\n• Incorrect (A & C): Apply \"ip helper-address\" to FastEthernet0/0 (the WAN link). The router never relays DHCP broadcasts from hosts unless the helper address is on the LAN interface where clients reside (FastEthernet0/1). In addition, Option A lacks the \"udp\" keyword.\n• Incorrect (D): Specifies \"tcp\" instead of \"udp\". DHCP is strictly a UDP-based protocol (ports 67 for server and 68 for client); TCP traffic matching port 67 will never permit DHCP."
   },
   {
     "id": 179,
