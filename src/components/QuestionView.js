@@ -441,40 +441,119 @@ function QuestionView({
     setIsNoteBoxOpen(false);
   };
 
-  const handleDeleteComment = (qKey) => {
-    const targetKey = qKey || questionKey;
+  const handleDeleteComment = (targetIdentifier, targetQNo, rawKey) => {
+    let targetQ = null;
+    let targetId = null;
+    let targetNo = null;
+
+    if (targetIdentifier && typeof targetIdentifier === "object") {
+      targetQ = targetIdentifier;
+      targetId = targetQ.id;
+      targetNo = targetQ.questionNo;
+    } else if (targetIdentifier != null || targetQNo != null || rawKey != null) {
+      const idStr = targetIdentifier != null ? String(targetIdentifier).trim() : "";
+      const qNoStr = targetQNo != null ? String(targetQNo).trim() : "";
+      const rawStr = rawKey != null ? String(rawKey).trim() : "";
+      const numVal = Number(idStr);
+
+      if (Array.isArray(questions)) {
+        targetQ = questions.find(
+          (q) =>
+            q &&
+            (q.id === targetIdentifier ||
+              String(q.id) === idStr ||
+              (qNoStr && q.questionNo === qNoStr) ||
+              (idStr && q.questionNo === idStr) ||
+              (rawStr && (String(q.id) === rawStr || q.questionNo === rawStr)))
+        );
+      }
+
+      if (targetQ) {
+        targetId = targetQ.id;
+        targetNo = targetQ.questionNo;
+      } else {
+        targetId = !isNaN(numVal) && numVal > 0 ? numVal : null;
+        targetNo = qNoStr || (idStr.startsWith("Question") ? idStr : null);
+      }
+    } else {
+      targetQ = question;
+      targetId = question?.id;
+      targetNo = question?.questionNo;
+    }
+
+    // Comprehensive cleanup of questionComments state across all key representations
     const updated = { ...questionComments };
-    delete updated[targetKey];
-    if (question?.id) delete updated[String(question.id)];
+    const keysToDelete = new Set();
+
+    if (targetId != null) {
+      keysToDelete.add(targetId);
+      keysToDelete.add(String(targetId));
+    }
+    if (targetNo) {
+      keysToDelete.add(targetNo);
+      const digits = targetNo.replace(/\D/g, "");
+      if (digits) {
+        keysToDelete.add(digits);
+        keysToDelete.add(Number(digits));
+        keysToDelete.add(`Question #${digits}`);
+        keysToDelete.add(`Question ${digits}`);
+      }
+    }
+    if (targetIdentifier && typeof targetIdentifier !== "object") {
+      keysToDelete.add(targetIdentifier);
+      keysToDelete.add(String(targetIdentifier));
+    }
+    if (rawKey) {
+      keysToDelete.add(rawKey);
+      keysToDelete.add(String(rawKey));
+    }
+
+    keysToDelete.forEach((k) => {
+      delete updated[k];
+    });
+
     setQuestionComments(updated);
-    if (targetKey === questionKey || String(targetKey) === String(question?.id)) {
+
+    // If the active question on screen is the one being deleted, reset composer
+    const isCurrentQuestion =
+      (targetId != null && question?.id === targetId) ||
+      (targetNo && question?.questionNo === targetNo) ||
+      targetIdentifier === questionKey ||
+      rawKey === questionKey;
+
+    if (isCurrentQuestion) {
       setCurrentNoteText("");
       setIsNoteBoxOpen(false);
     }
 
-    // MySQL sync
-    const qId = Number(targetKey) || question?.id;
-    if (qId) {
-      const storedUser = (() => {
-        try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
-      })();
-      const token = localStorage.getItem("ccna_auth_token") || "";
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+    // MySQL sync with userId / userEmail
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+    })();
+    const token = localStorage.getItem("ccna_auth_token") || "";
+    const headers = { "Content-Type": "application/json", Accept: "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      fetch("/api/notes", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          userId: currentUser?.id || storedUser?.id || null,
-          userEmail: currentUser?.email || storedUser?.email || null,
-          candidateName: currentUser?.name || storedUser?.name || candidateName || "Candidate",
-          questionId: qId,
-          questionNo: question?.questionNo || `Question #${qId}`,
-          noteText: "",
-        }),
-      }).catch(() => {});
-    }
+    const effectiveUserId = currentUser?.id || storedUser?.id || null;
+    const effectiveEmail = currentUser?.email || storedUser?.email || null;
+    const effectiveName = currentUser?.name || storedUser?.name || candidateName || "Candidate";
+
+    const resolvedQId = targetId || (targetNo ? parseInt(targetNo.replace(/\D/g, ""), 10) : 0);
+    const resolvedQNo = targetNo || (targetId ? `Question #${targetId}` : "");
+
+    fetch("/api/notes", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        userId: effectiveUserId,
+        userEmail: effectiveEmail,
+        candidateName: effectiveName,
+        questionId: resolvedQId,
+        questionNo: resolvedQNo,
+        noteText: "",
+        action: "delete",
+      }),
+    }).catch(() => {});
   };
 
   const isDragDrop = question.type === "drag_drop" || Boolean(question.dragDropData);
@@ -1018,7 +1097,7 @@ function QuestionView({
                 <button
                   type="button"
                   className="btn-note-delete"
-                  onClick={() => handleDeleteComment(questionKey)}
+                  onClick={() => handleDeleteComment(question?.id || questionKey, question?.questionNo, questionKey)}
                 >
                   🗑️ Delete Note
                 </button>
@@ -1486,7 +1565,7 @@ function QuestionView({
           comments={currentBankNotes}
           allQuestions={questions}
           onSelectQuestion={(targetIdx) => onGoToQuestion(targetIdx)}
-          onDeleteComment={(qId) => handleDeleteComment(qId)}
+          onDeleteComment={(targetId, targetQNo, rawKey) => handleDeleteComment(targetId, targetQNo, rawKey)}
           onClose={() => setIsAllNotesModalOpen(false)}
         />
       )}

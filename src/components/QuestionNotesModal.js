@@ -8,24 +8,35 @@ function QuestionNotesModal({
   onClose,
 }) {
   const [copied, setCopied] = useState(false);
+  const [deletedKeys, setDeletedKeys] = useState(new Set());
 
   const commentedList = Object.entries(comments)
-    .filter(([qId, text]) => text && text.trim().length > 0)
+    .filter(([qId, text]) => {
+      if (!text || !text.trim()) return false;
+      if (deletedKeys.has(qId) || deletedKeys.has(String(qId))) return false;
+      return true;
+    })
     .map(([qId, text]) => {
       const numId = Number(qId);
       const qIndex = allQuestions.findIndex(
-        (q) => q.id === numId || String(q.id) === String(qId) || q.questionNo === qId
+        (q) => q && (q.id === numId || String(q.id) === String(qId) || q.questionNo === qId)
       );
       const qObj = qIndex >= 0 ? allQuestions[qIndex] : null;
+      const questionNo = qObj?.questionNo || (String(qId).startsWith("Question") ? qId : `Question #${qId}`);
       return {
         id: qId,
+        questionId: qObj?.id,
         index: qIndex,
-        questionNo: qObj?.questionNo || `Question #${qId}`,
+        questionNo,
         prompt: qObj?.question || "",
         comment: text,
       };
     })
-    .filter((item) => item.index >= 0);
+    .filter((item) => {
+      if (item.questionId && (deletedKeys.has(item.questionId) || deletedKeys.has(String(item.questionId)))) return false;
+      if (item.questionNo && deletedKeys.has(item.questionNo)) return false;
+      return item.index >= 0;
+    });
 
   const handleCopyAll = () => {
     if (commentedList.length === 0) return;
@@ -132,7 +143,22 @@ function QuestionNotesModal({
                       <button
                         type="button"
                         className="btn-delete-note-item"
-                        onClick={() => onDeleteComment(item.id)}
+                        onClick={() => {
+                          setDeletedKeys((prev) => {
+                            const next = new Set(prev);
+                            next.add(item.id);
+                            next.add(String(item.id));
+                            if (item.questionId) {
+                              next.add(item.questionId);
+                              next.add(String(item.questionId));
+                            }
+                            if (item.questionNo) next.add(item.questionNo);
+                            return next;
+                          });
+                          if (onDeleteComment) {
+                            onDeleteComment(item.questionId || item.id, item.questionNo, item.id);
+                          }
+                        }}
                         title="Delete note"
                       >
                         🗑️

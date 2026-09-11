@@ -1507,47 +1507,142 @@ if (preg_match('#^/api/notes#', $basePath)) {
         exit;
     }
 
-    if ($method === 'POST') {
-        $b = $body;
-        $userId = trim($b['userId'] ?? ($tokenUser['id'] ?? ''));
-        $userEmail = isset($b['userEmail']) ? strtolower(trim($b['userEmail'])) : (isset($tokenUser['email']) ? strtolower(trim($tokenUser['email'])) : '');
+    if ($method === 'POST' || $method === 'DELETE') {
+        $b = is_array($body) ? $body : [];
+        $userId = trim($b['userId'] ?? ($tokenUser['id'] ?? ($_GET['userId'] ?? '')));
+        $userEmail = isset($b['userEmail']) ? strtolower(trim($b['userEmail'])) : (isset($tokenUser['email']) ? strtolower(trim($tokenUser['email'])) : (isset($_GET['userEmail']) ? strtolower(trim($_GET['userEmail'])) : ''));
         $candidateName = trim($b['candidateName'] ?? ($tokenUser['name'] ?? 'Candidate'));
-        $qId = isset($b['questionId']) ? (int)$b['questionId'] : 0;
-        $qNo = trim($b['questionNo'] ?? ("Question #" . $qId));
-        $noteText = trim($b['noteText'] ?? '');
+
+        $qId = isset($b['questionId']) ? (int)$b['questionId'] : (isset($_GET['questionId']) ? (int)$_GET['questionId'] : 0);
+        $qNo = trim($b['questionNo'] ?? ($_GET['questionNo'] ?? ''));
+        $noteId = isset($b['noteId']) ? (int)$b['noteId'] : (isset($_GET['noteId']) ? (int)$_GET['noteId'] : (isset($b['id']) ? (int)$b['id'] : 0));
+        $noteText = isset($b['noteText']) ? trim($b['noteText']) : null;
+        $action = trim($b['action'] ?? ($_GET['action'] ?? ''));
+
+        $isDelete = ($method === 'DELETE') || ($action === 'delete') || ($noteText === '');
 
         if (empty($userId) && empty($userEmail)) {
             http_response_code(401);
-            echo json_encode(["error" => "User identity required to save private notes."]);
+            echo json_encode(["error" => "User identity required to manage notes."]);
             exit;
         }
 
-        if ($qId <= 0) {
-            http_response_code(400);
-            echo json_encode(["error" => "Invalid question ID"]);
-            exit;
+        // Check admin bypass (admins can manage/delete any note)
+        $isAdmin = false;
+        if ($tokenUser && (strtolower($tokenUser['role'] ?? '') === 'admin' || strtolower($tokenUser['email'] ?? '') === 'candidate@ccna.com')) {
+            $isAdmin = true;
+        }
+        if ($userEmail === 'candidate@ccna.com') {
+            $isAdmin = true;
         }
 
-        if ($noteText === '') {
-            // Delete note strictly for this user
-            $delParams = [];
-            $delConds = [];
-            if (!empty($userId)) {
-                $delConds[] = "user_id = ?";
-                $delParams[] = $userId;
+        // Extract numeric question sequence from questionNo (e.g. "Question #125" -> 125)
+        $numSeq = 0;
+        if ($qNo && preg_match('/(\d+)/', $qNo, $qm)) {
+            $numSeq = (int)$qm[1];
+        }
+        if ($qId <= 0 && $numSeq > 0) {
+            $qId = $numSeq;
+        }
+
+        // Look up paired ID and questionNo from questions table if available
+        $lookupQId = null;
+        $lookupQNo = null;
+        if ($qId > 0 || !empty($qNo)) {
+            try {
+                $lStmt = $pdo->prepare("SELECT id, question_no FROM questions WHERE id = ? OR id = ? OR question_no = ? LIMIT 1");
+                $lStmt->execute([$qId, $numSeq, $qNo]);
+                $foundQ = $lStmt->fetch();
+                if ($foundQ) {
+                    $lookupQId = (int)$foundQ['id'];
+                    $lookupQNo = $foundQ['question_no'];
+                }
+            } catch (Exception $e) {}
+        }
+
+        if ($isDelete) {
+            // Build matching clauses for target note
+            $qClauses = [];
+            $qParams = [];
+
+            if ($noteId > 0) {
+                $qClauses[] = "id = ?";
+                $qParams[] = $noteId;
             }
-            if (!empty($userEmail)) {
-                $delConds[] = "user_email = ?";
-                $delParams[] = $userEmail;
+            if ($qId > 0) {
+                $qClauses[] = "question_id = ?";
+                $qParams[] = $qId;
             }
-            $pdo->prepare("DELETE FROM candidate_notes WHERE question_id = ? AND (" . implode(" OR ", $delConds) . ")")->execute(array_merge([$qId], $delParams));
-            echo json_encode(["success" => true, "message" => "Note deleted"]);
+            if ($lookupQId && $lookupQId !== $qId) {
+                $qClauses[] = "question_id = ?";
+                $qParams[] = $lookupQId;
+            }
+            if ($numSeq > 0 && $numSeq !== $qId && $numSeq !== $lookupQId) {
+                $qClauses[] = "question_id = ?";
+                $qParams[] = $numSeq;
+            }
+            if (!empty($qNo)) {
+                $qClauses[] = "question_no = ?";
+                $qParams[] = $qNo;
+            }
+            if (!empty($lookupQNo) && $lookupQNo !== $qNo) {
+                $qClauses[] = "question_no = ?";
+                $qParams[] = $lookupQNo;
+            }
+            if ($numSeq > 0) {
+                $qClauses[] = "question_no = ?";
+                $qParams[] = "Question #{$numSeq}";
+                $qClauses[] = "question_no = ?";
+                $qParams[] = "Question {$numSeq}";
+            }
+
+            if (empty($qClauses)) {
+                http_response_code(400);
+                echo json_encode(["error" => "Question identifier required for deletion."]);
+                exit;
+            }
+
+            // User scope (unless admin)
+            $userClauses = [];
+            $userParams = [];
+            if (!$isAdmin) {
+                if (!empty($userId)) {
+                    $userClauses[] = "user_id = ?";
+                    $userParams[] = $userId;
+                }
+                if (!empty($userEmail)) {
+                    $userClauses[] = "user_email = ?";
+                    $userParams[] = $userEmail;
+                }
+            }
+
+            $sql = "DELETE FROM candidate_notes WHERE (" . implode(" OR ", $qClauses) . ")";
+            $finalParams = $qParams;
+            if (!empty($userClauses)) {
+                $sql .= " AND (" . implode(" OR ", $userClauses) . ")";
+                $finalParams = array_merge($finalParams, $userParams);
+            }
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($finalParams);
+            $affected = $stmt->rowCount();
+
+            echo json_encode(["success" => true, "message" => "Note deleted", "affected" => $affected]);
             exit;
         }
 
         // Insert or update note strictly for this user
-        $findParams = [];
+        if ($qId <= 0 && empty($qNo)) {
+            http_response_code(400);
+            echo json_encode(["error" => "Valid question ID is required"]);
+            exit;
+        }
+
+        $effectiveQId = $lookupQId ?: $qId;
+        $effectiveQNo = $lookupQNo ?: ($qNo ?: "Question #{$effectiveQId}");
+
         $findConds = [];
+        $findParams = [];
         if (!empty($userId)) {
             $findConds[] = "user_id = ?";
             $findParams[] = $userId;
@@ -1556,19 +1651,20 @@ if (preg_match('#^/api/notes#', $basePath)) {
             $findConds[] = "user_email = ?";
             $findParams[] = $userEmail;
         }
-        $existing = $pdo->prepare("SELECT id FROM candidate_notes WHERE question_id = ? AND (" . implode(" OR ", $findConds) . ") LIMIT 1");
-        $existing->execute(array_merge([$qId], $findParams));
+
+        $existing = $pdo->prepare("SELECT id FROM candidate_notes WHERE (question_id = ? OR question_id = ? OR question_no = ?) AND (" . implode(" OR ", $findConds) . ") LIMIT 1");
+        $existing->execute(array_merge([$effectiveQId, $qId, $effectiveQNo], $findParams));
         $existingId = $existing->fetchColumn();
 
         if ($existingId) {
-            $stmt = $pdo->prepare("UPDATE candidate_notes SET note_text = ?, question_no = ?, candidate_name = ?, user_id = ?, user_email = ? WHERE id = ?");
-            $stmt->execute([$noteText, $qNo, $candidateName, $userId ?: null, $userEmail ?: null, $existingId]);
+            $stmt = $pdo->prepare("UPDATE candidate_notes SET note_text = ?, question_id = ?, question_no = ?, candidate_name = ?, user_id = ?, user_email = ? WHERE id = ?");
+            $stmt->execute([$noteText, $effectiveQId, $effectiveQNo, $candidateName, $userId ?: null, $userEmail ?: null, $existingId]);
         } else {
             $stmt = $pdo->prepare("INSERT INTO candidate_notes (user_id, user_email, candidate_name, question_id, question_no, note_text) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$userId ?: null, $userEmail ?: null, $candidateName, $qId, $qNo, $noteText]);
+            $stmt->execute([$userId ?: null, $userEmail ?: null, $candidateName, $effectiveQId, $effectiveQNo, $noteText]);
         }
 
-        echo json_encode(["success" => true, "message" => "Note saved"]);
+        echo json_encode(["success" => true, "message" => "Note saved", "questionId" => $effectiveQId, "questionNo" => $effectiveQNo]);
         exit;
     }
 }

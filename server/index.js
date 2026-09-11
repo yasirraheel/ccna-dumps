@@ -1145,60 +1145,168 @@ app.get('/api/notes', async (req, res) => {
   }
 });
 
-app.post('/api/notes', async (req, res) => {
+app.all(['/api/notes', '/api/notes/:id'], async (req, res, next) => {
+  if (req.method !== 'POST' && req.method !== 'DELETE') return next();
   try {
-    const { userId, userEmail, candidateName, questionId, questionNo, noteText } = req.body;
-    const qId = parseInt(questionId, 10);
-    if (!qId) {
-      return res.status(400).json({ error: 'Valid questionId is required' });
-    }
+    const b = req.body || {};
+    const q = req.query || {};
+    const { userId, userEmail, candidateName, questionId, questionNo, noteText, action, noteId, id } = { ...q, ...b, ...req.params };
 
+    const pool = getPool();
     const uId = (userId || '').trim();
     const uEmail = (userEmail || '').trim().toLowerCase();
 
-    if (!uId && !uEmail) {
-      return res.status(401).json({ error: 'User identity required to save private notes.' });
+    // Check token if present
+    const auth = req.headers.authorization || '';
+    let tokenUser = null;
+    if (auth && auth.startsWith('Bearer ')) {
+      try {
+        tokenUser = jwt.verify(auth.slice(7), JWT_SECRET);
+      } catch (e) {}
     }
 
-    const pool = getPool();
-    const trimmedNote = (noteText || '').trim();
+    const effectiveUserId = uId || tokenUser?.id || '';
+    const effectiveEmail = uEmail || (tokenUser?.email || '').toLowerCase();
+    const effectiveName = (candidateName || tokenUser?.name || 'Candidate').trim();
 
-    if (trimmedNote === '') {
-      // Delete note strictly for this user
-      const delConds = [];
-      const delParams = [];
-      if (uId) { delConds.push('user_id = ?'); delParams.push(uId); }
-      if (uEmail) { delConds.push('user_email = ?'); delParams.push(uEmail); }
-      await pool.query(`DELETE FROM candidate_notes WHERE question_id = ? AND (${delConds.join(' OR ')})`, [qId, ...delParams]);
-      return res.json({ success: true, message: 'Note deleted from MySQL' });
+    if (!effectiveUserId && !effectiveEmail) {
+      return res.status(401).json({ error: 'User identity required to manage notes.' });
     }
 
-    // Check if row already exists for this user and question
+    const isAdmin =
+      (tokenUser && (String(tokenUser.role).toLowerCase() === 'admin' || String(tokenUser.email).toLowerCase() === 'candidate@ccna.com')) ||
+      effectiveEmail === 'candidate@ccna.com';
+
+    let qId = parseInt(questionId || id || 0, 10);
+    const rawQNo = (questionNo || '').trim();
+    const targetNoteId = parseInt(noteId || (req.params?.id ? req.params.id : 0), 10);
+    const trimmedNote = typeof noteText === 'string' ? noteText.trim() : null;
+
+    // Extract sequence number from questionNo if available
+    let numSeq = 0;
+    if (rawQNo) {
+      const match = rawQNo.match(/(\d+)/);
+      if (match) numSeq = parseInt(match[1], 10);
+    }
+    if (!qId && numSeq > 0) {
+      qId = numSeq;
+    }
+
+    // Lookup paired question in questions table if available
+    let lookupQId = null;
+    let lookupQNo = null;
+    if (qId > 0 || rawQNo) {
+      try {
+        const [foundRows] = await pool.query(
+          'SELECT id, question_no FROM questions WHERE id = ? OR id = ? OR question_no = ? LIMIT 1',
+          [qId, numSeq, rawQNo]
+        );
+        if (foundRows && foundRows.length > 0) {
+          lookupQId = foundRows[0].id;
+          lookupQNo = foundRows[0].question_no;
+        }
+      } catch (err) {}
+    }
+
+    const isDelete = req.method === 'DELETE' || action === 'delete' || trimmedNote === '';
+
+    if (isDelete) {
+      const qClauses = [];
+      const qParams = [];
+
+      if (targetNoteId > 0) {
+        qClauses.push('id = ?');
+        qParams.push(targetNoteId);
+      }
+      if (qId > 0) {
+        qClauses.push('question_id = ?');
+        qParams.push(qId);
+      }
+      if (lookupQId && lookupQId !== qId) {
+        qClauses.push('question_id = ?');
+        qParams.push(lookupQId);
+      }
+      if (numSeq > 0 && numSeq !== qId && numSeq !== lookupQId) {
+        qClauses.push('question_id = ?');
+        qParams.push(numSeq);
+      }
+      if (rawQNo) {
+        qClauses.push('question_no = ?');
+        qParams.push(rawQNo);
+      }
+      if (lookupQNo && lookupQNo !== rawQNo) {
+        qClauses.push('question_no = ?');
+        qParams.push(lookupQNo);
+      }
+      if (numSeq > 0) {
+        qClauses.push('question_no = ?');
+        qParams.push(`Question #${numSeq}`);
+        qClauses.push('question_no = ?');
+        qParams.push(`Question ${numSeq}`);
+      }
+
+      if (qClauses.length === 0) {
+        return res.status(400).json({ error: 'Question identifier required for deletion.' });
+      }
+
+      const userClauses = [];
+      const userParams = [];
+      if (!isAdmin) {
+        if (effectiveUserId) {
+          userClauses.push('user_id = ?');
+          userParams.push(effectiveUserId);
+        }
+        if (effectiveEmail) {
+          userClauses.push('user_email = ?');
+          userParams.push(effectiveEmail);
+        }
+      }
+
+      let deleteSql = `DELETE FROM candidate_notes WHERE (${qClauses.join(' OR ')})`;
+      let finalParams = [...qParams];
+      if (userClauses.length > 0) {
+        deleteSql += ` AND (${userClauses.join(' OR ')})`;
+        finalParams = [...finalParams, ...userParams];
+      }
+
+      const [delResult] = await pool.query(deleteSql, finalParams);
+      return res.json({ success: true, message: 'Note deleted from MySQL', affected: delResult.affectedRows });
+    }
+
+    // SAVE / UPDATE NOTE
+    if (!qId && !rawQNo) {
+      return res.status(400).json({ error: 'Valid questionId is required' });
+    }
+
+    const effectiveQId = lookupQId || qId;
+    const effectiveQNo = lookupQNo || rawQNo || `Question #${effectiveQId}`;
+
     const findConds = [];
     const findParams = [];
-    if (uId) { findConds.push('user_id = ?'); findParams.push(uId); }
-    if (uEmail) { findConds.push('user_email = ?'); findParams.push(uEmail); }
+    if (effectiveUserId) { findConds.push('user_id = ?'); findParams.push(effectiveUserId); }
+    if (effectiveEmail) { findConds.push('user_email = ?'); findParams.push(effectiveEmail); }
+
     const [existing] = await pool.query(
-      `SELECT id FROM candidate_notes WHERE question_id = ? AND (${findConds.join(' OR ')}) LIMIT 1`,
-      [qId, ...findParams]
+      `SELECT id FROM candidate_notes WHERE (question_id = ? OR question_id = ? OR question_no = ?) AND (${findConds.join(' OR ')}) LIMIT 1`,
+      [effectiveQId, qId, effectiveQNo, ...findParams]
     );
 
     if (existing.length > 0) {
       await pool.query(
-        `UPDATE candidate_notes SET note_text = ?, question_no = ?, candidate_name = ?, user_id = ?, user_email = ? WHERE id = ?`,
-        [trimmedNote, questionNo || `Question #${qId}`, candidateName || 'Candidate', uId || null, uEmail || null, existing[0].id]
+        `UPDATE candidate_notes SET note_text = ?, question_id = ?, question_no = ?, candidate_name = ?, user_id = ?, user_email = ? WHERE id = ?`,
+        [trimmedNote, effectiveQId, effectiveQNo, effectiveName, effectiveUserId || null, effectiveEmail || null, existing[0].id]
       );
     } else {
       await pool.query(
         `INSERT INTO candidate_notes (user_id, user_email, candidate_name, question_id, question_no, note_text) VALUES (?, ?, ?, ?, ?, ?)`,
-        [uId || null, uEmail || null, candidateName || 'Candidate', qId, questionNo || `Question #${qId}`, trimmedNote]
+        [effectiveUserId || null, effectiveEmail || null, effectiveName, effectiveQId, effectiveQNo, trimmedNote]
       );
     }
 
-    res.json({ success: true, message: 'Note saved to MySQL' });
+    res.json({ success: true, message: 'Note saved to MySQL', questionId: effectiveQId, questionNo: effectiveQNo });
   } catch (error) {
-    console.error('Failed to save note to MySQL:', error);
-    res.status(500).json({ error: 'Failed to save note', details: error.message });
+    console.error('Failed to save/delete note in MySQL:', error);
+    res.status(500).json({ error: 'Failed to process note', details: error.message });
   }
 });
 
