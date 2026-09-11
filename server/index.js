@@ -1192,15 +1192,30 @@ app.all(['/api/notes', '/api/notes/:id'], async (req, res, next) => {
       qId = numSeq;
     }
 
-    // Lookup paired question in questions table if available
+    // Lookup paired question in questions table (question_no is authoritative)
     let lookupQId = null;
     let lookupQNo = null;
-    if (qId > 0 || rawQNo) {
+    if (rawQNo) {
       try {
-        const [foundRows] = await pool.query(
-          'SELECT id, question_no FROM questions WHERE id = ? OR id = ? OR question_no = ? LIMIT 1',
-          [qId, numSeq, rawQNo]
-        );
+        const [foundRows] = await pool.query('SELECT id, question_no FROM questions WHERE question_no = ? LIMIT 1', [rawQNo]);
+        if (foundRows && foundRows.length > 0) {
+          lookupQId = foundRows[0].id;
+          lookupQNo = foundRows[0].question_no;
+        }
+      } catch (err) {}
+    }
+    if (!lookupQId && numSeq > 0) {
+      try {
+        const [foundRows] = await pool.query('SELECT id, question_no FROM questions WHERE question_no LIKE ? LIMIT 1', [`%#${numSeq}`]);
+        if (foundRows && foundRows.length > 0) {
+          lookupQId = foundRows[0].id;
+          lookupQNo = foundRows[0].question_no;
+        }
+      } catch (err) {}
+    }
+    if (!lookupQId && qId > 0) {
+      try {
+        const [foundRows] = await pool.query('SELECT id, question_no FROM questions WHERE id = ? LIMIT 1', [qId]);
         if (foundRows && foundRows.length > 0) {
           lookupQId = foundRows[0].id;
           lookupQNo = foundRows[0].question_no;
@@ -1218,18 +1233,6 @@ app.all(['/api/notes', '/api/notes/:id'], async (req, res, next) => {
         qClauses.push('id = ?');
         qParams.push(targetNoteId);
       }
-      if (qId > 0) {
-        qClauses.push('question_id = ?');
-        qParams.push(qId);
-      }
-      if (lookupQId && lookupQId !== qId) {
-        qClauses.push('question_id = ?');
-        qParams.push(lookupQId);
-      }
-      if (numSeq > 0 && numSeq !== qId && numSeq !== lookupQId) {
-        qClauses.push('question_id = ?');
-        qParams.push(numSeq);
-      }
       if (rawQNo) {
         qClauses.push('question_no = ?');
         qParams.push(rawQNo);
@@ -1237,6 +1240,14 @@ app.all(['/api/notes', '/api/notes/:id'], async (req, res, next) => {
       if (lookupQNo && lookupQNo !== rawQNo) {
         qClauses.push('question_no = ?');
         qParams.push(lookupQNo);
+      }
+      if (lookupQId) {
+        qClauses.push('question_id = ?');
+        qParams.push(lookupQId);
+      }
+      if (qId > 0 && (!lookupQId || qId === lookupQId)) {
+        qClauses.push('question_id = ?');
+        qParams.push(qId);
       }
       if (numSeq > 0) {
         qClauses.push('question_no = ?');

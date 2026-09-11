@@ -1545,13 +1545,35 @@ if (preg_match('#^/api/notes#', $basePath)) {
             $qId = $numSeq;
         }
 
-        // Look up paired ID and questionNo from questions table if available
+        // Look up paired ID and questionNo from questions table (question_no is authoritative)
         $lookupQId = null;
         $lookupQNo = null;
-        if ($qId > 0 || !empty($qNo)) {
+        if (!empty($qNo)) {
             try {
-                $lStmt = $pdo->prepare("SELECT id, question_no FROM questions WHERE id = ? OR id = ? OR question_no = ? LIMIT 1");
-                $lStmt->execute([$qId, $numSeq, $qNo]);
+                $lStmt = $pdo->prepare("SELECT id, question_no FROM questions WHERE question_no = ? LIMIT 1");
+                $lStmt->execute([$qNo]);
+                $foundQ = $lStmt->fetch();
+                if ($foundQ) {
+                    $lookupQId = (int)$foundQ['id'];
+                    $lookupQNo = $foundQ['question_no'];
+                }
+            } catch (Exception $e) {}
+        }
+        if (!$lookupQId && $numSeq > 0) {
+            try {
+                $lStmt = $pdo->prepare("SELECT id, question_no FROM questions WHERE question_no LIKE ? LIMIT 1");
+                $lStmt->execute(["%#{$numSeq}"]);
+                $foundQ = $lStmt->fetch();
+                if ($foundQ) {
+                    $lookupQId = (int)$foundQ['id'];
+                    $lookupQNo = $foundQ['question_no'];
+                }
+            } catch (Exception $e) {}
+        }
+        if (!$lookupQId && $qId > 0) {
+            try {
+                $lStmt = $pdo->prepare("SELECT id, question_no FROM questions WHERE id = ? LIMIT 1");
+                $lStmt->execute([$qId]);
                 $foundQ = $lStmt->fetch();
                 if ($foundQ) {
                     $lookupQId = (int)$foundQ['id'];
@@ -1569,18 +1591,6 @@ if (preg_match('#^/api/notes#', $basePath)) {
                 $qClauses[] = "id = ?";
                 $qParams[] = $noteId;
             }
-            if ($qId > 0) {
-                $qClauses[] = "question_id = ?";
-                $qParams[] = $qId;
-            }
-            if ($lookupQId && $lookupQId !== $qId) {
-                $qClauses[] = "question_id = ?";
-                $qParams[] = $lookupQId;
-            }
-            if ($numSeq > 0 && $numSeq !== $qId && $numSeq !== $lookupQId) {
-                $qClauses[] = "question_id = ?";
-                $qParams[] = $numSeq;
-            }
             if (!empty($qNo)) {
                 $qClauses[] = "question_no = ?";
                 $qParams[] = $qNo;
@@ -1588,6 +1598,14 @@ if (preg_match('#^/api/notes#', $basePath)) {
             if (!empty($lookupQNo) && $lookupQNo !== $qNo) {
                 $qClauses[] = "question_no = ?";
                 $qParams[] = $lookupQNo;
+            }
+            if ($lookupQId) {
+                $qClauses[] = "question_id = ?";
+                $qParams[] = $lookupQId;
+            }
+            if ($qId > 0 && (!$lookupQId || $qId === $lookupQId)) {
+                $qClauses[] = "question_id = ?";
+                $qParams[] = $qId;
             }
             if ($numSeq > 0) {
                 $qClauses[] = "question_no = ?";
