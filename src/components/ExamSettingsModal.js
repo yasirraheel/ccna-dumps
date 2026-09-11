@@ -19,7 +19,7 @@ function ExamSettingsModal({ settings, setSettings, onClose }) {
 
   const handleSaveAndClose = () => {
     if (setSettings) {
-      setSettings((current) => ({ ...current, ...draft }));
+      setSettings(draft);
     }
     onClose();
   };

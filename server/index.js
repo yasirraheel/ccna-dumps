@@ -1397,6 +1397,144 @@ app.post('/api/user/upgrade-plan', async (req, res) => {
   }
 });
 
+// 10.5 User Exam Settings & Preferences (Bank, Mode, Custom Settings)
+app.get(['/api/user/settings', '/api/user-settings'], async (req, res) => {
+  try {
+    const pool = getPool();
+    let tokenUser = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        tokenUser = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      } catch (e) {}
+    }
+
+    const userId = req.query.userId || tokenUser?.id || '';
+    const userEmail = (req.query.userEmail || tokenUser?.email || '').toLowerCase().trim();
+
+    if (!userId && !userEmail) {
+      return res.json({
+        success: true,
+        selectedBank: 'bank_a',
+        examMode: 'study',
+        settings: null,
+      });
+    }
+
+    const conditions = [];
+    const params = [];
+    if (userEmail) {
+      conditions.push('user_email = ?');
+      params.push(userEmail);
+    }
+    if (userId) {
+      conditions.push('user_id = ?');
+      params.push(userId);
+    }
+
+    const [rows] = await pool.query(
+      `SELECT * FROM user_exam_settings WHERE ${conditions.join(' OR ')} ORDER BY updated_at DESC LIMIT 1`,
+      params
+    );
+
+    if (rows.length > 0) {
+      const row = rows[0];
+      let parsedSettings = null;
+      try {
+        parsedSettings = typeof row.settings === 'string' ? JSON.parse(row.settings) : row.settings;
+      } catch (e) {}
+
+      return res.json({
+        success: true,
+        selectedBank: row.selected_bank || 'bank_a',
+        examMode: row.exam_mode || 'study',
+        settings: parsedSettings,
+        updatedAt: row.updated_at,
+      });
+    }
+
+    return res.json({
+      success: true,
+      selectedBank: 'bank_a',
+      examMode: 'study',
+      settings: null,
+    });
+  } catch (err) {
+    console.error('Error fetching user exam settings:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post(['/api/user/settings', '/api/user-settings'], async (req, res) => {
+  try {
+    const pool = getPool();
+    let tokenUser = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        tokenUser = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+      } catch (e) {}
+    }
+
+    const userId = req.body.userId || tokenUser?.id || null;
+    let userEmail = (req.body.userEmail || tokenUser?.email || '').toLowerCase().trim();
+
+    if (!userEmail && userId) {
+      const [uRows] = await pool.query('SELECT email FROM users WHERE id = ?', [userId]);
+      if (uRows.length > 0 && uRows[0].email) {
+        userEmail = uRows[0].email.toLowerCase().trim();
+      }
+    }
+
+    if (!userEmail) {
+      return res.status(400).json({ error: 'User email or token required to save exam settings.' });
+    }
+
+    const selectedBank = req.body.selectedBank || 'bank_a';
+    const examMode = req.body.examMode || 'study';
+    let settingsData = req.body.settings;
+    let settingsJson = '';
+
+    if (typeof settingsData === 'object' && settingsData !== null) {
+      settingsJson = JSON.stringify(settingsData);
+    } else if (typeof settingsData === 'string' && settingsData) {
+      settingsJson = settingsData;
+    } else {
+      settingsJson = JSON.stringify({
+        randomizeQuestions: false,
+        randomizeAnswers: false,
+        showScoreLive: true,
+        showRequiredAnswersCount: true,
+        includeShowAnswerBtn: true,
+        showAnswersInline: true,
+        timerMode: 'not_timed',
+      });
+    }
+
+    await pool.query(
+      `INSERT INTO user_exam_settings (user_id, user_email, selected_bank, exam_mode, settings)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         user_id = VALUES(user_id),
+         selected_bank = VALUES(selected_bank),
+         exam_mode = VALUES(exam_mode),
+         settings = VALUES(settings),
+         updated_at = CURRENT_TIMESTAMP`,
+      [userId, userEmail, selectedBank, examMode, settingsJson]
+    );
+
+    res.json({
+      success: true,
+      message: 'Exam settings saved successfully.',
+      selectedBank,
+      examMode,
+    });
+  } catch (err) {
+    console.error('Error saving user exam settings:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Admin Authentication Middleware
 async function adminAuthMiddleware(req, res, next) {
   try {

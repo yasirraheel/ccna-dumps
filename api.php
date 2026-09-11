@@ -77,6 +77,18 @@ try {
     try { $pdo->exec("ALTER TABLE plans CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE plans ADD COLUMN bank_permissions JSON"); } catch (Exception $e) {}
 
+    // Ensure user_exam_settings table exists
+    $pdo->exec("CREATE TABLE IF NOT EXISTS user_exam_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100) NULL,
+        user_email VARCHAR(191) NOT NULL,
+        selected_bank VARCHAR(50) DEFAULT 'bank_a',
+        exam_mode VARCHAR(50) DEFAULT 'study',
+        settings LONGTEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_settings (user_email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     $defaultFreePerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
         'bank_b' => ['enabled' => true, 'max_questions' => 50],
@@ -1748,6 +1760,129 @@ if (preg_match('#^/api/user/upgrade-plan$#', $basePath) && $method === 'POST') {
         "token" => $newToken
     ]);
     exit;
+}
+
+// 12.6 User Exam Settings & Preferences API
+if (preg_match('#^/api/user(?:-settings|/settings)$#', $basePath)) {
+    // Auth extraction
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if (!$auth && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $auth = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    }
+    $tokenUser = null;
+    if ($auth && preg_match('/Bearer\s+(.*)$/i', $auth, $m)) {
+        $tokenUser = verifyToken(trim($m[1]), $jwtSecret);
+    }
+
+    if ($method === 'GET') {
+        $userId = trim($_GET['userId'] ?? ($tokenUser['id'] ?? ''));
+        $userEmail = isset($_GET['userEmail']) ? strtolower(trim($_GET['userEmail'])) : (isset($tokenUser['email']) ? strtolower(trim($tokenUser['email'])) : '');
+
+        if (empty($userId) && empty($userEmail)) {
+            echo json_encode([
+                "success" => true,
+                "selectedBank" => "bank_a",
+                "examMode" => "study",
+                "settings" => null
+            ]);
+            exit;
+        }
+
+        $conditions = [];
+        $params = [];
+        if (!empty($userEmail)) {
+            $conditions[] = "user_email = ?";
+            $params[] = $userEmail;
+        }
+        if (!empty($userId)) {
+            $conditions[] = "user_id = ?";
+            $params[] = $userId;
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM user_exam_settings WHERE " . implode(" OR ", $conditions) . " ORDER BY updated_at DESC LIMIT 1");
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        if ($row) {
+            $parsedSettings = json_decode($row['settings'], true);
+            echo json_encode([
+                "success" => true,
+                "selectedBank" => $row['selected_bank'] ?? 'bank_a',
+                "examMode" => $row['exam_mode'] ?? 'study',
+                "settings" => $parsedSettings ?: null,
+                "updatedAt" => $row['updated_at']
+            ]);
+        } else {
+            echo json_encode([
+                "success" => true,
+                "selectedBank" => "bank_a",
+                "examMode" => "study",
+                "settings" => null
+            ]);
+        }
+        exit;
+    }
+
+    if ($method === 'POST') {
+        $userId = trim($body['userId'] ?? ($tokenUser['id'] ?? ''));
+        $userEmail = isset($body['userEmail']) ? strtolower(trim($body['userEmail'])) : (isset($tokenUser['email']) ? strtolower(trim($tokenUser['email'])) : '');
+
+        if (empty($userEmail) && !empty($userId)) {
+            $uStmt = $pdo->prepare("SELECT email FROM users WHERE id = ?");
+            $uStmt->execute([$userId]);
+            $uRow = $uStmt->fetch();
+            if ($uRow && !empty($uRow['email'])) {
+                $userEmail = strtolower(trim($uRow['email']));
+            }
+        }
+
+        if (empty($userEmail)) {
+            http_response_code(400);
+            echo json_encode(["error" => "User email or token required to save exam settings."]);
+            exit;
+        }
+
+        $selectedBank = trim($body['selectedBank'] ?? 'bank_a');
+        $examMode = trim($body['examMode'] ?? 'study');
+        $settingsData = $body['settings'] ?? null;
+
+        if (is_array($settingsData) || is_object($settingsData)) {
+            $settingsJson = json_encode($settingsData);
+        } else if (is_string($settingsData) && !empty($settingsData)) {
+            $settingsJson = $settingsData;
+        } else {
+            $settingsJson = json_encode([
+                "randomizeQuestions" => false,
+                "randomizeAnswers" => false,
+                "showScoreLive" => true,
+                "showRequiredAnswersCount" => true,
+                "includeShowAnswerBtn" => true,
+                "showAnswersInline" => true,
+                "timerMode" => "not_timed"
+            ]);
+        }
+
+        $upsertStmt = $pdo->prepare("
+            INSERT INTO user_exam_settings (user_id, user_email, selected_bank, exam_mode, settings)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                user_id = VALUES(user_id),
+                selected_bank = VALUES(selected_bank),
+                exam_mode = VALUES(exam_mode),
+                settings = VALUES(settings),
+                updated_at = CURRENT_TIMESTAMP
+        ");
+        $upsertStmt->execute([$userId ?: null, $userEmail, $selectedBank, $examMode, $settingsJson]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Exam settings saved successfully.",
+            "selectedBank" => $selectedBank,
+            "examMode" => $examMode
+        ]);
+        exit;
+    }
 }
 
 function checkAdminAuth($pdo, $jwtSecret, $body = null) {

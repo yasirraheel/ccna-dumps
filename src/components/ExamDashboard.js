@@ -46,8 +46,32 @@ function ExamDashboard({
   onLogout,
   onOpenUpgrade,
 }) {
-  const [selectedBank, setSelectedBank] = useState("bank_a");
-  const [examMode, setExamMode] = useState("study");
+  // Synchronously load cached user exam preferences to prevent default flash on refresh
+  const getInitialPrefs = () => {
+    try {
+      const email = currentUser?.email || (typeof window !== "undefined" && JSON.parse(localStorage.getItem("ccna_auth_user") || "null")?.email);
+      if (email) {
+        const cached = localStorage.getItem(`ccna_user_settings_${email}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return {
+            selectedBank: parsed.selectedBank || "bank_a",
+            examMode: parsed.examMode || "study",
+            settings: parsed.settings ? { ...DEFAULT_STUDY_SETTINGS, ...parsed.settings } : DEFAULT_STUDY_SETTINGS,
+          };
+        }
+      }
+    } catch (e) {}
+    return {
+      selectedBank: "bank_a",
+      examMode: "study",
+      settings: DEFAULT_STUDY_SETTINGS,
+    };
+  };
+
+  const initialPrefs = getInitialPrefs();
+  const [selectedBank, setSelectedBank] = useState(initialPrefs.selectedBank);
+  const [examMode, setExamMode] = useState(initialPrefs.examMode);
   const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -70,8 +94,8 @@ function ExamDashboard({
     onConfirm: () => {},
   });
 
-  // Settings state in memory only (pure server & component authority, zero localStorage)
-  const [settings, setSettings] = useState(DEFAULT_STUDY_SETTINGS);
+  // Settings state initialized from cached preferences, synced with server
+  const [settings, setSettings] = useState(initialPrefs.settings);
   const [availablePlans, setAvailablePlans] = useState([]);
 
   useEffect(() => {
@@ -85,9 +109,111 @@ function ExamDashboard({
       .catch((err) => console.warn('Could not load dynamic plans:', err));
   }, []);
 
-  // Update settings in memory
+  // Fetch persisted settings from MySQL server on load or when user changes
+  useEffect(() => {
+    const userEmail = currentUser?.email || (typeof window !== "undefined" && JSON.parse(localStorage.getItem("ccna_auth_user") || "null")?.email);
+    const userId = currentUser?.id || (typeof window !== "undefined" && JSON.parse(localStorage.getItem("ccna_auth_user") || "null")?.id);
+    if (!userEmail && !userId) return;
+
+    const token = localStorage.getItem("ccna_auth_token");
+    const query = new URLSearchParams();
+    if (userEmail) query.append("userEmail", userEmail);
+    if (userId) query.append("userId", userId);
+
+    fetch(`/api/user/settings?${query.toString()}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      cache: "no-store"
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.success) {
+          if (data.selectedBank) {
+            setSelectedBank((prev) => {
+              return isPlanAllowedForBank(currentUser, data.selectedBank, availablePlans)
+                ? data.selectedBank
+                : prev;
+            });
+          }
+          if (data.examMode) {
+            setExamMode((prev) => {
+              return isPlanAllowedForMode(currentUser, data.examMode, availablePlans)
+                ? data.examMode
+                : prev;
+            });
+          }
+          if (data.settings && typeof data.settings === "object") {
+            setSettings((prev) => ({
+              ...DEFAULT_STUDY_SETTINGS,
+              ...data.settings,
+            }));
+          }
+          if (userEmail) {
+            try {
+              localStorage.setItem(
+                `ccna_user_settings_${userEmail}`,
+                JSON.stringify({
+                  selectedBank: data.selectedBank || "bank_a",
+                  examMode: data.examMode || "study",
+                  settings: data.settings ? { ...DEFAULT_STUDY_SETTINGS, ...data.settings } : DEFAULT_STUDY_SETTINGS,
+                })
+              );
+            } catch (e) {}
+          }
+        }
+      })
+      .catch((err) => console.warn("Could not sync user exam settings from server:", err));
+  }, [currentUser?.email, currentUser?.id, availablePlans, currentUser]);
+
+  // Persist user exam choices (selected bank, mode, settings) to MySQL server
+  const savePreferencesToServer = (partial) => {
+    const userEmail = currentUser?.email || (typeof window !== "undefined" && JSON.parse(localStorage.getItem("ccna_auth_user") || "null")?.email);
+    const userId = currentUser?.id || (typeof window !== "undefined" && JSON.parse(localStorage.getItem("ccna_auth_user") || "null")?.id);
+
+    const nextBank = partial.selectedBank !== undefined ? partial.selectedBank : selectedBank;
+    const nextMode = partial.examMode !== undefined ? partial.examMode : examMode;
+    const nextSettings = partial.settings !== undefined ? partial.settings : settings;
+
+    if (userEmail) {
+      try {
+        localStorage.setItem(
+          `ccna_user_settings_${userEmail}`,
+          JSON.stringify({
+            selectedBank: nextBank,
+            examMode: nextMode,
+            settings: nextSettings,
+          })
+        );
+      } catch (e) {}
+    }
+
+    if (userEmail || userId) {
+      const token = localStorage.getItem("ccna_auth_token");
+      fetch("/api/user/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          userId,
+          userEmail,
+          selectedBank: nextBank,
+          examMode: nextMode,
+          settings: nextSettings,
+        }),
+      }).catch((err) => console.warn("Failed to persist exam settings to server:", err));
+    }
+  };
+
+  // Update settings in memory & persist to server
   const handleUpdateSettings = (updater) => {
-    setSettings((prev) => (typeof updater === "function" ? updater(prev) : updater));
+    setSettings((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      savePreferencesToServer({ settings: next });
+      return next;
+    });
   };
 
   const getBankFilteredQuestions = () => {
@@ -175,6 +301,7 @@ function ExamDashboard({
       return;
     }
     setSelectedBank(bankKey);
+    savePreferencesToServer({ selectedBank: bankKey });
   };
 
   const handleModeSelect = (mode) => {
@@ -188,6 +315,7 @@ function ExamDashboard({
       return;
     }
     setExamMode(mode);
+    savePreferencesToServer({ examMode: mode });
   };
 
   const effectiveSettings = isSimulation

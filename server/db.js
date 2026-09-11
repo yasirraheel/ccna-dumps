@@ -173,6 +173,20 @@ async function initDB() {
       await pool.query(`ALTER TABLE candidate_notes ADD COLUMN user_email VARCHAR(191) AFTER user_id;`);
     } catch {}
 
+    // 6. User exam settings table (Dashboard exam bank, mode, and customize settings)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_exam_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100) NULL,
+        user_email VARCHAR(191) NOT NULL,
+        selected_bank VARCHAR(50) DEFAULT 'bank_a',
+        exam_mode VARCHAR(50) DEFAULT 'study',
+        settings LONGTEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_settings (user_email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
     const [qRows] = await pool.query('SELECT COUNT(*) as count FROM questions');
     if (qRows[0].count === 0) {
       console.log('Seeding CCNA questions into MySQL...');
@@ -244,6 +258,12 @@ async function initDB() {
         JOIN users u ON LOWER(cn.user_email) = LOWER(u.email) 
         SET cn.user_id = u.id 
         WHERE cn.user_id IS NULL OR cn.user_id = ""
+      `);
+      await pool.query(`
+        UPDATE user_exam_settings ues 
+        JOIN users u ON LOWER(ues.user_email) = LOWER(u.email) 
+        SET ues.user_id = u.id 
+        WHERE ues.user_id IS NULL OR ues.user_id = ""
       `);
     } catch (e) {
       console.warn('Test user check/map:', e.message);
