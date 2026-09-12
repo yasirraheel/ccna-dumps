@@ -2552,7 +2552,9 @@ export default function App() {
       return;
     }
 
-    const bank = examRecord?.bankName || selectedBankName;
+    const bank = (examRecord?.bankName || selectedBankName)
+      .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged)[^)]*\)/gi, "")
+      .trim();
     const mode = examRecord?.examMode || examMode;
     const stngs = examRecord?.settings || settings;
 
@@ -2588,15 +2590,15 @@ export default function App() {
       setAlertDialog({
         isOpen: true,
         title: "Perfect Score! 🌟",
-        message: "Congratulations! All questions were answered correctly in this exam session. There are no incorrect questions to retake.",
-        confirmText: "Awesome!",
-        cancelText: null,
+        message: "Congratulations! You answered all questions correctly in this exam session.",
         type: "success",
       });
       return;
     }
 
-    const bank = examRecord?.bankName || selectedBankName;
+    const bank = (examRecord?.bankName || selectedBankName)
+      .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged)[^)]*\)/gi, "")
+      .trim();
     const mode = examRecord?.examMode || examMode;
     const stngs = examRecord?.settings || settings;
 

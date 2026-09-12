@@ -1117,6 +1117,14 @@ if (preg_match('#^/api/history#', $basePath)) {
                                 $mOpts = json_decode($m['options'] ?? '[]', true) ?? [];
                                 $mCorr = json_decode($m['correct_option'] ?? '[]', true) ?? [];
                                 $mCorrArr = is_array($mCorr) ? $mCorr : [$mCorr];
+                                $stripFn = function($s) { return strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', (string)$s))); };
+                                $masterCorrectTexts = [];
+                                foreach ($mCorrArr as $cIdx) {
+                                    if (isset($mOpts[$cIdx])) {
+                                        $masterCorrectTexts[] = $stripFn($mOpts[$cIdx]);
+                                    }
+                                }
+
                                 $qItem['question'] = $m['question'];
                                 $qItem['explanation'] = $m['explanation'];
                                 $qItem['cliSnippet'] = $m['cli_snippet'];
@@ -1124,9 +1132,35 @@ if (preg_match('#^/api/history#', $basePath)) {
                                 if (!empty($m['original_source_image'])) {
                                     $qItem['originalSourceImage'] = $m['original_source_image'];
                                 }
-                                $qItem['options'] = $mOpts;
-                                $qItem['correctOption'] = count($mCorrArr) === 1 ? $mCorrArr[0] : $mCorrArr;
-                                $qItem['correctOptions'] = $mCorrArr;
+
+                                $hasExistingOptions = !empty($qItem['options']) && is_array($qItem['options']);
+                                if ($hasExistingOptions) {
+                                    $mTexts = array_map($stripFn, $mOpts);
+                                    $qTexts = array_map($stripFn, $qItem['options']);
+                                    sort($mTexts);
+                                    sort($qTexts);
+                                    if ($mTexts === $qTexts && count($qTexts) > 0) {
+                                        // Scrambled / randomized options: keep options as user saw them, re-map correctOption
+                                        $newCorrIndices = [];
+                                        foreach ($qItem['options'] as $qIdx => $qOpt) {
+                                            if (in_array($stripFn($qOpt), $masterCorrectTexts, true)) {
+                                                $newCorrIndices[] = $qIdx;
+                                            }
+                                        }
+                                        if (!empty($newCorrIndices)) {
+                                            $qItem['correctOption'] = count($newCorrIndices) === 1 ? $newCorrIndices[0] : $newCorrIndices;
+                                            $qItem['correctOptions'] = $newCorrIndices;
+                                        }
+                                    } else {
+                                        $qItem['options'] = $mOpts;
+                                        $qItem['correctOption'] = count($mCorrArr) === 1 ? $mCorrArr[0] : $mCorrArr;
+                                        $qItem['correctOptions'] = $mCorrArr;
+                                    }
+                                } else {
+                                    $qItem['options'] = $mOpts;
+                                    $qItem['correctOption'] = count($mCorrArr) === 1 ? $mCorrArr[0] : $mCorrArr;
+                                    $qItem['correctOptions'] = $mCorrArr;
+                                }
                             }
                         }
                     }

@@ -890,7 +890,7 @@ function ExamDashboard({
                             : `Recent Exam #${idx + 1}:`}
                         </span>
                         <h3 className="past-exam-title">
-                          Cisco 200-301 CCNA ({cleanBankTitle(exam.bankName || "CCNA Exam")})
+                          Cisco 200-301 CCNA — {cleanBankTitle(exam.bankName || "CCNA Exam")}
                         </h3>
                       </div>
 
