@@ -90,6 +90,11 @@ function QuestionView({
   secondsRemaining,
   isPaused = false,
   onTogglePause,
+  serverConnectionError = null,
+  onRetryConnection,
+  isRetryingConnection = false,
+  isNavSaving = false,
+  onRevealAnswer,
 }) {
   const isUserAdmin = Boolean(
     isAdmin ||
@@ -98,6 +103,7 @@ function QuestionView({
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+  const [isCheckingAnswer, setIsCheckingAnswer] = useState(false);
   const toastTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -148,6 +154,8 @@ function QuestionView({
     }, 360);
     return () => clearTimeout(timer);
   }, [seqNumber]);
+
+  const isBusyNavigating = Boolean(isNavTransitioning || isNavSaving);
   const [showPaletteModal, setShowPaletteModal] = useState(false);
   const [isNoteBoxOpen, setIsNoteBoxOpen] = useState(false);
   const [isAllNotesModalOpen, setIsAllNotesModalOpen] = useState(false);
@@ -580,6 +588,14 @@ function QuestionView({
     ? answer
     : answer?.selections || [];
 
+  const userIsFullyCorrect = useMemo(() => {
+    if (correctOptions.length === 0 || selectedIndices.length === 0) return false;
+    if (correctOptions.length !== selectedIndices.length) return false;
+    const sortedCorr = [...correctOptions].sort().join(",");
+    const sortedSel = [...selectedIndices].sort().join(",");
+    return sortedCorr === sortedSel;
+  }, [correctOptions, selectedIndices]);
+
   // Exhibit image source resolver
   const getExhibitUrl = (imgPath) => {
     if (!imgPath) return "";
@@ -605,6 +621,12 @@ function QuestionView({
   const handleOptionClick = (index) => {
     // Once answer is revealed, committed, in review mode, or time has expired, user cannot modify their selection
     if (isLocked) return;
+    if (serverConnectionError) {
+      setToastMsg("⚠️ Server connection lost. You cannot submit or change answers while offline.");
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => setToastMsg(""), 4000);
+      return;
+    }
 
     if (isMulti) {
       const current = selectedIndices;
@@ -683,6 +705,50 @@ function QuestionView({
 
   const canGoPrev = seqNumber > 1;
   const canGoNext = seqNumber < numQuestions;
+
+  const handleNextClick = async () => {
+    if (!canGoNext || isBusyNavigating) return;
+    if (serverConnectionError) {
+      if (onRetryConnection) onRetryConnection();
+      return;
+    }
+    try {
+      await onGoToQuestion(seqNumber);
+    } catch (err) {
+      console.error("Next question navigation blocked due to server connection error:", err);
+    }
+  };
+
+  const handlePrevClick = async () => {
+    if (!canGoPrev || isBusyNavigating) return;
+    try {
+      await onGoToQuestion(seqNumber - 2);
+    } catch (err) {
+      console.error("Previous question navigation blocked:", err);
+    }
+  };
+
+  const handleShowAnswerClick = async () => {
+    if (isRevealed || (isCommitted && settings?.showAnswersInline !== false)) return;
+    if (serverConnectionError) {
+      if (onRetryConnection) onRetryConnection();
+      return;
+    }
+    if (isCheckingAnswer) return;
+
+    if (onRevealAnswer) {
+      setIsCheckingAnswer(true);
+      try {
+        await onRevealAnswer(seqNumber - 1);
+      } catch (err) {
+        console.error("Reveal answer failed due to server connection error:", err);
+      } finally {
+        setIsCheckingAnswer(false);
+      }
+    } else {
+      dispatch({ type: "revealAnswer", payload: seqNumber - 1 });
+    }
+  };
 
   const handleExitClick = () => {
     if (isReviewMode) {
@@ -1043,8 +1109,9 @@ function QuestionView({
         <button
           type="button"
           className="boson-side-arrow side-arrow-left"
-          onClick={() => onGoToQuestion(seqNumber - 2)}
+          onClick={handlePrevClick}
           title="Previous Question"
+          disabled={isBusyNavigating}
         >
           ‹
         </button>
@@ -1053,9 +1120,10 @@ function QuestionView({
       {!isPaused && canGoNext && (
         <button
           type="button"
-          className="boson-side-arrow side-arrow-right"
-          onClick={() => onGoToQuestion(seqNumber)}
+          className={`boson-side-arrow side-arrow-right ${serverConnectionError || isBusyNavigating ? "disabled" : ""}`}
+          onClick={handleNextClick}
           title="Next Question"
+          disabled={isBusyNavigating || Boolean(serverConnectionError)}
         >
           ›
         </button>
@@ -1063,6 +1131,28 @@ function QuestionView({
 
       {/* QUESTION BODY AREA */}
       <div className="boson-question-body" key={seqNumber}>
+        {/* INLINE CONNECTION ERROR NOTICE */}
+        {serverConnectionError && (
+          <div className="server-connection-error-banner" style={{ margin: "0 0 16px 0", borderRadius: "8px", position: "relative" }} role="alert">
+            <div className="connection-error-content">
+              <div className="connection-error-left">
+                <span className="connection-error-icon">⚠️</span>
+                <div className="connection-error-text">
+                  <span className="connection-error-title">Server Offline - Actions Locked</span>
+                  <span className="connection-error-desc">Next question progression, answer verification, and submissions are disabled until reconnected.</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-retry-connection"
+                onClick={onRetryConnection}
+                disabled={isRetryingConnection}
+              >
+                {isRetryingConnection ? "Reconnecting..." : "🔄 Reconnect"}
+              </button>
+            </div>
+          </div>
+        )}
         {/* INLINE QUESTION NOTE COMPOSER */}
         {isNoteBoxOpen && (
           <div className="inline-note-composer-card">
@@ -1369,8 +1459,8 @@ function QuestionView({
             question={question}
             dispatch={dispatch}
             answer={answer}
-            isReviewMode={isReviewMode || isTimeOver || isLocked}
-            isLocked={isLocked}
+            isReviewMode={isReviewMode || isTimeOver || isLocked || Boolean(serverConnectionError)}
+            isLocked={isLocked || Boolean(serverConnectionError)}
           />
         ) : (
           <div className="boson-options-list">
@@ -1418,9 +1508,9 @@ function QuestionView({
 
                     <div className="boson-option-content">
                       {text.includes("\n") ? (
-                        <pre className="boson-cli-opt">{text}</pre>
+                        <pre className="option-multiline-text">{text}</pre>
                       ) : (
-                        <span className="boson-opt-text">{text}</span>
+                        <span className="option-text-inline">{text}</span>
                       )}
                     </div>
                   </div>
@@ -1433,19 +1523,27 @@ function QuestionView({
         {(isReviewMode || isRevealed || (isCommitted && settings?.showAnswersInline !== false)) && !isDragDrop && (
           <div className="boson-explanation-card">
             <div className="explanation-title">
-              💡 <strong>Correct Answer & Explanation:</strong>
+              <span className="explanation-icon">💡</span> Official Answer & Verification
             </div>
             <div className="explanation-body">
-              <div className="correct-options-full-list">
-                {correctOptions.map((idx) => {
-                  const opt = question.options[idx] || "";
+              <div className="explanation-header-banner">
+                {userIsFullyCorrect ? (
+                  <span className="badge-correct">✓ Your Answer is Correct!</span>
+                ) : (
+                  <span className="badge-incorrect">✗ Your Answer is Incorrect</span>
+                )}
+              </div>
+
+              <div className="explanation-correct-labels">
+                <strong>Correct Option{correctOptions.length > 1 ? "s" : ""}:</strong>
+                {correctOptions.map((optIdx) => {
+                  const optText = question.options?.[optIdx] || `Option ${optIdx + 1}`;
+                  const cleanText = optText.replace(/^[A-E]\.\s*/, "");
+                  const letter = String.fromCharCode(65 + optIdx);
                   return (
-                    <div key={idx} className="correct-opt-row">
-                      {opt.includes("\n") ? (
-                        <pre className="boson-cli-opt">{opt}</pre>
-                      ) : (
-                        <span className="correct-opt-text">{opt}</span>
-                      )}
+                    <div key={optIdx} className="correct-option-pill">
+                      <span className="pill-letter">{letter}</span>
+                      <span className="pill-text">{cleanText}</span>
                     </div>
                   );
                 })}
@@ -1472,20 +1570,20 @@ function QuestionView({
           <button
             type="button"
             className={`btn-boson-nav ${!canGoPrev ? "disabled" : ""}`}
-            onClick={() => canGoPrev && onGoToQuestion(seqNumber - 2)}
-            disabled={!canGoPrev}
+            onClick={handlePrevClick}
+            disabled={!canGoPrev || isBusyNavigating}
           >
             Previous
           </button>
 
           <button
             type="button"
-            className={`btn-boson-nav ${!canGoNext ? "disabled" : ""} ${isNavTransitioning ? "is-nav-loading" : ""}`}
-            onClick={() => canGoNext && onGoToQuestion(seqNumber)}
-            disabled={!canGoNext}
+            className={`btn-boson-nav ${!canGoNext || Boolean(serverConnectionError) ? "disabled" : ""} ${isBusyNavigating ? "is-nav-loading" : ""}`}
+            onClick={handleNextClick}
+            disabled={!canGoNext || isBusyNavigating || Boolean(serverConnectionError)}
           >
-            <span>Next</span>
-            {isNavTransitioning && <span className="btn-nav-pulse-dot"></span>}
+            <span>{isNavSaving ? "Saving to Server..." : "Next"}</span>
+            {isBusyNavigating && <span className="btn-nav-pulse-dot"></span>}
           </button>
         </div>
 
@@ -1493,15 +1591,11 @@ function QuestionView({
           {!isDragDrop && !isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
             <button
               type="button"
-              className={`btn-boson-action ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) ? "disabled" : ""}`}
-              onClick={() => {
-                if (!isRevealed && !(isCommitted && settings?.showAnswersInline !== false)) {
-                  dispatch({ type: "revealAnswer", payload: seqNumber - 1 });
-                }
-              }}
-              disabled={isRevealed || (isCommitted && settings?.showAnswersInline !== false)}
+              className={`btn-boson-action ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) ? "disabled" : ""}`}
+              onClick={handleShowAnswerClick}
+              disabled={isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) || isCheckingAnswer}
             >
-              {isRevealed || (isCommitted && settings?.showAnswersInline !== false) ? "✓ Answer Revealed" : "Show Answer"}
+              {isCheckingAnswer ? "Verifying..." : (isRevealed || (isCommitted && settings?.showAnswersInline !== false) ? "✓ Answer Revealed" : "Show Answer")}
             </button>
           )}
 

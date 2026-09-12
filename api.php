@@ -790,6 +790,146 @@ if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
     exit;
 }
 
+// 9.5 Realtime Server Answer Validation & Question Reveal
+if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
+    $qId = !empty($body['questionId']) ? (int)$body['questionId'] : null;
+    $qNo = trim($body['questionNo'] ?? '');
+    $userAnswer = $body['userAnswer'] ?? null;
+    $action = $body['action'] ?? 'check'; // 'check' | 'reveal' | 'commit_next'
+    $sessionId = $body['sessionId'] ?? null;
+    $sessionData = $body['sessionData'] ?? null;
+
+    if (!$qId && empty($qNo)) {
+        http_response_code(400);
+        echo json_encode(["error" => "questionId or questionNo is required"]);
+        exit;
+    }
+
+    try {
+        $qStmt = $pdo->prepare("SELECT * FROM questions WHERE id = ? OR LOWER(question_no) = LOWER(?) LIMIT 1");
+        $qStmt->execute([$qId, $qNo]);
+        $dbQ = $qStmt->fetch();
+
+        if (!$dbQ) {
+            http_response_code(404);
+            echo json_encode(["error" => "Question not found in database"]);
+            exit;
+        }
+
+        $opts = json_decode($dbQ['options'] ?? '[]', true) ?? [];
+        $rawCorr = json_decode($dbQ['correct_option'] ?? '[]', true);
+        $corrOptions = is_array($rawCorr) ? array_map('intval', $rawCorr) : ($rawCorr !== null ? [(int)$rawCorr] : []);
+        $dragDrop = json_decode($dbQ['drag_drop_data'] ?? 'null', true);
+        $qType = $dbQ['type'] ?? ($dragDrop ? 'drag_drop' : 'multiple_choice');
+        $isDragDrop = $qType === 'drag_drop' || !empty($dragDrop);
+
+        // Evaluate correctness
+        $isCorrect = false;
+        if ($isDragDrop) {
+            if (is_array($userAnswer) && !empty($userAnswer['confirmed'])) {
+                $isCorrect = !empty($userAnswer['isCorrect']);
+            }
+        } else {
+            $userIndices = [];
+            if (is_numeric($userAnswer)) {
+                $userIndices = [(int)$userAnswer];
+            } elseif (is_array($userAnswer)) {
+                if (isset($userAnswer['selections']) && is_array($userAnswer['selections'])) {
+                    $userIndices = array_map('intval', $userAnswer['selections']);
+                } else {
+                    $userIndices = array_map('intval', $userAnswer);
+                }
+            }
+            sort($userIndices);
+            $expectedCorr = $corrOptions;
+            sort($expectedCorr);
+
+            if (!empty($userIndices) && $userIndices === $expectedCorr) {
+                $isCorrect = true;
+            } else {
+                // Also check option text equivalence if client shuffled options
+                $cleanUserTexts = [];
+                $allQuestionOpts = $body['questionOptions'] ?? $opts;
+                foreach ($userIndices as $uIdx) {
+                    if (isset($allQuestionOpts[$uIdx])) {
+                        $cleanUserTexts[] = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', $allQuestionOpts[$uIdx])));
+                    }
+                }
+                sort($cleanUserTexts);
+
+                $cleanMasterTexts = [];
+                foreach ($corrOptions as $cIdx) {
+                    if (isset($opts[$cIdx])) {
+                        $cleanMasterTexts[] = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', $opts[$cIdx])));
+                    }
+                }
+                sort($cleanMasterTexts);
+
+                if (!empty($cleanUserTexts) && $cleanUserTexts === $cleanMasterTexts) {
+                    $isCorrect = true;
+                }
+            }
+        }
+
+        $earnedPoints = $isCorrect ? (int)($dbQ['points'] ?? 10) : 0;
+
+        // If sessionData is provided, update saved_sessions table in MySQL immediately
+        if (is_array($sessionData) && !empty($sessionData['id'])) {
+            $sId = $sessionData['id'];
+            $uId = $sessionData['userId'] ?? null;
+            $uEmail = isset($sessionData['userEmail']) ? strtolower($sessionData['userEmail']) : null;
+            $cName = $sessionData['candidateName'] ?? 'Candidate';
+            $bName = cleanBankName($sessionData['selectedBankName'] ?? $sessionData['bankName'] ?? 'CCNA Exam');
+            $eMode = $sessionData['examMode'] ?? 'study';
+            $qIdx = (int)($sessionData['index'] ?? 0);
+            $pts = (int)($sessionData['points'] ?? 0);
+            $secRem = (int)($sessionData['secondsRemaining'] ?? 7200);
+            $tSpent = (int)($sessionData['timeSpentSeconds'] ?? 0);
+            $qJson = json_encode($sessionData['questions'] ?? []);
+            $aJson = json_encode($sessionData['answers'] ?? []);
+            $fJson = json_encode($sessionData['flaggedQuestions'] ?? []);
+            $rJson = json_encode($sessionData['revealedQuestions'] ?? []);
+            $cJson = json_encode($sessionData['committedQuestions'] ?? []);
+            $setJson = json_encode($sessionData['settings'] ?? []);
+            $upAt = time() * 1000;
+
+            $sessUpsert = $pdo->prepare("
+                INSERT INTO saved_sessions 
+                (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, settings, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                user_id=VALUES(user_id), user_email=VALUES(user_email), candidate_name=VALUES(candidate_name),
+                bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode), q_index=VALUES(q_index),
+                points=VALUES(points), seconds_remaining=VALUES(seconds_remaining), time_spent_seconds=VALUES(time_spent_seconds),
+                answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
+                revealed_questions=VALUES(revealed_questions), committed_questions=VALUES(committed_questions),
+                settings=VALUES(settings), updated_at=VALUES(updated_at)
+            ");
+            $sessUpsert->execute([
+                $sId, $uId, $uEmail, $cName, $bName, $eMode, $qIdx, $pts, $secRem, $tSpent,
+                $qJson, $aJson, $fJson, $rJson, $cJson, $setJson, $upAt
+            ]);
+        }
+
+        echo json_encode([
+            "success" => true,
+            "questionId" => (int)$dbQ['id'],
+            "questionNo" => $dbQ['question_no'],
+            "isCorrect" => $isCorrect,
+            "correctOption" => $corrOptions,
+            "explanation" => $dbQ['explanation'] ?? null,
+            "earnedPoints" => $earnedPoints,
+            "sessionSaved" => true,
+            "serverTimestamp" => time() * 1000
+        ]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(["error" => "Database error validating answer: " . $e->getMessage()]);
+        exit;
+    }
+}
+
 // 10. Exam History API
 if (preg_match('#^/api/history#', $basePath)) {
     if ($method === 'POST') {

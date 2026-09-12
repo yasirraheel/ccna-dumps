@@ -32,12 +32,14 @@ export function isExamFinishedId(targetId) {
   return finishedSessionIdsSet.has(String(targetId));
 }
 
-export function syncActiveSessionToServer(sessionData) {
+export async function syncActiveSessionToServer(sessionData) {
   if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
-    return;
+    return { success: true };
   }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {
-    fetch(`${API_BASE_URL}/sessions`, {
+    const res = await fetch(`${API_BASE_URL}/sessions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -45,20 +47,37 @@ export function syncActiveSessionToServer(sessionData) {
         Pragma: "no-cache",
       },
       body: JSON.stringify(sessionData),
-      keepalive: true,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && typeof data.serverPoints === "number") {
-          window.dispatchEvent(
-            new CustomEvent("ccna_server_score_synced", {
-              detail: { sessionId: sessionData.id, points: data.serverPoints },
-            })
-          );
-        }
-      })
-      .catch(() => {});
-  } catch (e) {}
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Server returned HTTP ${res.status}: ${errText || res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (data && typeof data.serverPoints === "number") {
+      window.dispatchEvent(
+        new CustomEvent("ccna_server_score_synced", {
+          detail: { sessionId: sessionData.id, points: data.serverPoints },
+        })
+      );
+    }
+    if (window.__ccna_clear_connection_error) {
+      window.__ccna_clear_connection_error();
+    }
+    return data;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    const msg = e.name === "AbortError"
+      ? "Server connection timed out. Response could not be saved to server database."
+      : `Server connection failed: ${e.message || "Network error"}`;
+    if (window.__ccna_set_connection_error) {
+      window.__ccna_set_connection_error(msg);
+    }
+    throw e;
+  }
 }
 
 export const syncActiveSessionToLocalStorage = syncActiveSessionToServer;
@@ -360,6 +379,37 @@ function reducer(state, action) {
 
       return {
         ...state,
+        revealedQuestions: newRevealed,
+        committedQuestions: newCommitted,
+        points: updatedPoints,
+      };
+    }
+
+    case "revealAnswerWithServerData": {
+      const qIdx = action.payload?.index !== undefined ? action.payload.index : state.index;
+      const { correctOption, explanation } = action.payload || {};
+
+      const newRevealed = state.revealedQuestions.includes(qIdx)
+        ? state.revealedQuestions
+        : [...state.revealedQuestions, qIdx];
+      const newCommitted = !state.committedQuestions?.includes(qIdx)
+        ? [...(state.committedQuestions || []), qIdx]
+        : (state.committedQuestions || []);
+
+      const updatedQuestions = [...state.questions];
+      if (updatedQuestions[qIdx]) {
+        updatedQuestions[qIdx] = {
+          ...updatedQuestions[qIdx],
+          ...(correctOption ? { correctOption, correctOptions: correctOption } : {}),
+          ...(explanation ? { explanation } : {}),
+        };
+      }
+
+      const updatedPoints = calculateTotalPoints(updatedQuestions, state.answers);
+
+      return {
+        ...state,
+        questions: updatedQuestions,
         revealedQuestions: newRevealed,
         committedQuestions: newCommitted,
         points: updatedPoints,
@@ -1082,6 +1132,93 @@ export default function App() {
   const closeAlert = () => {
     setAlertDialog((prev) => ({ ...prev, isOpen: false }));
   };
+
+  // Real-time server connection & offline detection state
+  const [serverConnectionError, setServerConnectionError] = useState(null);
+  const [isRetryingConnection, setIsRetryingConnection] = useState(false);
+  const [isNavTransitioning, setIsNavTransitioning] = useState(false);
+
+  useEffect(() => {
+    window.__ccna_set_connection_error = (msg) => setServerConnectionError(msg);
+    window.__ccna_clear_connection_error = () => setServerConnectionError(null);
+    return () => {
+      delete window.__ccna_set_connection_error;
+      delete window.__ccna_clear_connection_error;
+    };
+  }, []);
+
+  const handleRetryConnection = useCallback(async () => {
+    setIsRetryingConnection(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/health?_t=${Date.now()}`, { cache: "no-store" });
+      if (res.ok) {
+        setServerConnectionError(null);
+        // If in active exam, re-sync the active session immediately!
+        if (status === "active" && activeSessionId) {
+          const snapshot = {
+            id: activeSessionId,
+            userId: currentUser?.id || null,
+            userEmail: currentUser?.email || null,
+            candidateName: currentUser?.name || candidateName,
+            status: "active",
+            questions,
+            index,
+            answer,
+            answers,
+            points,
+            secondsRemaining,
+            examMode,
+            settings,
+            selectedBankName,
+            selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+            bankName: selectedBankName,
+            flaggedQuestions,
+            revealedQuestions,
+            committedQuestions,
+            startedAt,
+            savedAt: Date.now(),
+            updatedAt: Date.now(),
+            isPaused: false,
+          };
+          await syncActiveSessionToServer(snapshot);
+        }
+      } else {
+        setServerConnectionError("Server is still unreachable. Please verify your connection.");
+      }
+    } catch (e) {
+      setServerConnectionError("Server is still unreachable. Please verify your internet connection.");
+    } finally {
+      setIsRetryingConnection(false);
+    }
+  }, [status, activeSessionId, currentUser, candidateName, questions, index, answer, answers, points, secondsRemaining, examMode, settings, selectedBankName, selectedBankKey, flaggedQuestions, revealedQuestions, committedQuestions, startedAt]);
+
+  useEffect(() => {
+    const handleOnline = () => handleRetryConnection();
+    const handleOffline = () => setServerConnectionError("Network disconnected: You are currently offline. Server synchronization is paused.");
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [handleRetryConnection]);
+
+  // Periodic heartbeat every 20 seconds during active exam
+  useEffect(() => {
+    if (status !== "active") return;
+    const interval = setInterval(() => {
+      fetch(`${API_BASE_URL}/health?_t=${Date.now()}`, { cache: "no-store" })
+        .then((r) => {
+          if (!r.ok) setServerConnectionError("Server health check failed. Reconnection required.");
+          else if (serverConnectionError && serverConnectionError.includes("health")) setServerConnectionError(null);
+        })
+        .catch(() => {
+          setServerConnectionError("Server connection lost. Actions and progression are locked until connection is restored.");
+        });
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [status, serverConnectionError]);
 
   // Handle redirect notice if user visited an already finished exam
   useEffect(() => {
@@ -1899,6 +2036,289 @@ export default function App() {
     setCurrentView("exam");
   };
 
+  // STRICT REAL-TIME SERVER NAVIGATION & REVEAL HANDLERS
+  const handleGoToQuestion = async (targetIdx) => {
+    if (isPaused) return;
+    if (serverConnectionError) {
+      setAlertDialog({
+        isOpen: true,
+        title: "⚠️ Server Connection Failed",
+        message: "You are currently disconnected from the server. Your exam progress and answers cannot be saved offline. Please check your internet connection and click Retry to continue.",
+        confirmText: "Retry Connection Now",
+        cancelText: "Dismiss",
+        type: "danger",
+        onConfirm: () => handleRetryConnection(),
+      });
+      return;
+    }
+
+    const curAns = answers[index];
+    const hasCurrentAnswer =
+      curAns !== null &&
+      curAns !== undefined &&
+      (typeof curAns === "number" ||
+        (Array.isArray(curAns) && curAns.length > 0) ||
+        (Array.isArray(curAns?.selections) && curAns.selections.length > 0) ||
+        (curAns?.matches && Object.keys(curAns.matches).length > 0));
+
+    const newCommitted =
+      hasCurrentAnswer && !committedQuestions?.includes(index)
+        ? [...(committedQuestions || []), index]
+        : (committedQuestions || []);
+
+    const updatedPoints = calculateTotalPoints(questions, answers);
+    const now = Date.now();
+    const sessionSnapshot = {
+      id: activeSessionId || `session_${startedAt || now}`,
+      userId: currentUser?.id || null,
+      userEmail: currentUser?.email || null,
+      candidateName: currentUser?.name || candidateName,
+      status: "active",
+      questions,
+      index: targetIdx,
+      answer: answers[targetIdx] ?? null,
+      answers,
+      points: updatedPoints,
+      secondsRemaining,
+      examMode,
+      settings,
+      selectedBankName,
+      selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+      bankName: selectedBankName,
+      flaggedQuestions,
+      revealedQuestions: revealedQuestions || [],
+      committedQuestions: newCommitted,
+      startedAt: startedAt || now,
+      savedAt: now,
+      updatedAt: now,
+      isPaused: false,
+    };
+
+    try {
+      setIsNavTransitioning(true);
+      // STRICT REQUIREMENT: MUST AWAIT AND PERSIST TO SERVER DATABASE FIRST
+      await syncActiveSessionToServer(sessionSnapshot);
+
+      // ADVANCE TO NEXT QUESTION ONLY IF SERVER ACKNOWLEDGED!
+      dispatch({ type: "goToQuestion", payload: targetIdx });
+    } catch (err) {
+      console.error("Navigation blocked due to server connection failure:", err);
+      setServerConnectionError("Server connection failed: Unable to verify and save your response to the server. You cannot advance to the next question while disconnected.");
+      setAlertDialog({
+        isOpen: true,
+        title: "⚠️ Server Connection Error",
+        message: "Unable to reach the server. Your answer could not be recorded in the database. Advancing to the next question is blocked until your connection is restored.",
+        confirmText: "Retry Connection",
+        cancelText: "Stay on Question",
+        type: "danger",
+        onConfirm: () => handleRetryConnection(),
+      });
+      throw err;
+    } finally {
+      setIsNavTransitioning(false);
+    }
+  };
+
+  const handleRevealAnswer = async (qIdx) => {
+    if (serverConnectionError) {
+      setAlertDialog({
+        isOpen: true,
+        title: "⚠️ Server Connection Failed",
+        message: "Cannot check or reveal answers while offline. Please restore connection to verify your answer.",
+        confirmText: "Retry Connection",
+        cancelText: "Dismiss",
+        type: "danger",
+        onConfirm: () => handleRetryConnection(),
+      });
+      return;
+    }
+
+    const q = questions[qIdx];
+    const userAns = answers[qIdx];
+    const targetQNo = q?.questionNo || `Question #${qIdx + 1}`;
+    const targetQId = q?.id;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const curAns = answers[index];
+      const hasCurrentAnswer =
+        curAns !== null &&
+        curAns !== undefined &&
+        (typeof curAns === "number" ||
+          (Array.isArray(curAns) && curAns.length > 0) ||
+          (Array.isArray(curAns?.selections) && curAns.selections.length > 0) ||
+          (curAns?.matches && Object.keys(curAns.matches).length > 0));
+
+      const newCommitted =
+        hasCurrentAnswer && !committedQuestions?.includes(index)
+          ? [...(committedQuestions || []), index]
+          : (committedQuestions || []);
+
+      const newRevealed = revealedQuestions?.includes(qIdx)
+        ? revealedQuestions
+        : [...(revealedQuestions || []), qIdx];
+
+      const now = Date.now();
+      const sessionData = {
+        id: activeSessionId || `session_${startedAt || now}`,
+        userId: currentUser?.id || null,
+        userEmail: currentUser?.email || null,
+        candidateName: currentUser?.name || candidateName,
+        status: "active",
+        questions,
+        index: qIdx,
+        answer: userAns ?? null,
+        answers,
+        points,
+        secondsRemaining,
+        examMode,
+        settings,
+        selectedBankName,
+        selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+        bankName: selectedBankName,
+        flaggedQuestions,
+        revealedQuestions: newRevealed,
+        committedQuestions: newCommitted,
+        startedAt: startedAt || now,
+        savedAt: now,
+        updatedAt: now,
+        isPaused: false,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/check-answer`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+        body: JSON.stringify({
+          questionId: targetQId,
+          questionNo: targetQNo,
+          userAnswer: userAns,
+          action: "reveal",
+          sessionId: activeSessionId,
+          questionOptions: q?.options || [],
+          sessionData,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data || data.success === false) {
+        throw new Error(data?.error || "Server validation failed");
+      }
+
+      setServerConnectionError(null);
+
+      dispatch({
+        type: "revealAnswerWithServerData",
+        payload: {
+          index: qIdx,
+          correctOption: data.correctOption,
+          explanation: data.explanation,
+          isCorrect: data.isCorrect,
+        },
+      });
+
+      return data;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.error("Reveal answer blocked due to server connection failure:", err);
+      const msg = err.name === "AbortError"
+        ? "Server connection timed out. Could not verify answer with server."
+        : `Connection to server failed: ${err.message || "Network error"}`;
+      setServerConnectionError(msg);
+      setAlertDialog({
+        isOpen: true,
+        title: "⚠️ Server Connection Failed",
+        message: "Could not retrieve and verify answer from the server database. Please restore your connection.",
+        confirmText: "Retry Connection",
+        cancelText: "Dismiss",
+        type: "danger",
+        onConfirm: () => handleRetryConnection(),
+      });
+      throw err;
+    }
+  };
+
+  const handleFinishExam = async () => {
+    if (serverConnectionError) {
+      setAlertDialog({
+        isOpen: true,
+        title: "⚠️ Cannot Grade Exam While Disconnected",
+        message: "You are currently disconnected from the server. Your exam results cannot be saved. Please click Retry Connection to submit your exam.",
+        confirmText: "Retry Connection Now",
+        cancelText: "Cancel",
+        type: "danger",
+        onConfirm: () => handleRetryConnection(),
+      });
+      return;
+    }
+
+    try {
+      const finalPoints = calculateTotalPoints(questions, answers);
+      const now = Date.now();
+      const completedRecord = {
+        id: activeSessionId || `exam_${now}`,
+        userId: currentUser?.id || null,
+        userEmail: currentUser?.email || null,
+        candidateName: currentUser?.name || candidateName || "Candidate",
+        bankName: selectedBankName || "CCNA Exam",
+        score: finalPoints,
+        maxScore: questions.length * 10,
+        percentage: Math.round((finalPoints / (questions.length * 10)) * 100),
+        passed: Math.round((finalPoints / (questions.length * 10)) * 100) >= 80,
+        totalQuestions: questions.length,
+        timeSpentSeconds: secondsRemaining !== null ? Math.max(0, 7200 - secondsRemaining) : 0,
+        examDate: now,
+        questions,
+        answers,
+        flaggedQuestions,
+        revealedQuestions,
+        settings,
+        examMode,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completedRecord),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      if (activeSessionId) {
+        fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(activeSessionId)}`, {
+          method: "DELETE",
+        }).catch(() => {});
+      }
+
+      dispatch({ type: "finish" });
+    } catch (err) {
+      console.error("Finish exam blocked due to server connection error:", err);
+      setServerConnectionError("Server connection failed: Could not record completed exam to server history. Please retry.");
+      setAlertDialog({
+        isOpen: true,
+        title: "⚠️ Submission Failed",
+        message: "Could not submit your completed exam to the server database. Please verify your connection and retry.",
+        confirmText: "Retry Submission",
+        cancelText: "Stay on Exam",
+        type: "danger",
+        onConfirm: () => handleFinishExam(),
+      });
+    }
+  };
+
   // On /exam mount: fetch fresh session from server (ZERO LOCALSTORAGE CACHING)
   useEffect(() => {
     const path = typeof window !== "undefined" ? window.location.pathname.toLowerCase().replace(/\/+$/, "") : "";
@@ -2263,6 +2683,27 @@ export default function App() {
 
   return (
     <div className="cisco-simulator-root">
+      {serverConnectionError && (
+        <div className="server-connection-error-banner" role="alert">
+          <div className="connection-error-content">
+            <div className="connection-error-left">
+              <span className="connection-error-icon">⚠️</span>
+              <div className="connection-error-text">
+                <span className="connection-error-title">Server Connection Failed</span>
+                <span className="connection-error-desc">{serverConnectionError}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-retry-connection"
+              onClick={handleRetryConnection}
+              disabled={isRetryingConnection}
+            >
+              {isRetryingConnection ? "Reconnecting..." : "🔄 Retry Connection"}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="simulator-app-container">
         {status === "loading" && <Loader />}
         {status === "error" && <Error />}
@@ -2363,10 +2804,13 @@ export default function App() {
             isPaused={isPaused}
             onTogglePause={() => dispatch({ type: "togglePauseExam" })}
             onToggleFlag={handleToggleFlag}
-            onGoToQuestion={(targetIdx) =>
-              dispatch({ type: "goToQuestion", payload: targetIdx })
-            }
-            onFinishExam={() => dispatch({ type: "finish" })}
+            onGoToQuestion={handleGoToQuestion}
+            onRevealAnswer={handleRevealAnswer}
+            onFinishExam={handleFinishExam}
+            serverConnectionError={serverConnectionError}
+            onRetryConnection={handleRetryConnection}
+            isRetryingConnection={isRetryingConnection}
+            isNavSaving={isNavTransitioning}
             onExitReview={() => {
               dispatch({ type: "exitReview" });
               handleNavigate("dashboard");

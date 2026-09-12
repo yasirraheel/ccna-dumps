@@ -676,7 +676,140 @@ app.get('/api/questions', async (req, res) => {
     res.json({ questions: formatted });
   } catch (error) {
     console.error('Failed to fetch questions:', error);
-    res.status(500).json({ error: 'Failed to fetch questions from database', details: error.message });
+    res.status(500).json({ error: 'Failed to fetch questions', details: error.message });
+  }
+});
+
+// 2.5 Realtime Server Answer Validation & Question Reveal
+app.post('/api/check-answer', async (req, res) => {
+  try {
+    const { questionId, questionNo, userAnswer, action, sessionId, sessionData, questionOptions } = req.body;
+    const qId = questionId ? parseInt(questionId, 10) : null;
+    const qNo = (questionNo || '').trim();
+
+    if (!qId && !qNo) {
+      return res.status(400).json({ error: 'questionId or questionNo is required' });
+    }
+
+    const pool = getPool();
+    const [rows] = await pool.query(
+      'SELECT * FROM questions WHERE id = ? OR LOWER(question_no) = LOWER(?) LIMIT 1',
+      [qId, qNo]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Question not found in database' });
+    }
+
+    const dbQ = rows[0];
+    let opts = [];
+    try { opts = typeof dbQ.options === 'string' ? JSON.parse(dbQ.options) : dbQ.options || []; } catch (e) {}
+    let rawCorr = null;
+    try { rawCorr = typeof dbQ.correct_option === 'string' ? JSON.parse(dbQ.correct_option) : dbQ.correct_option; } catch (e) {}
+    const corrOptions = Array.isArray(rawCorr) ? rawCorr.map(Number) : (rawCorr !== null && rawCorr !== undefined ? [Number(rawCorr)] : []);
+    let dragDrop = null;
+    try { dragDrop = typeof dbQ.drag_drop_data === 'string' ? JSON.parse(dbQ.drag_drop_data) : dbQ.drag_drop_data; } catch (e) {}
+    const qType = dbQ.type || (dragDrop ? 'drag_drop' : 'multiple_choice');
+    const isDragDrop = qType === 'drag_drop' || Boolean(dragDrop);
+
+    let isCorrect = false;
+    if (isDragDrop) {
+      if (userAnswer && typeof userAnswer === 'object' && userAnswer.confirmed) {
+        isCorrect = Boolean(userAnswer.isCorrect);
+      }
+    } else {
+      let userIndices = [];
+      if (typeof userAnswer === 'number') {
+        userIndices = [userAnswer];
+      } else if (Array.isArray(userAnswer)) {
+        userIndices = userAnswer.map(Number);
+      } else if (userAnswer && Array.isArray(userAnswer.selections)) {
+        userIndices = userAnswer.selections.map(Number);
+      }
+      userIndices.sort((a, b) => a - b);
+      const expectedCorr = [...corrOptions].sort((a, b) => a - b);
+
+      if (userIndices.length > 0 && JSON.stringify(userIndices) === JSON.stringify(expectedCorr)) {
+        isCorrect = true;
+      } else {
+        const cleanUserTexts = [];
+        const allOpts = Array.isArray(questionOptions) && questionOptions.length > 0 ? questionOptions : opts;
+        userIndices.forEach((uIdx) => {
+          if (allOpts[uIdx]) {
+            cleanUserTexts.push(String(allOpts[uIdx]).replace(/^[A-Z][.):-]\s*/i, '').trim().toLowerCase());
+          }
+        });
+        cleanUserTexts.sort();
+
+        const cleanMasterTexts = [];
+        corrOptions.forEach((cIdx) => {
+          if (opts[cIdx]) {
+            cleanMasterTexts.push(String(opts[cIdx]).replace(/^[A-Z][.):-]\s*/i, '').trim().toLowerCase());
+          }
+        });
+        cleanMasterTexts.sort();
+
+        if (cleanUserTexts.length > 0 && JSON.stringify(cleanUserTexts) === JSON.stringify(cleanMasterTexts)) {
+          isCorrect = true;
+        }
+      }
+    }
+
+    const earnedPoints = isCorrect ? (dbQ.points || 10) : 0;
+
+    // If sessionData is provided, update saved_sessions table in MySQL immediately
+    if (sessionData && typeof sessionData === 'object' && sessionData.id) {
+      try {
+        await pool.query(
+          `INSERT INTO saved_sessions 
+           (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, settings, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+           user_id=VALUES(user_id), user_email=VALUES(user_email), candidate_name=VALUES(candidate_name),
+           bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode), q_index=VALUES(q_index),
+           points=VALUES(points), seconds_remaining=VALUES(seconds_remaining), time_spent_seconds=VALUES(time_spent_seconds),
+           answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
+           revealed_questions=VALUES(revealed_questions), committed_questions=VALUES(committed_questions),
+           settings=VALUES(settings), updated_at=VALUES(updated_at)`,
+          [
+            sessionData.id,
+            sessionData.userId || null,
+            sessionData.userEmail ? sessionData.userEmail.trim().toLowerCase() : null,
+            sessionData.candidateName || 'Candidate',
+            sessionData.selectedBankName || sessionData.bankName || 'CCNA Exam',
+            sessionData.examMode || 'study',
+            sessionData.index || 0,
+            sessionData.points || 0,
+            sessionData.secondsRemaining || 7200,
+            sessionData.timeSpentSeconds || 0,
+            sessionData.questions ? JSON.stringify(sessionData.questions) : null,
+            sessionData.answers ? JSON.stringify(sessionData.answers) : null,
+            sessionData.flaggedQuestions ? JSON.stringify(sessionData.flaggedQuestions) : null,
+            sessionData.revealedQuestions ? JSON.stringify(sessionData.revealedQuestions) : null,
+            sessionData.committedQuestions ? JSON.stringify(sessionData.committedQuestions) : null,
+            sessionData.settings ? JSON.stringify(sessionData.settings) : null,
+            Date.now(),
+          ]
+        );
+      } catch (e) {
+        console.warn('Live session sync in check-answer warning:', e.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      questionId: dbQ.id,
+      questionNo: dbQ.question_no,
+      isCorrect,
+      correctOption: corrOptions,
+      explanation: dbQ.explanation || null,
+      earnedPoints,
+      sessionSaved: true,
+      serverTimestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Check answer error:', error);
+    res.status(500).json({ error: 'Database error validating answer', details: error.message });
   }
 });
 
