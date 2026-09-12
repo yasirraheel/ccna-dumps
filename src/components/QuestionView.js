@@ -1558,9 +1558,23 @@ function QuestionView({
                   <div style={{ fontWeight: 700, color: "#38bdf8", marginBottom: "0.5rem", fontSize: "1.3rem", display: "flex", alignItems: "center", gap: "6px" }}>
                     <span>📖</span> Explanation & Key Concept:
                   </div>
-                  <div style={{ color: "#f8fafc", fontSize: "1.35rem", lineHeight: "1.65", whiteSpace: "pre-line" }}>
-                    {question.explanation || resolveExplanation(question)}
-                  </div>
+                  {(() => {
+                    const expl = question.explanation || resolveExplanation(question);
+                    const isHtml = typeof expl === "string" && /<[a-z][\s\S]*>/i.test(expl);
+                    if (isHtml) {
+                      return (
+                        <div
+                          className="explanation-rich-content"
+                          dangerouslySetInnerHTML={{ __html: expl }}
+                        />
+                      );
+                    }
+                    return (
+                      <div style={{ color: "#f8fafc", fontSize: "1.35rem", lineHeight: "1.65", whiteSpace: "pre-line" }}>
+                        {expl}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
