@@ -712,6 +712,23 @@ app.post('/api/check-answer', async (req, res) => {
     const qType = dbQ.type || (dragDrop ? 'drag_drop' : 'multiple_choice');
     const isDragDrop = qType === 'drag_drop' || Boolean(dragDrop);
 
+    const stripPrefix = (s) => String(s || '').replace(/^[A-Z][.):-]\s*/i, '').trim().toLowerCase();
+    const masterCorrectTexts = corrOptions
+      .map((cIdx) => (opts[cIdx] ? stripPrefix(opts[cIdx]) : null))
+      .filter(Boolean);
+
+    let clientCorrIndices = [];
+    if (Array.isArray(questionOptions) && questionOptions.length > 0) {
+      questionOptions.forEach((qOpt, qIdx) => {
+        if (masterCorrectTexts.includes(stripPrefix(qOpt))) {
+          clientCorrIndices.push(qIdx);
+        }
+      });
+    }
+    if (clientCorrIndices.length === 0) {
+      clientCorrIndices = corrOptions;
+    }
+
     let isCorrect = false;
     if (isDragDrop) {
       if (userAnswer && typeof userAnswer === 'object' && userAnswer.confirmed) {
@@ -726,8 +743,8 @@ app.post('/api/check-answer', async (req, res) => {
       } else if (userAnswer && Array.isArray(userAnswer.selections)) {
         userIndices = userAnswer.selections.map(Number);
       }
-      userIndices.sort((a, b) => a - b);
-      const expectedCorr = [...corrOptions].sort((a, b) => a - b);
+      userIndices = Array.from(new Set(userIndices)).sort((a, b) => a - b);
+      const expectedCorr = Array.from(new Set(clientCorrIndices)).sort((a, b) => a - b);
 
       if (userIndices.length > 0 && JSON.stringify(userIndices) === JSON.stringify(expectedCorr)) {
         isCorrect = true;
@@ -736,20 +753,13 @@ app.post('/api/check-answer', async (req, res) => {
         const allOpts = Array.isArray(questionOptions) && questionOptions.length > 0 ? questionOptions : opts;
         userIndices.forEach((uIdx) => {
           if (allOpts[uIdx]) {
-            cleanUserTexts.push(String(allOpts[uIdx]).replace(/^[A-Z][.):-]\s*/i, '').trim().toLowerCase());
+            cleanUserTexts.push(stripPrefix(allOpts[uIdx]));
           }
         });
         cleanUserTexts.sort();
+        const checkMaster = [...masterCorrectTexts].sort();
 
-        const cleanMasterTexts = [];
-        corrOptions.forEach((cIdx) => {
-          if (opts[cIdx]) {
-            cleanMasterTexts.push(String(opts[cIdx]).replace(/^[A-Z][.):-]\s*/i, '').trim().toLowerCase());
-          }
-        });
-        cleanMasterTexts.sort();
-
-        if (cleanUserTexts.length > 0 && JSON.stringify(cleanUserTexts) === JSON.stringify(cleanMasterTexts)) {
+        if (cleanUserTexts.length > 0 && JSON.stringify(cleanUserTexts) === JSON.stringify(checkMaster)) {
           isCorrect = true;
         }
       }
@@ -801,7 +811,7 @@ app.post('/api/check-answer', async (req, res) => {
       questionId: dbQ.id,
       questionNo: dbQ.question_no,
       isCorrect,
-      correctOption: corrOptions,
+      correctOption: clientCorrIndices,
       explanation: dbQ.explanation || null,
       earnedPoints,
       sessionSaved: true,

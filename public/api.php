@@ -823,6 +823,30 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
         $qType = $dbQ['type'] ?? ($dragDrop ? 'drag_drop' : 'multiple_choice');
         $isDragDrop = $qType === 'drag_drop' || !empty($dragDrop);
 
+        // Extract master correct texts
+        $stripPrefix = function($s) {
+            return strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', (string)$s)));
+        };
+        $masterCorrectTexts = [];
+        foreach ($corrOptions as $cIdx) {
+            if (isset($opts[$cIdx])) {
+                $masterCorrectTexts[] = $stripPrefix($opts[$cIdx]);
+            }
+        }
+
+        // Map correct options to the client's currently displayed options (accounting for randomization/shuffling)
+        $clientCorrIndices = [];
+        if (!empty($body['questionOptions']) && is_array($body['questionOptions'])) {
+            foreach ($body['questionOptions'] as $qIdx => $qOpt) {
+                if (in_array($stripPrefix($qOpt), $masterCorrectTexts, true)) {
+                    $clientCorrIndices[] = (int)$qIdx;
+                }
+            }
+        }
+        if (empty($clientCorrIndices)) {
+            $clientCorrIndices = $corrOptions;
+        }
+
         // Evaluate correctness
         $isCorrect = false;
         if ($isDragDrop) {
@@ -840,29 +864,26 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
                     $userIndices = array_map('intval', $userAnswer);
                 }
             }
+            $userIndices = array_values(array_unique($userIndices));
             sort($userIndices);
-            $expectedCorr = $corrOptions;
+
+            $expectedCorr = array_values(array_unique($clientCorrIndices));
             sort($expectedCorr);
 
             if (!empty($userIndices) && $userIndices === $expectedCorr) {
                 $isCorrect = true;
             } else {
-                // Also check option text equivalence if client shuffled options
+                // Fallback: check option text equivalence
                 $cleanUserTexts = [];
                 $allQuestionOpts = $body['questionOptions'] ?? $opts;
                 foreach ($userIndices as $uIdx) {
                     if (isset($allQuestionOpts[$uIdx])) {
-                        $cleanUserTexts[] = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', $allQuestionOpts[$uIdx])));
+                        $cleanUserTexts[] = $stripPrefix($allQuestionOpts[$uIdx]);
                     }
                 }
                 sort($cleanUserTexts);
 
-                $cleanMasterTexts = [];
-                foreach ($corrOptions as $cIdx) {
-                    if (isset($opts[$cIdx])) {
-                        $cleanMasterTexts[] = strtolower(trim(preg_replace('/^[A-Z][.):-]\s*/i', '', $opts[$cIdx])));
-                    }
-                }
+                $cleanMasterTexts = $masterCorrectTexts;
                 sort($cleanMasterTexts);
 
                 if (!empty($cleanUserTexts) && $cleanUserTexts === $cleanMasterTexts) {
@@ -916,7 +937,7 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
             "questionId" => (int)$dbQ['id'],
             "questionNo" => $dbQ['question_no'],
             "isCorrect" => $isCorrect,
-            "correctOption" => $corrOptions,
+            "correctOption" => $clientCorrIndices,
             "explanation" => $dbQ['explanation'] ?? null,
             "earnedPoints" => $earnedPoints,
             "sessionSaved" => true,

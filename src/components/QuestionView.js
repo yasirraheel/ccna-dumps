@@ -566,33 +566,37 @@ function QuestionView({
 
   const isDragDrop = question.type === "drag_drop" || Boolean(question.dragDropData);
 
-  const rawCorrect = question.correctOption !== undefined && question.correctOption !== null
-    ? question.correctOption
-    : question.correctOptions;
-  const correctOptions = Array.isArray(rawCorrect)
-    ? rawCorrect
-    : rawCorrect !== undefined && rawCorrect !== null
-    ? [rawCorrect]
-    : [];
+  const correctOptions = useMemo(() => {
+    const raw = question.correctOptions !== undefined && question.correctOptions !== null
+      ? question.correctOptions
+      : question.correctOption;
+    return (Array.isArray(raw) ? raw : raw !== null && raw !== undefined ? [raw] : [])
+      .map(Number)
+      .filter((n) => !isNaN(n));
+  }, [question.correctOption, question.correctOptions]);
+
   const isMulti = correctOptions.length > 1;
 
   const isFlagged = flaggedQuestions?.includes(seqNumber - 1);
 
-  const selectedIndices = isMulti
-    ? Array.isArray(answer)
+  const selectedIndices = useMemo(() => {
+    const raw = isMulti
+      ? Array.isArray(answer)
+        ? answer
+        : answer?.selections || []
+      : typeof answer === "number"
+      ? [answer]
+      : Array.isArray(answer)
       ? answer
-      : answer?.selections || []
-    : typeof answer === "number"
-    ? [answer]
-    : Array.isArray(answer)
-    ? answer
-    : answer?.selections || [];
+      : answer?.selections || [];
+    return raw.map(Number).filter((n) => !isNaN(n));
+  }, [answer, isMulti]);
 
   const userIsFullyCorrect = useMemo(() => {
     if (correctOptions.length === 0 || selectedIndices.length === 0) return false;
     if (correctOptions.length !== selectedIndices.length) return false;
-    const sortedCorr = [...correctOptions].sort().join(",");
-    const sortedSel = [...selectedIndices].sort().join(",");
+    const sortedCorr = [...correctOptions].sort((a, b) => a - b).join(",");
+    const sortedSel = [...selectedIndices].sort((a, b) => a - b).join(",");
     return sortedCorr === sortedSel;
   }, [correctOptions, selectedIndices]);
 

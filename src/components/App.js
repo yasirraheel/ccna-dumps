@@ -398,14 +398,45 @@ function reducer(state, action) {
 
       const updatedQuestions = [...state.questions];
       if (updatedQuestions[qIdx]) {
+        const curQ = updatedQuestions[qIdx];
+        // DO NOT overwrite existing correctOption if the running question already has a valid correctOption
+        // (which is properly mapped to curQ.options when randomized)!
+        const hasExistingCorrect =
+          curQ.correctOption !== undefined &&
+          curQ.correctOption !== null &&
+          !(Array.isArray(curQ.correctOption) && curQ.correctOption.length === 0);
+
         updatedQuestions[qIdx] = {
-          ...updatedQuestions[qIdx],
-          ...(correctOption ? { correctOption, correctOptions: correctOption } : {}),
+          ...curQ,
+          ...(!hasExistingCorrect && correctOption !== undefined ? { correctOption, correctOptions: correctOption } : {}),
           ...(explanation ? { explanation } : {}),
         };
       }
 
       const updatedPoints = calculateTotalPoints(updatedQuestions, state.answers);
+
+      if (!state.isReviewMode && state.activeSessionId) {
+        syncActiveSessionToLocalStorage({
+          id: state.activeSessionId,
+          questions: updatedQuestions,
+          index: state.index,
+          answer: state.answer,
+          answers: state.answers,
+          points: updatedPoints,
+          secondsRemaining: state.secondsRemaining,
+          examMode: state.examMode,
+          settings: state.settings,
+          selectedBankName: state.selectedBankName,
+          selectedBankKey: state.selectedBankKey,
+          bankName: state.selectedBankName,
+          flaggedQuestions: state.flaggedQuestions,
+          revealedQuestions: newRevealed,
+          committedQuestions: newCommitted,
+          startedAt: state.startedAt,
+          updatedAt: Date.now(),
+          savedAt: Date.now(),
+        });
+      }
 
       return {
         ...state,
