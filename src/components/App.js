@@ -32,10 +32,37 @@ export function isExamFinishedId(targetId) {
   return finishedSessionIdsSet.has(String(targetId));
 }
 
+export function sanitizeQuestionsForServer(questions) {
+  if (!Array.isArray(questions)) return [];
+  return questions.map((q) => {
+    if (!q || typeof q !== "object") return q;
+    // Omit large HTML explanations and heavy fields before sending to server to prevent ModSecurity 403 blocks
+    const { explanation, ...cleanQ } = q;
+    return cleanQ;
+  });
+}
+
+export function sanitizeSessionPayload(sessionData) {
+  if (!sessionData || typeof sessionData !== "object") return sessionData;
+  return {
+    ...sessionData,
+    questions: sanitizeQuestionsForServer(sessionData.questions),
+  };
+}
+
+export function sanitizeRecordPayload(record) {
+  if (!record || typeof record !== "object") return record;
+  return {
+    ...record,
+    questions: sanitizeQuestionsForServer(record.questions),
+  };
+}
+
 export async function syncActiveSessionToServer(sessionData) {
   if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
     return { success: true };
   }
+  const cleanPayload = sanitizeSessionPayload(sessionData);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {
@@ -46,7 +73,7 @@ export async function syncActiveSessionToServer(sessionData) {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
       },
-      body: JSON.stringify(sessionData),
+      body: JSON.stringify(cleanPayload),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -840,6 +867,7 @@ function reducer(state, action) {
       };
     }
 
+    case "sessionNotFound":
     case "restart": {
       return {
         ...initialState,
@@ -977,7 +1005,7 @@ export default function App() {
           fetch(`${API_BASE_URL}/sessions`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sessionSnapshot),
+            body: JSON.stringify(sanitizeSessionPayload(sessionSnapshot)),
             keepalive: true,
           }).catch(() => {});
         } catch (e) {}
@@ -1372,7 +1400,7 @@ export default function App() {
           fetch(`${API_BASE_URL}/sessions`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(sessionSnapshot),
+            body: JSON.stringify(sanitizeSessionPayload(sessionSnapshot)),
             keepalive: true,
           }).catch(() => {});
         } catch (e) {}
@@ -1618,7 +1646,7 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // 1.15 Real-time updates: Listen to SSE, BroadcastChannel, and custom DOM events
+  // 1.15 Real-time updates: Listen to BroadcastChannel and custom DOM events
   useEffect(() => {
     const handleLiveQuestionUpdate = (e) => {
       if (e?.detail) {
@@ -1626,22 +1654,6 @@ export default function App() {
       }
     };
     window.addEventListener("ccna_question_updated", handleLiveQuestionUpdate);
-
-    let evtSource = null;
-    try {
-      evtSource = new EventSource(`${API_BASE_URL}/events`);
-      evtSource.addEventListener("question_updated", (e) => {
-        try {
-          const q = JSON.parse(e.data);
-          if (q) {
-            dispatch({ type: "updateQuestion", payload: q });
-          }
-        } catch (err) {}
-      });
-      evtSource.addEventListener("plan_updated", () => {
-        loadFreshDashboardData();
-      });
-    } catch (e) {}
 
     const ch = getRealtimeChannel();
     const handleBroadcast = (e) => {
@@ -1653,7 +1665,6 @@ export default function App() {
 
     return () => {
       window.removeEventListener("ccna_question_updated", handleLiveQuestionUpdate);
-      if (evtSource) evtSource.close();
       if (ch) ch.removeEventListener("message", handleBroadcast);
     };
   }, [loadFreshDashboardData]);
@@ -1772,7 +1783,7 @@ export default function App() {
         fetch(`${API_BASE_URL}/sessions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(finalSession),
+          body: JSON.stringify(sanitizeSessionPayload(finalSession)),
         }).catch(() => {});
 
         return updated;
@@ -1874,7 +1885,7 @@ export default function App() {
       fetch(`${API_BASE_URL}/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(completedRecord),
+        body: JSON.stringify(sanitizeRecordPayload(completedRecord)),
       }).catch(() => {});
 
       // Also clean active session from MySQL if present
@@ -2342,7 +2353,7 @@ export default function App() {
       const res = await fetch(`${API_BASE_URL}/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(completedRecord),
+        body: JSON.stringify(sanitizeRecordPayload(completedRecord)),
       });
 
       if (!res.ok) {
@@ -2428,14 +2439,40 @@ export default function App() {
         const session = urlSessionId ? list.find((s) => s.id === urlSessionId) : list[0];
         if (session && !isExamFinishedId(session.id)) {
           handleResumeSession(session);
-        } else if (!urlSessionId) {
+        } else {
           handleNavigate("dashboard");
+          dispatch({ type: "sessionNotFound" });
+          if (urlSessionId) {
+            setAlertDialog({
+              isOpen: true,
+              title: "Exam Session Not Found",
+              message: "The requested exam session could not be found or has expired. You have been returned to the dashboard.",
+              confirmText: "OK",
+              type: "info",
+            });
+          }
         }
       })
       .catch((err) => {
         console.warn("Could not resume session from server:", err);
+        handleNavigate("dashboard");
+        dispatch({ type: "sessionNotFound" });
       });
   }, []);
+
+  // Safety watchdog: recover from stuck "loading" state on /exam route
+  useEffect(() => {
+    if (status !== "loading") return;
+    const timer = setTimeout(() => {
+      const isExam = typeof window !== "undefined" && (window.location.pathname.toLowerCase().includes("/exam") || window.location.search.includes("view=exam"));
+      if (isExam && status === "loading") {
+        console.warn("Exam route loading timed out. Recovering to dashboard.");
+        handleNavigate("dashboard");
+        dispatch({ type: "sessionNotFound" });
+      }
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [status]);
 
   const handleDeleteSession = (sessionId) => {
     setSavedSessions((prev) => prev.filter((s, idx) => s.id !== sessionId && idx !== sessionId));
@@ -2904,7 +2941,7 @@ export default function App() {
                 fetch(`${API_BASE_URL}/sessions`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(sessionSnapshot),
+                  body: JSON.stringify(sanitizeSessionPayload(sessionSnapshot)),
                   keepalive: true,
                 }).catch(() => {});
               } catch (e) {}

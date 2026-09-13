@@ -996,6 +996,19 @@ if (preg_match('#^/api/history#', $basePath)) {
             ON DUPLICATE KEY UPDATE
             user_id=VALUES(user_id), user_email=VALUES(user_email), candidate_name=VALUES(candidate_name), score=VALUES(score),
             percentage=VALUES(percentage), passed=VALUES(passed), answers=VALUES(answers), settings=VALUES(settings)");
+        $rawAttemptQs = $b['questions'] ?? [];
+        $cleanAttemptQuestions = [];
+        if (is_array($rawAttemptQs)) {
+            foreach ($rawAttemptQs as $atq) {
+                if (is_array($atq)) {
+                    unset($atq['explanation']);
+                    $cleanAttemptQuestions[] = $atq;
+                } else {
+                    $cleanAttemptQuestions[] = $atq;
+                }
+            }
+        }
+
         $stmt->execute([
             $id,
             $b['userId'] ?? null,
@@ -1009,7 +1022,7 @@ if (preg_match('#^/api/history#', $basePath)) {
             $b['totalQuestions'] ?? 0,
             $b['timeSpentSeconds'] ?? 0,
             $b['date'] ?? (time() * 1000),
-            json_encode($b['questions'] ?? []),
+            json_encode($cleanAttemptQuestions),
             json_encode($b['answers'] ?? []),
             json_encode($b['flaggedQuestions'] ?? []),
             json_encode($b['revealedQuestions'] ?? []),
@@ -1342,6 +1355,9 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 if (empty($qItem['cliSnippet']) && !empty($m['cli_snippet'])) {
                     $qItem['cliSnippet'] = $m['cli_snippet'];
                 }
+            }
+            if (is_array($qItem)) {
+                unset($qItem['explanation']);
             }
             $canonicalQuestions[] = $qItem;
 
