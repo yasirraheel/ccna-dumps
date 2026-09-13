@@ -322,17 +322,25 @@ function reducer(state, action) {
           .filter((i) => i !== null);
       }
 
-      return {
-        ...state,
-        questions: finalQuestions,
-        index,
-        answer,
-        answers: answers || new Array(questions.length).fill(null),
-        points: points || 0,
-        secondsRemaining:
-          secondsRemaining !== undefined ? secondsRemaining : null,
-        examMode: examMode || "study",
-        settings: settings || initialState.settings,
+        const effectiveSettings = settings || initialState.settings;
+        const isUntimed =
+          effectiveSettings?.timerMode === "not_timed" ||
+          effectiveSettings?.isTimed === false ||
+          effectiveSettings?.timerMode === "none";
+        return {
+          ...state,
+          questions: finalQuestions,
+          index,
+          answer,
+          answers: answers || new Array(questions.length).fill(null),
+          points: points || 0,
+          secondsRemaining: isUntimed
+            ? null
+            : secondsRemaining !== undefined
+            ? secondsRemaining
+            : null,
+          examMode: examMode || "study",
+          settings: effectiveSettings,
         selectedBankName: selectedBankName || "Resumed CCNA Exam",
         status: "active",
         activeSessionId: finalSessionId,
@@ -1197,7 +1205,7 @@ export default function App() {
             answer,
             answers,
             points,
-            secondsRemaining,
+            secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
             examMode,
             settings,
             selectedBankName,
@@ -1345,7 +1353,7 @@ export default function App() {
           answer,
           answers,
           points,
-          secondsRemaining,
+          secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
           examMode,
           settings,
           selectedBankName,
@@ -1681,7 +1689,11 @@ export default function App() {
 
   // *** EXAM TIMER COUNTDOWN ***
   useEffect(() => {
-    if (status !== "active" || secondsRemaining === null || isPaused) return;
+    const isUntimed =
+      settings?.timerMode === "not_timed" ||
+      settings?.isTimed === false ||
+      settings?.timerMode === "none";
+    if (status !== "active" || secondsRemaining === null || isPaused || isUntimed) return;
     if (secondsRemaining <= 0) {
       dispatch({ type: "finish" });
       return;
@@ -1690,7 +1702,7 @@ export default function App() {
       dispatch({ type: "tick" });
     }, 1000);
     return () => clearInterval(interval);
-  }, [status, secondsRemaining, isPaused]);
+  }, [status, secondsRemaining, isPaused, settings]);
 
   // 2. Keep active exam session saved in savedSessions list on every change (tied to user)
   useEffect(() => {
@@ -1722,7 +1734,7 @@ export default function App() {
         answer,
         answers,
         points,
-        secondsRemaining,
+        secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
         examMode,
         settings,
         selectedBankName,
@@ -2047,6 +2059,12 @@ export default function App() {
             ? session.answers[activeIdx]
             : null);
 
+    const effectiveSettings = session.settings || initialState.settings;
+    const isUntimed =
+      effectiveSettings?.timerMode === "not_timed" ||
+      effectiveSettings?.isTimed === false ||
+      effectiveSettings?.timerMode === "none";
+
     dispatch({
       type: "resumeExam",
       payload: {
@@ -2055,9 +2073,9 @@ export default function App() {
         answer: activeAnswer,
         answers: session.answers || [],
         points: typeof recalculatedPoints === "number" ? recalculatedPoints : (session.points || 0),
-        secondsRemaining: session.secondsRemaining,
+        secondsRemaining: isUntimed ? null : session.secondsRemaining,
         examMode: session.examMode || "study",
-        settings: session.settings || initialState.settings,
+        settings: effectiveSettings,
         selectedBankName: session.selectedBankName || session.bankName || "Resumed CCNA Exam",
         activeSessionId: session.id,
         revealedQuestions: session.revealedQuestions || [],
@@ -2110,7 +2128,7 @@ export default function App() {
       answer: answers[targetIdx] ?? null,
       answers,
       points: updatedPoints,
-      secondsRemaining,
+      secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
       examMode,
       settings,
       selectedBankName,
@@ -2203,7 +2221,7 @@ export default function App() {
         answer: userAns ?? null,
         answers,
         points,
-        secondsRemaining,
+        secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
         examMode,
         settings,
         selectedBankName,

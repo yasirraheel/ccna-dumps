@@ -813,8 +813,14 @@ function QuestionView({
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  const timerDisplay = formatTime(secondsRemaining);
-  const timerIsLow = secondsRemaining !== null && secondsRemaining < 300;
+  const isUntimed =
+    settings?.timerMode === "not_timed" ||
+    settings?.isTimed === false ||
+    settings?.timerMode === "none" ||
+    secondsRemaining === null;
+
+  const timerDisplay = isUntimed ? null : formatTime(secondsRemaining);
+  const timerIsLow = !isUntimed && secondsRemaining !== null && secondsRemaining < 300;
 
   return (
     <div className={`boson-exsim-view ${isPaused ? "is-paused" : ""}`}>
@@ -1135,28 +1141,7 @@ function QuestionView({
 
       {/* QUESTION BODY AREA */}
       <div className="boson-question-body" key={seqNumber}>
-        {/* INLINE CONNECTION ERROR NOTICE */}
-        {serverConnectionError && (
-          <div className="server-connection-error-banner" style={{ margin: "0 0 16px 0", borderRadius: "8px", position: "relative" }} role="alert">
-            <div className="connection-error-content">
-              <div className="connection-error-left">
-                <span className="connection-error-icon">⚠️</span>
-                <div className="connection-error-text">
-                  <span className="connection-error-title">Server Offline - Actions Locked</span>
-                  <span className="connection-error-desc">Next question progression, answer verification, and submissions are disabled until reconnected.</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="btn-retry-connection"
-                onClick={onRetryConnection}
-                disabled={isRetryingConnection}
-              >
-                {isRetryingConnection ? "Reconnecting..." : "🔄 Reconnect"}
-              </button>
-            </div>
-          </div>
-        )}
+
         {/* INLINE QUESTION NOTE COMPOSER */}
         {isNoteBoxOpen && (
           <div className="inline-note-composer-card">
@@ -1545,9 +1530,35 @@ function QuestionView({
                   const cleanText = optText.replace(/^[A-E]\.\s*/, "");
                   const letter = String.fromCharCode(65 + optIdx);
                   return (
-                    <div key={optIdx} className="correct-option-pill">
-                      <span className="pill-letter">{letter}</span>
-                      <span className="pill-text">{cleanText}</span>
+                    <div
+                      key={optIdx}
+                      className="correct-option-pill"
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: "8px",
+                        margin: "6px 0",
+                        padding: "6px 12px",
+                        background: "rgba(16, 185, 129, 0.12)",
+                        border: "1px solid rgba(16, 185, 129, 0.3)",
+                        borderRadius: "6px",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <span
+                        className="pill-letter"
+                        style={{
+                          fontWeight: 700,
+                          color: "#10b981",
+                          fontSize: "1.05rem",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        {letter}.
+                      </span>
+                      <span className="pill-text" style={{ color: "#e2e8f0" }}>
+                        {cleanText}
+                      </span>
                     </div>
                   );
                 })}
@@ -1755,7 +1766,7 @@ function QuestionView({
                 <span className="paused-stat-label">Current Question</span>
                 <span className="paused-stat-value">#{seqNumber} of {numQuestions}</span>
               </div>
-              {secondsRemaining !== null && (
+              {!isUntimed && secondsRemaining !== null && (
                 <div className="paused-stat-card highlight">
                   <span className="paused-stat-label">Timer Paused At</span>
                   <span className="paused-stat-value paused-timer-highlight">

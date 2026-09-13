@@ -903,8 +903,9 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
             $bName = cleanBankName($sessionData['selectedBankName'] ?? $sessionData['bankName'] ?? 'CCNA Exam');
             $eMode = $sessionData['examMode'] ?? 'study';
             $qIdx = (int)($sessionData['index'] ?? 0);
-            $pts = (int)($sessionData['points'] ?? 0);
-            $secRem = (int)($sessionData['secondsRemaining'] ?? 7200);
+            $sessSettings = is_array($sessionData['settings'] ?? null) ? $sessionData['settings'] : [];
+            $isUntimed = (isset($sessSettings['timerMode']) && ($sessSettings['timerMode'] === 'not_timed' || $sessSettings['timerMode'] === 'none')) || (isset($sessSettings['isTimed']) && $sessSettings['isTimed'] === false);
+            $secRem = $isUntimed ? null : (isset($sessionData['secondsRemaining']) && $sessionData['secondsRemaining'] !== null ? (int)$sessionData['secondsRemaining'] : null);
             $tSpent = (int)($sessionData['timeSpentSeconds'] ?? 0);
             $qJson = json_encode($sessionData['questions'] ?? []);
             $aJson = json_encode($sessionData['answers'] ?? []);
@@ -1467,6 +1468,11 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             settings=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(settings), saved_sessions.settings),
             started_at=COALESCE(saved_sessions.started_at, VALUES(started_at)),
             updated_at=GREATEST(saved_sessions.updated_at, VALUES(updated_at))");
+
+        $sessSettings = is_array($s['settings'] ?? null) ? $s['settings'] : [];
+        $isUntimed = (isset($sessSettings['timerMode']) && ($sessSettings['timerMode'] === 'not_timed' || $sessSettings['timerMode'] === 'none')) || (isset($sessSettings['isTimed']) && $sessSettings['isTimed'] === false);
+        $secRem = $isUntimed ? null : (isset($s['secondsRemaining']) && $s['secondsRemaining'] !== null ? (int)$s['secondsRemaining'] : null);
+
         $stmt->execute([
             $s['id'],
             $s['userId'] ?? null,
@@ -1476,7 +1482,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             $s['examMode'] ?? 'study',
             $s['index'] ?? 0,
             $effectivePoints,
-            $s['secondsRemaining'] ?? 7200,
+            $secRem,
             $s['timeSpentSeconds'] ?? 0,
             json_encode($canonicalQuestions),
             json_encode($s['answers'] ?? []),
@@ -1628,6 +1634,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 continue;
             }
 
+            $parsedSettings = json_decode($r['settings'] ?? '{}', true) ?: [];
+
             $formatted[] = [
                 'id' => $r['id'],
                 'userId' => $r['user_id'],
@@ -1638,7 +1646,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'examMode' => $r['exam_mode'],
                 'index' => (int)$r['q_index'],
                 'points' => (int)$r['points'],
-                'secondsRemaining' => (int)$r['seconds_remaining'],
+                'secondsRemaining' => ((isset($parsedSettings['timerMode']) && ($parsedSettings['timerMode'] === 'not_timed' || $parsedSettings['timerMode'] === 'none')) || (isset($parsedSettings['isTimed']) && $parsedSettings['isTimed'] === false) || $r['seconds_remaining'] === null) ? null : (int)$r['seconds_remaining'],
                 'timeSpentSeconds' => (int)$r['time_spent_seconds'],
                 'questions' => $qs,
                 'answers' => $ans,
@@ -1646,7 +1654,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),
                 'committedQuestions' => json_decode($r['committed_questions'] ?? '[]', true) ?: [],
                 'questionNotes' => json_decode($r['question_notes'] ?? '{}', true),
-                'settings' => json_decode($r['settings'] ?? '{}', true),
+                'settings' => $parsedSettings,
                 'startedAt' => $startedAt,
                 'savedAt' => $savedAt,
                 'updatedAt' => $savedAt

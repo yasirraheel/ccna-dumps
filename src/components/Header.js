@@ -63,7 +63,7 @@ function Header({
               </span>
             )}
 
-            {secondsRemaining !== null && (
+            {secondsRemaining !== null && settings?.timerMode !== "not_timed" && settings?.isTimed !== false && (
               <Timer
                 dispatch={dispatch}
                 secondsRemaining={secondsRemaining}
