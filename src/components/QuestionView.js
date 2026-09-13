@@ -5,7 +5,12 @@ import CustomConfirmModal from "./CustomConfirmModal";
 import QuestionNotesModal from "./QuestionNotesModal";
 import EditQuestionModal from "./Admin/EditQuestionModal";
 import MobileBottomBar from "./MobileBottomBar";
-import { resolveOriginalSourceImage, resolveExplanation } from "../utils/questionSourceHelper";
+import {
+  resolveOriginalSourceImage,
+  resolveExplanation,
+  remapExplanationToDisplayedOptions,
+  getMasterQuestion,
+} from "../utils/questionSourceHelper";
 import { calculateTotalPoints } from "../utils/examScoring";
 
 function renderFormattedPrompt(rawText) {
@@ -68,6 +73,7 @@ function QuestionView({
   answer,
   answers,
   questions,
+  allQuestions = [],
   dispatch,
   examMode,
   settings,
@@ -1620,7 +1626,19 @@ function QuestionView({
                     <span>📖</span> Explanation & Key Concept:
                   </div>
                   {(() => {
-                    const expl = question.explanation || resolveExplanation(question);
+                    const rawExpl = question.explanation || resolveExplanation(question);
+                    if (!rawExpl) return null;
+
+                    const masterQ =
+                      (Array.isArray(allQuestions) &&
+                        allQuestions.find(
+                          (mq) =>
+                            (mq.id !== undefined && question.id !== undefined && String(mq.id) === String(question.id)) ||
+                            (mq.questionNo && question.questionNo && String(mq.questionNo).trim().toLowerCase() === String(question.questionNo).trim().toLowerCase())
+                        )) ||
+                      getMasterQuestion(question);
+
+                    const expl = remapExplanationToDisplayedOptions(rawExpl, masterQ?.options, question?.options);
                     const isHtml = typeof expl === "string" && /<[a-z][\s\S]*>/i.test(expl);
                     if (isHtml) {
                       return (

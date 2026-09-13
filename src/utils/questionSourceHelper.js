@@ -123,3 +123,122 @@ export function enrichQuestionsList(list) {
   return list.map(enrichQuestion);
 }
 
+// Master questions cache by ID and questionNo
+const masterQuestionsById = new Map();
+const masterQuestionsByQno = new Map();
+
+export function setMasterQuestionsCache(list) {
+  if (!Array.isArray(list)) return;
+  list.forEach((q) => {
+    if (!q) return;
+    if (q.id !== undefined) masterQuestionsById.set(Number(q.id), q);
+    if (q.questionNo) masterQuestionsByQno.set(String(q.questionNo).trim().toLowerCase(), q);
+  });
+}
+
+export function getMasterQuestion(q) {
+  if (!q) return null;
+  if (q.id !== undefined && masterQuestionsById.has(Number(q.id))) {
+    return masterQuestionsById.get(Number(q.id));
+  }
+  if (q.questionNo && masterQuestionsByQno.has(String(q.questionNo).trim().toLowerCase())) {
+    return masterQuestionsByQno.get(String(q.questionNo).trim().toLowerCase());
+  }
+  return null;
+}
+
+/**
+ * Dynamically remaps option letters (Option A, Option B, etc.) in an explanation
+ * to strictly match the randomized or reordered options currently displayed on the user's screen.
+ */
+export function remapExplanationToDisplayedOptions(html, masterOpts, curOpts) {
+  if (!html || typeof html !== "string") return html;
+  if (!Array.isArray(masterOpts) || !Array.isArray(curOpts) || masterOpts.length === 0 || curOpts.length === 0) {
+    return html;
+  }
+
+  const clean = (s) => (typeof s === "string" ? s.replace(/^[A-Z][.):-]\s*/i, "").trim().toLowerCase() : "");
+
+  // Check if options are already in the exact same order
+  const isSame = masterOpts.length === curOpts.length && masterOpts.every((m, i) => clean(m) === clean(curOpts[i]));
+  if (isSame) return html;
+
+  // Build mapping from Master Letter (A, B, C, D...) to Current Letter
+  const letterMap = {};
+  masterOpts.forEach((mOpt, mIdx) => {
+    const mLetter = String.fromCharCode(65 + mIdx);
+    const mText = clean(mOpt);
+    const cIdx = curOpts.findIndex((cOpt) => clean(cOpt) === mText);
+    if (cIdx !== -1) {
+      letterMap[mLetter] = String.fromCharCode(65 + cIdx);
+    }
+  });
+
+  let result = html;
+
+  // 1. Remap compound groups first: e.g. "Options A and D", "Options B and E", "(Options A and E)"
+  result = result.replace(/\bOptions?\s+([A-F])\s+and\s+([A-F])\b/gi, (match, l1, l2) => {
+    const nl1 = letterMap[l1.toUpperCase()] || l1;
+    const nl2 = letterMap[l2.toUpperCase()] || l2;
+    const sorted = [nl1, nl2].sort();
+    return `Options ${sorted[0]} and ${sorted[1]}`;
+  });
+
+  // 2. Remap single "Option X" references using temporary placeholders to prevent cross-replacement
+  result = result.replace(/\bOption\s+([A-F])\b/gi, (match, letter) => {
+    const target = letterMap[letter.toUpperCase()];
+    return target ? `__OPTION_PLACEHOLDER_${target}__` : match;
+  });
+
+  // 3. Remap standalone "(Option X)" or "(Options X)"
+  result = result.replace(/\(Option\s+([A-F])\)/gi, (match, letter) => {
+    const target = letterMap[letter.toUpperCase()];
+    return target ? `(__OPTION_PLACEHOLDER_${target}__)` : match;
+  });
+
+  // 4. Restore placeholders to final "Option X"
+  result = result.replace(/__OPTION_PLACEHOLDER_([A-F])__/g, (match, letter) => `Option ${letter}`);
+
+  // 5. Sort correct options list items if multiple correct answers exist
+  const correctUlMatch = result.match(/(<h4 class="section-title-correct">[\s\S]*?<\/h4>\s*<ul>)([\s\S]*?)(<\/ul>)/i);
+  if (correctUlMatch) {
+    const prefix = correctUlMatch[1];
+    const liContent = correctUlMatch[2];
+    const suffix = correctUlMatch[3];
+    const liItems = liContent.match(/<li[\s\S]*?<\/li>/gi) || [];
+    if (liItems.length > 1) {
+      liItems.sort((a, b) => {
+        const matchA = a.match(/Option\s+([A-F])/i);
+        const matchB = b.match(/Option\s+([A-F])/i);
+        const lA = matchA ? matchA[1].toUpperCase() : "";
+        const lB = matchB ? matchB[1].toUpperCase() : "";
+        return lA.localeCompare(lB);
+      });
+      const sortedUl = prefix + "\n      " + liItems.join("\n      ") + "\n    " + suffix;
+      result = result.replace(correctUlMatch[0], sortedUl);
+    }
+  }
+
+  // 6. Sort incorrect options list items so they appear in clean alphabetical order
+  const incorrectBlockMatch = result.match(/(<h4 class="section-title-incorrect">[\s\S]*?<\/h4>\s*<ul>)([\s\S]*?)(<\/ul>)/i);
+  if (incorrectBlockMatch) {
+    const prefix = incorrectBlockMatch[1];
+    const liContent = incorrectBlockMatch[2];
+    const suffix = incorrectBlockMatch[3];
+    const liItems = liContent.match(/<li[\s\S]*?<\/li>/gi) || [];
+    if (liItems.length > 0) {
+      liItems.sort((a, b) => {
+        const matchA = a.match(/Option\s+([A-F])/i);
+        const matchB = b.match(/Option\s+([A-F])/i);
+        const lA = matchA ? matchA[1].toUpperCase() : "";
+        const lB = matchB ? matchB[1].toUpperCase() : "";
+        return lA.localeCompare(lB);
+      });
+      const sortedUl = prefix + "\n      " + liItems.join("\n      ") + "\n    " + suffix;
+      result = result.replace(incorrectBlockMatch[0], sortedUl);
+    }
+  }
+
+  return result;
+}
+

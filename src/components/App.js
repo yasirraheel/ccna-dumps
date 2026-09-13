@@ -15,7 +15,7 @@ import CustomConfirmModal from "./CustomConfirmModal";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
-import { enrichQuestionsList } from "../utils/questionSourceHelper";
+import { enrichQuestionsList, setMasterQuestionsCache } from "../utils/questionSourceHelper";
 import { applyQuestionOverrides, getRealtimeChannel } from "../utils/questionSync";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "/api";
@@ -1640,6 +1640,7 @@ export default function App() {
       .then((data) => {
         const qList = Array.isArray(data) ? data : data?.questions || [];
         if (qList.length > 0) {
+          setMasterQuestionsCache(qList);
           dispatch({ type: "dataReceived", payload: qList });
         }
       })
@@ -2866,6 +2867,7 @@ export default function App() {
             answer={answer}
             answers={answers}
             questions={questions}
+            allQuestions={allQuestions}
             dispatch={dispatch}
             examMode={examMode}
             settings={settings}
