@@ -1693,7 +1693,10 @@ export default function App() {
       settings?.timerMode === "not_timed" ||
       settings?.isTimed === false ||
       settings?.timerMode === "none";
-    if (status !== "active" || secondsRemaining === null || isPaused || isUntimed) return;
+    const isDisconnected =
+      Boolean(serverConnectionError) ||
+      (typeof navigator !== "undefined" && !navigator.onLine);
+    if (status !== "active" || secondsRemaining === null || isPaused || isUntimed || isDisconnected) return;
     if (secondsRemaining <= 0) {
       dispatch({ type: "finish" });
       return;
@@ -1702,7 +1705,7 @@ export default function App() {
       dispatch({ type: "tick" });
     }, 1000);
     return () => clearInterval(interval);
-  }, [status, secondsRemaining, isPaused, settings]);
+  }, [status, secondsRemaining, isPaused, settings, serverConnectionError]);
 
   // 2. Keep active exam session saved in savedSessions list on every change (tied to user)
   useEffect(() => {

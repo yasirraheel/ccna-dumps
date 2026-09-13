@@ -149,6 +149,42 @@ function QuestionView({
 
   useEffect(() => {
     setIsNavTransitioning(true);
+
+    // 1. Hide original source dump when navigating to any question
+    setShowOriginalSource(false);
+    setSourceZoom(1);
+    setSourcePan({ x: 0, y: 0 });
+    setSourceImgError(false);
+
+    // 2. Reset exhibit zoom/pan and image errors
+    setExhibitZoom(1);
+    setExhibitPan({ x: 0, y: 0 });
+    setImgError(false);
+
+    // 3. Close inline note box
+    setIsNoteBoxOpen(false);
+
+    // 4. Scroll smoothly to top of question statement
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+
+    const mainContainer =
+      document.querySelector(".cisco-simulator-root") ||
+      document.querySelector(".simulator-app-container") ||
+      document.querySelector(".boson-exsim-view");
+    if (mainContainer) mainContainer.scrollTop = 0;
+
+    requestAnimationFrame(() => {
+      const promptEl =
+        document.querySelector(".boson-question-prompt") ||
+        document.querySelector(".boson-question-title-row") ||
+        document.querySelector(".boson-question-body");
+      if (promptEl) {
+        promptEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
     const timer = setTimeout(() => {
       setIsNavTransitioning(false);
     }, 360);
@@ -716,6 +752,12 @@ function QuestionView({
       if (onRetryConnection) onRetryConnection();
       return;
     }
+
+    setShowOriginalSource(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+
     try {
       await onGoToQuestion(seqNumber);
     } catch (err) {
@@ -725,6 +767,12 @@ function QuestionView({
 
   const handlePrevClick = async () => {
     if (!canGoPrev || isBusyNavigating) return;
+
+    setShowOriginalSource(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+
     try {
       await onGoToQuestion(seqNumber - 2);
     } catch (err) {
@@ -871,22 +919,24 @@ function QuestionView({
           {/* TIMER PILL */}
           {timerDisplay && (
             <div
-              className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""} ${isPaused ? "timer-paused" : ""}`}
-              onClick={!isReviewMode && onTogglePause ? onTogglePause : undefined}
+              className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""} ${isPaused || Boolean(serverConnectionError) ? "timer-paused" : ""}`}
+              onClick={!isReviewMode && !serverConnectionError && onTogglePause ? onTogglePause : undefined}
               title={
-                !isReviewMode && onTogglePause
+                serverConnectionError
+                  ? "Timer paused due to network disconnection"
+                  : !isReviewMode && onTogglePause
                   ? isPaused
                     ? "Exam Paused (Click to resume)"
                     : "Exam Running (Click to pause)"
                   : undefined
               }
-              style={{ cursor: !isReviewMode && onTogglePause ? "pointer" : "default" }}
-              role={!isReviewMode && onTogglePause ? "button" : undefined}
+              style={{ cursor: !isReviewMode && !serverConnectionError && onTogglePause ? "pointer" : "default" }}
+              role={!isReviewMode && !serverConnectionError && onTogglePause ? "button" : undefined}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
               </svg>
-              <span>{isPaused ? "⏸️ PAUSED" : timerDisplay}</span>
+              <span>{serverConnectionError ? "⏸️ PAUSED (OFFLINE)" : isPaused ? "⏸️ PAUSED" : timerDisplay}</span>
             </div>
           )}
 
