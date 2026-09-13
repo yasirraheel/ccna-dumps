@@ -907,7 +907,19 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
             $isUntimed = (isset($sessSettings['timerMode']) && ($sessSettings['timerMode'] === 'not_timed' || $sessSettings['timerMode'] === 'none')) || (isset($sessSettings['isTimed']) && $sessSettings['isTimed'] === false);
             $secRem = $isUntimed ? null : (isset($sessionData['secondsRemaining']) && $sessionData['secondsRemaining'] !== null ? (int)$sessionData['secondsRemaining'] : null);
             $tSpent = (int)($sessionData['timeSpentSeconds'] ?? 0);
-            $qJson = json_encode($sessionData['questions'] ?? []);
+            $rawCheckQs = $sessionData['questions'] ?? [];
+            $cleanCheckQs = [];
+            if (is_array($rawCheckQs)) {
+                foreach ($rawCheckQs as $cq) {
+                    if (is_array($cq)) {
+                        unset($cq['explanation']);
+                        $cleanCheckQs[] = $cq;
+                    } else {
+                        $cleanCheckQs[] = $cq;
+                    }
+                }
+            }
+            $qJson = json_encode($cleanCheckQs);
             $aJson = json_encode($sessionData['answers'] ?? []);
             $fJson = json_encode($sessionData['flaggedQuestions'] ?? []);
             $rJson = json_encode($sessionData['revealedQuestions'] ?? []);

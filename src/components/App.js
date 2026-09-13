@@ -2184,15 +2184,8 @@ export default function App() {
 
   const handleRevealAnswer = async (qIdx) => {
     if (serverConnectionError) {
-      setAlertDialog({
-        isOpen: true,
-        title: "⚠️ Server Connection Failed",
-        message: "Cannot check or reveal answers while offline. Please restore connection to verify your answer.",
-        confirmText: "Retry Connection",
-        cancelText: "Dismiss",
-        type: "danger",
-        onConfirm: () => handleRetryConnection(),
-      });
+      // If offline/disconnected, reveal locally immediately without blocking the candidate
+      dispatch({ type: "revealAnswer", payload: qIdx });
       return;
     }
 
@@ -2204,52 +2197,52 @@ export default function App() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+    const curAns = answers[index];
+    const hasCurrentAnswer =
+      curAns !== null &&
+      curAns !== undefined &&
+      (typeof curAns === "number" ||
+        (Array.isArray(curAns) && curAns.length > 0) ||
+        (Array.isArray(curAns?.selections) && curAns.selections.length > 0) ||
+        (curAns?.matches && Object.keys(curAns.matches).length > 0));
+
+    const newCommitted =
+      hasCurrentAnswer && !committedQuestions?.includes(index)
+        ? [...(committedQuestions || []), index]
+        : (committedQuestions || []);
+
+    const newRevealed = revealedQuestions?.includes(qIdx)
+      ? revealedQuestions
+      : [...(revealedQuestions || []), qIdx];
+
+    const now = Date.now();
+    const sessionData = {
+      id: activeSessionId || `session_${startedAt || now}`,
+      userId: currentUser?.id || null,
+      userEmail: currentUser?.email || null,
+      candidateName: currentUser?.name || candidateName,
+      status: "active",
+      questions: sanitizeQuestionsForServer(questions),
+      index: qIdx,
+      answer: userAns ?? null,
+      answers,
+      points,
+      secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
+      examMode,
+      settings,
+      selectedBankName,
+      selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+      bankName: selectedBankName,
+      flaggedQuestions,
+      revealedQuestions: newRevealed,
+      committedQuestions: newCommitted,
+      startedAt: startedAt || now,
+      savedAt: now,
+      updatedAt: now,
+      isPaused: false,
+    };
+
     try {
-      const curAns = answers[index];
-      const hasCurrentAnswer =
-        curAns !== null &&
-        curAns !== undefined &&
-        (typeof curAns === "number" ||
-          (Array.isArray(curAns) && curAns.length > 0) ||
-          (Array.isArray(curAns?.selections) && curAns.selections.length > 0) ||
-          (curAns?.matches && Object.keys(curAns.matches).length > 0));
-
-      const newCommitted =
-        hasCurrentAnswer && !committedQuestions?.includes(index)
-          ? [...(committedQuestions || []), index]
-          : (committedQuestions || []);
-
-      const newRevealed = revealedQuestions?.includes(qIdx)
-        ? revealedQuestions
-        : [...(revealedQuestions || []), qIdx];
-
-      const now = Date.now();
-      const sessionData = {
-        id: activeSessionId || `session_${startedAt || now}`,
-        userId: currentUser?.id || null,
-        userEmail: currentUser?.email || null,
-        candidateName: currentUser?.name || candidateName,
-        status: "active",
-        questions,
-        index: qIdx,
-        answer: userAns ?? null,
-        answers,
-        points,
-        secondsRemaining: (settings?.timerMode === "not_timed" || settings?.isTimed === false || settings?.timerMode === "none") ? null : secondsRemaining,
-        examMode,
-        settings,
-        selectedBankName,
-        selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
-        bankName: selectedBankName,
-        flaggedQuestions,
-        revealedQuestions: newRevealed,
-        committedQuestions: newCommitted,
-        startedAt: startedAt || now,
-        savedAt: now,
-        updatedAt: now,
-        isPaused: false,
-      };
-
       const res = await fetch(`${API_BASE_URL}/check-answer`, {
         method: "POST",
         headers: {
@@ -2264,7 +2257,7 @@ export default function App() {
           action: "reveal",
           sessionId: activeSessionId,
           questionOptions: q?.options || [],
-          sessionData,
+          sessionData: sanitizeSessionPayload(sessionData),
         }),
         signal: controller.signal,
       });
@@ -2294,21 +2287,12 @@ export default function App() {
       return data;
     } catch (err) {
       clearTimeout(timeoutId);
-      console.error("Reveal answer blocked due to server connection failure:", err);
-      const msg = err.name === "AbortError"
-        ? "Server connection timed out. Could not verify answer with server."
-        : `Connection to server failed: ${err.message || "Network error"}`;
-      setServerConnectionError(msg);
-      setAlertDialog({
-        isOpen: true,
-        title: "⚠️ Server Connection Failed",
-        message: "Could not retrieve and verify answer from the server database. Please restore your connection.",
-        confirmText: "Retry Connection",
-        cancelText: "Dismiss",
-        type: "danger",
-        onConfirm: () => handleRetryConnection(),
-      });
-      throw err;
+      console.warn("Server check-answer call had an issue, falling back to local question reveal:", err);
+      // Seamless fallback: Reveal the answer locally so candidate is NEVER blocked from studying
+      dispatch({ type: "revealAnswer", payload: qIdx });
+      // Queue background session sync
+      syncActiveSessionToServer(sessionData).catch(() => {});
+      return null;
     }
   };
 
