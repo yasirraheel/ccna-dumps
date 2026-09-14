@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 
-function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked }) {
+function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked, isRevealed = false }) {
   const dragData = question.dragDropData || {
     items: [],
     targets: [],
     correctMatches: {},
   };
 
-  const isLocked = propIsLocked !== undefined ? propIsLocked : ((answer !== null && answer.confirmed === true) || isReviewMode);
-  const hasAnswered = isLocked;
+  const isLocked = propIsLocked !== undefined ? propIsLocked : ((answer !== null && answer.confirmed === true) || isReviewMode || isRevealed);
+  const hasAnswered = isLocked || isRevealed;
   const currentMatches = answer?.matches || {};
 
   const [selectedItem, setSelectedItem] = useState(null);
@@ -163,7 +163,9 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
               if (hasAnswered) {
                 if (isMatchCorrect) slotClass += " correct-slot";
                 else if (isMatchWrong) slotClass += " wrong-slot";
-                else if (isMissing) slotClass += " missing-slot";
+                else if (isMissing) {
+                  slotClass += isRevealed ? " correct-slot" : " missing-slot";
+                }
               }
 
               return (
@@ -196,6 +198,11 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
                             ✕
                           </button>
                         )}
+                      </div>
+                    ) : isRevealed ? (
+                      <div className="assigned-item revealed-auto-match" style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(16, 185, 129, 0.18)", border: "1px solid #10b981", borderRadius: "6px", padding: "8px 12px", width: "100%" }}>
+                        <span style={{ color: "#10b981", fontWeight: 800, fontSize: "1.15rem" }}>✓</span>
+                        <span className="assigned-text" style={{ color: "#f0fdf4", fontWeight: 600 }}>{correctAnswer}</span>
                       </div>
                     ) : (
                       <div className="drop-placeholder">

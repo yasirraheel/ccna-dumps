@@ -1506,6 +1506,7 @@ function QuestionView({
             answer={answer}
             isReviewMode={isReviewMode || isTimeOver || isLocked || Boolean(serverConnectionError)}
             isLocked={isLocked || Boolean(serverConnectionError)}
+            isRevealed={isRevealed}
           />
         ) : (
           <div className="boson-options-list">
@@ -1565,60 +1566,116 @@ function QuestionView({
         )}
 
         {/* SHOW ANSWER INLINE BANNER */}
-        {(isReviewMode || isRevealed || (isCommitted && settings?.showAnswersInline !== false)) && !isDragDrop && (
+        {(isReviewMode || isRevealed || (isCommitted && settings?.showAnswersInline !== false)) && (
           <div className="boson-explanation-card">
             <div className="explanation-title">
               <span className="explanation-icon">💡</span> Official Answer & Verification
             </div>
             <div className="explanation-body">
               <div className="explanation-header-banner">
-                {userIsFullyCorrect ? (
+                {isDragDrop ? (
+                  (() => {
+                    const dndCorrect = (() => {
+                      if (answer?.isCorrect !== undefined) return Boolean(answer.isCorrect);
+                      const correctMatches = question?.dragDropData?.correctMatches || {};
+                      const userMatches = answer?.matches || {};
+                      const targets = Object.keys(correctMatches);
+                      if (targets.length === 0) return false;
+                      return targets.every((t) => userMatches[t] === correctMatches[t]);
+                    })();
+                    if (dndCorrect) {
+                      return <span className="badge-correct">✓ Your Matches are Correct!</span>;
+                    }
+                    return (
+                      <span className="badge-incorrect">
+                        {isRevealed && (!answer?.matches || Object.keys(answer.matches).length === 0)
+                          ? "Official Drag & Drop Solution & Explanations"
+                          : "✗ Your Matches are Incorrect"}
+                      </span>
+                    );
+                  })()
+                ) : userIsFullyCorrect ? (
                   <span className="badge-correct">✓ Your Answer is Correct!</span>
                 ) : (
                   <span className="badge-incorrect">✗ Your Answer is Incorrect</span>
                 )}
               </div>
 
-              <div className="explanation-correct-labels">
-                <strong>Correct Option{correctOptions.length > 1 ? "s" : ""}:</strong>
-                {correctOptions.map((optIdx) => {
-                  const optText = question.options?.[optIdx] || `Option ${optIdx + 1}`;
-                  const cleanText = optText.replace(/^[A-E]\.\s*/, "");
-                  const letter = String.fromCharCode(65 + optIdx);
-                  return (
-                    <div
-                      key={optIdx}
-                      className="correct-option-pill"
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: "8px",
-                        margin: "6px 0",
-                        padding: "6px 12px",
-                        background: "rgba(16, 185, 129, 0.12)",
-                        border: "1px solid rgba(16, 185, 129, 0.3)",
-                        borderRadius: "6px",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      <span
-                        className="pill-letter"
+              {isDragDrop ? (
+                <div className="explanation-correct-labels dnd-correct-summary" style={{ marginTop: "10px" }}>
+                  <strong style={{ color: "#38bdf8", fontSize: "1.2rem" }}>✓ Official Correct Matches:</strong>
+                  <div className="dnd-summary-grid" style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
+                    {Object.entries(question.dragDropData?.correctMatches || {}).map(([target, item], idx) => (
+                      <div
+                        key={idx}
+                        className="correct-option-pill"
                         style={{
-                          fontWeight: 700,
-                          color: "#10b981",
-                          fontSize: "1.05rem",
-                          letterSpacing: "0.5px",
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "8px 14px",
+                          background: "rgba(16, 185, 129, 0.12)",
+                          border: "1px solid rgba(16, 185, 129, 0.3)",
+                          borderRadius: "6px",
+                          color: "#e2e8f0",
+                          fontSize: "1.15rem",
+                          lineHeight: 1.5,
                         }}
                       >
-                        {letter}.
-                      </span>
-                      <span className="pill-text" style={{ color: "#e2e8f0" }}>
-                        {cleanText}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                        <span style={{ fontWeight: 700, color: "#10b981", minWidth: "160px" }}>
+                          🎯 {target}
+                        </span>
+                        <span style={{ color: "#94a3b8", fontWeight: 700 }}>➔</span>
+                        <span style={{ fontWeight: 600, color: "#f8fafc" }}>
+                          {item}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="explanation-correct-labels">
+                  <strong>Correct Option{correctOptions.length > 1 ? "s" : ""}:</strong>
+                  {correctOptions.map((optIdx) => {
+                    const optText = question.options?.[optIdx] || `Option ${optIdx + 1}`;
+                    const cleanText = optText.replace(/^[A-E]\.\s*/, "");
+                    const letter = String.fromCharCode(65 + optIdx);
+                    return (
+                      <div
+                        key={optIdx}
+                        className="correct-option-pill"
+                        style={{
+                          display: "flex",
+                          alignItems: "baseline",
+                          gap: "8px",
+                          margin: "6px 0",
+                          padding: "6px 12px",
+                          background: "rgba(16, 185, 129, 0.12)",
+                          border: "1px solid rgba(16, 185, 129, 0.3)",
+                          borderRadius: "6px",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <span
+                          className="pill-letter"
+                          style={{
+                            fontWeight: 700,
+                            color: "#10b981",
+                            fontSize: "1.05rem",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          {letter}.
+                        </span>
+                        <span className="pill-text" style={{ color: "#e2e8f0" }}>
+                          {cleanText}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {(question.explanation || resolveExplanation(question)) && (
                 <div className="question-explanation-text" style={{ marginTop: "1.1rem", paddingTop: "0.95rem", borderTop: "1px solid rgba(255,255,255,0.18)" }}>
@@ -1685,7 +1742,7 @@ function QuestionView({
         </div>
 
         <div className="toolbar-right">
-          {!isDragDrop && !isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
+          {!isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
             <button
               type="button"
               className={`btn-boson-action ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) ? "disabled" : ""}`}

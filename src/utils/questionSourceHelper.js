@@ -18,13 +18,15 @@ export function resolveOriginalSourceImage(q) {
     return q.originalSourceImage;
   }
 
-  // Drag & drop questions are excluded (21 total drag & drop questions)
-  if (
-    q.type === "drag_drop" ||
-    q.isDragDrop ||
-    (typeof q.questionNo === "string" && q.questionNo.toLowerCase().includes("drag"))
-  ) {
-    return null;
+  // 2. Check Drag & Drop pattern: "Drag & Drop #X" -> "original_sources/dX.png"
+  if (typeof q.questionNo === "string") {
+    const dndMatch = q.questionNo.match(/drag\s*(?:&|and)?\s*drop\s*#?(\d+)/i);
+    if (dndMatch && dndMatch[1]) {
+      const dNum = parseInt(dndMatch[1], 10);
+      if (dNum >= 1 && dNum <= 21) {
+        return `original_sources/d${dNum}.png`;
+      }
+    }
   }
 
   // 2. Check questionNo pattern: "Question #X" -> "original_sources/X.webp"
