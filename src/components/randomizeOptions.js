@@ -72,11 +72,23 @@ function getSlotCombinations(arr, k) {
  * 5. Correctly updates correctOption and correctOptions so grading is 100% accurate.
  */
 export function randomizeQuestionOptions(q) {
-  if (!q || !q.options || !Array.isArray(q.options) || q.options.length <= 1) {
+  if (!q) return q;
+
+  // Drag & drop questions: aggressively randomize draggable items pool while keeping targets and correctMatches intact
+  if (q.type === "drag_drop" || q.dragDropData || q.isDragDrop) {
+    if (q.dragDropData && Array.isArray(q.dragDropData.items) && q.dragDropData.items.length > 1) {
+      return {
+        ...q,
+        dragDropData: {
+          ...q.dragDropData,
+          items: aggressiveShuffle(q.dragDropData.items),
+        },
+      };
+    }
     return q;
   }
-  // Drag & drop questions should keep their designated category targets
-  if (q.type === "drag_drop" || q.dragDropData || q.isDragDrop) {
+
+  if (!q.options || !Array.isArray(q.options) || q.options.length <= 1) {
     return q;
   }
 

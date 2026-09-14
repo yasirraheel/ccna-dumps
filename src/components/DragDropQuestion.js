@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked, isRevealed = false }) {
   const dragData = question.dragDropData || {
@@ -14,10 +14,62 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   const [selectedItem, setSelectedItem] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
 
+  // Ensure draggable pool items are thoroughly scrambled and never in 1-to-1 order with target slots
+  const randomizedItems = useMemo(() => {
+    const rawItems = dragData.items || [];
+    if (rawItems.length <= 1) return rawItems;
+
+    const targets = dragData.targets || [];
+    const correctMatches = dragData.correctMatches || {};
+    const targetOrder = targets.map((t) => correctMatches[t]).filter(Boolean);
+
+    // Check if rawItems match the targetOrder top-to-bottom
+    let matchesTargetOrderCount = 0;
+    for (let i = 0; i < Math.min(rawItems.length, targetOrder.length); i++) {
+      if (rawItems[i] === targetOrder[i]) matchesTargetOrderCount++;
+    }
+
+    // If already scrambled (zero or minimal overlap), keep current arrangement
+    if (matchesTargetOrderCount < Math.min(2, Math.floor(targetOrder.length / 2))) {
+      return rawItems;
+    }
+
+    // Otherwise, perform deterministic seeded scramble per question so it never shifts while dragging
+    let seed = 54321;
+    const keyStr = String(question.id || question.questionNo || question.question || "");
+    for (let i = 0; i < keyStr.length; i++) {
+      seed = (seed * 37 + keyStr.charCodeAt(i)) | 0;
+    }
+    const rand = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    };
+
+    let shuffled = [...rawItems];
+    for (let attempt = 0; attempt < 10; attempt++) {
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      let overlap = 0;
+      for (let i = 0; i < Math.min(shuffled.length, targetOrder.length); i++) {
+        if (shuffled[i] === targetOrder[i]) overlap++;
+      }
+      if (overlap === 0) break;
+    }
+
+    // If still matching on first slot, rotate
+    if (shuffled.length > 2 && targetOrder.length > 0 && shuffled[0] === targetOrder[0]) {
+      shuffled = [shuffled[shuffled.length - 1], ...shuffled.slice(0, shuffled.length - 1)];
+    }
+
+    return shuffled;
+  }, [question.id, question.questionNo, question.question, dragData.items, dragData.targets, dragData.correctMatches]);
+
   const assignedValues = Object.values(currentMatches);
-  const availableItems = dragData.items.filter((item) => {
+  const availableItems = randomizedItems.filter((item) => {
     const timesAssigned = assignedValues.filter((v) => v === item).length;
-    const totalCount = dragData.items.filter((i) => i === item).length;
+    const totalCount = randomizedItems.filter((i) => i === item).length;
     return timesAssigned < totalCount;
   });
 
