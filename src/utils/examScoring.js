@@ -3,6 +3,69 @@
  * Used across App, ExamDashboard, and FinishScreen to ensure 100% consistent grading.
  */
 
+/**
+ * Evaluates drag-and-drop answers, supporting multi-slot categories (e.g. TCP 1, 2, 3).
+ * For categories with numbered slots, items assigned to ANY slot in the category are accepted
+ * in any order (e.g. ABC, BAC, CAB are all 100% correct).
+ * For ordered sequences ("Step 1", "Step 2", "First Command", etc.), the exact order is preserved.
+ */
+export function evaluateDragDrop(dragDropData, userMatches = {}) {
+  if (!dragDropData) return { isAllCorrect: false, slotResults: {} };
+
+  const targets = dragDropData.targets || [];
+  const correctMatches = dragDropData.correctMatches || {};
+
+  const getTargetGroup = (target) => {
+    if (!target) return "";
+    const trimmed = String(target).trim();
+    if (/^step\b/i.test(trimmed) || /command\b/i.test(trimmed)) {
+      return trimmed;
+    }
+    const match = trimmed.match(/^(.+?)\s+\d+$/);
+    if (match) {
+      return match[1].trim();
+    }
+    return trimmed;
+  };
+
+  const groupExpected = {};
+  for (const t of targets) {
+    const grp = getTargetGroup(t);
+    if (!groupExpected[grp]) groupExpected[grp] = [];
+    const expItem = correctMatches[t];
+    if (expItem) {
+      groupExpected[grp].push(expItem);
+    }
+  }
+
+  const remainingPerGroup = {};
+  for (const grp of Object.keys(groupExpected)) {
+    remainingPerGroup[grp] = [...groupExpected[grp]];
+  }
+
+  const slotResults = {};
+  for (const t of targets) {
+    const grp = getTargetGroup(t);
+    const assigned = userMatches ? userMatches[t] : null;
+    if (!assigned) {
+      slotResults[t] = { isCorrect: false, isMissing: true, isWrong: false };
+      continue;
+    }
+    const availableIndex = remainingPerGroup[grp]?.indexOf(assigned);
+    if (availableIndex !== undefined && availableIndex !== -1) {
+      remainingPerGroup[grp].splice(availableIndex, 1);
+      slotResults[t] = { isCorrect: true, isMissing: false, isWrong: false, item: assigned };
+    } else {
+      slotResults[t] = { isCorrect: false, isMissing: false, isWrong: true, item: assigned };
+    }
+  }
+
+  const allAssigned = targets.length > 0 && targets.every((t) => Boolean(userMatches?.[t]));
+  const isAllCorrect = allAssigned && targets.every((t) => slotResults[t]?.isCorrect === true);
+
+  return { isAllCorrect, slotResults };
+}
+
 export function calculateTotalPoints(questions, answers) {
   if (!questions || !answers) return 0;
   let total = 0;
@@ -18,7 +81,8 @@ export function calculateTotalPoints(questions, answers) {
       .map(Number);
 
     if (q.type === "drag_drop" || q.dragDropData) {
-      if (ans?.confirmed && ans?.isCorrect) {
+      const dndEval = evaluateDragDrop(q.dragDropData, ans?.matches || {});
+      if (ans?.confirmed && (ans?.isCorrect || dndEval.isAllCorrect)) {
         total += pointValue;
       }
     } else if (correctArr.length > 1) {
@@ -67,7 +131,8 @@ export function isQuestionAnswerCorrect(q, ans) {
     .map(Number);
 
   if (q.type === "drag_drop" || q.dragDropData || q.isDragDrop) {
-    return Boolean(ans?.confirmed && ans?.isCorrect);
+    const dndEval = evaluateDragDrop(q.dragDropData, ans?.matches || {});
+    return Boolean(ans?.confirmed && (ans?.isCorrect || dndEval.isAllCorrect));
   }
 
   if (correctArr.length > 1) {
@@ -192,7 +257,8 @@ export function getExamQuestionStats(questions, answers) {
     let isCorrect = false;
 
     if (q.type === "drag_drop" || q.dragDropData) {
-      isCorrect = Boolean(ans?.confirmed && ans?.isCorrect);
+      const dndEval = evaluateDragDrop(q.dragDropData, ans?.matches || {});
+      isCorrect = Boolean(ans?.confirmed && (ans?.isCorrect || dndEval.isAllCorrect));
     } else if (correctArr.length > 1) {
       const userSelections = (
         Array.isArray(ans)

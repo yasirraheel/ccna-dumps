@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { evaluateDragDrop } from "../utils/examScoring";
 
 function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked, isRevealed = false }) {
   const dragData = question.dragDropData || {
@@ -10,6 +11,10 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   const isLocked = propIsLocked !== undefined ? propIsLocked : ((answer !== null && answer.confirmed === true) || isReviewMode || isRevealed);
   const hasAnswered = isLocked || isRevealed;
   const currentMatches = answer?.matches || {};
+
+  const dndEvaluation = useMemo(() => {
+    return evaluateDragDrop(dragData, currentMatches);
+  }, [dragData, currentMatches]);
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [draggedItem, setDraggedItem] = useState(null);
@@ -67,11 +72,24 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   }, [question.id, question.questionNo, question.question, dragData.items, dragData.targets, dragData.correctMatches]);
 
   const assignedValues = Object.values(currentMatches);
-  const availableItems = randomizedItems.filter((item) => {
-    const timesAssigned = assignedValues.filter((v) => v === item).length;
-    const totalCount = randomizedItems.filter((i) => i === item).length;
-    return timesAssigned < totalCount;
+  const remainingCount = Math.max(0, randomizedItems.length - assignedValues.length);
+
+  // Track assignment counts to support duplicate items and preserve exact card positions
+  const assignedCounts = {};
+  for (const val of assignedValues) {
+    assignedCounts[val] = (assignedCounts[val] || 0) + 1;
+  }
+
+  const seenCounts = {};
+  const poolItems = randomizedItems.map((item, idx) => {
+    seenCounts[item] = (seenCounts[item] || 0) + 1;
+    const isAssigned = seenCounts[item] <= (assignedCounts[item] || 0);
+    return { item, idx, isAssigned };
   });
+
+  const getAssignedTargetForItem = (item) => {
+    return Object.keys(currentMatches).find((target) => currentMatches[target] === item);
+  };
 
   const assignItemToTarget = (targetName, itemName) => {
     if (isLocked) return;
@@ -147,18 +165,39 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
           <div className="column-header">
             <span className="column-title">📋 Available Items</span>
             <span className="column-count">
-              {availableItems.length} left
+              {remainingCount} left
             </span>
           </div>
 
           <div className="items-pool">
-            {availableItems.length === 0 && !hasAnswered && (
-              <div className="pool-empty-notice">
-                All items have been assigned! Review on the right.
-              </div>
-            )}
-            {availableItems.map((item, idx) => {
-              const isSelected = selectedItem === item;
+            {poolItems.map(({ item, idx, isAssigned }) => {
+              const isSelected = selectedItem === item && !isAssigned;
+
+              if (isAssigned) {
+                return (
+                  <div
+                    key={`${item}-${idx}`}
+                    className="drag-item-card is-assigned"
+                    draggable={false}
+                    onClick={() => {
+                      if (hasAnswered) return;
+                      const targetKey = getAssignedTargetForItem(item);
+                      if (targetKey) removeItemFromTarget(targetKey);
+                    }}
+                    title={hasAnswered ? "" : "Assigned to right side. Click to recall/unassign."}
+                  >
+                    <span className="drag-handle is-assigned-icon">✓</span>
+                    <span className="drag-text is-assigned-text">{item}</span>
+                    {!hasAnswered && (
+                      <span className="drag-assigned-badge">
+                        <span className="badge-used">Used</span>
+                        <span className="badge-recall">Recall ✕</span>
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={`${item}-${idx}`}
@@ -202,11 +241,10 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
             {dragData.targets.map((target, idx) => {
               const assignedItem = currentMatches[target];
               const correctAnswer = dragData.correctMatches[target];
-              const isMatchCorrect =
-                hasAnswered && assignedItem === correctAnswer;
-              const isMatchWrong =
-                hasAnswered && assignedItem && assignedItem !== correctAnswer;
-              const isMissing = hasAnswered && !assignedItem;
+              const slotEval = dndEvaluation?.slotResults?.[target] || {};
+              const isMatchCorrect = hasAnswered && slotEval.isCorrect;
+              const isMatchWrong = hasAnswered && slotEval.isWrong;
+              const isMissing = hasAnswered && slotEval.isMissing;
 
               let slotClass = "target-slot-card";
               if (assignedItem && !hasAnswered) slotClass += " filled";

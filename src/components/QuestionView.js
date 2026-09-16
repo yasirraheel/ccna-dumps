@@ -11,7 +11,7 @@ import {
   remapExplanationToDisplayedOptions,
   getMasterQuestion,
 } from "../utils/questionSourceHelper";
-import { calculateTotalPoints } from "../utils/examScoring";
+import { calculateTotalPoints, evaluateDragDrop } from "../utils/examScoring";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -1577,11 +1577,8 @@ function QuestionView({
                   (() => {
                     const dndCorrect = (() => {
                       if (answer?.isCorrect !== undefined) return Boolean(answer.isCorrect);
-                      const correctMatches = question?.dragDropData?.correctMatches || {};
-                      const userMatches = answer?.matches || {};
-                      const targets = Object.keys(correctMatches);
-                      if (targets.length === 0) return false;
-                      return targets.every((t) => userMatches[t] === correctMatches[t]);
+                      const dndEval = evaluateDragDrop(question?.dragDropData, answer?.matches || {});
+                      return dndEval.isAllCorrect;
                     })();
                     if (dndCorrect) {
                       return <span className="badge-correct">✓ Your Matches are Correct!</span>;

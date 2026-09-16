@@ -850,8 +850,33 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
         // Evaluate correctness
         $isCorrect = false;
         if ($isDragDrop) {
-            if (is_array($userAnswer) && !empty($userAnswer['confirmed'])) {
-                $isCorrect = !empty($userAnswer['isCorrect']);
+            if (is_array($userAnswer) && isset($userAnswer['isCorrect'])) {
+                $isCorrect = (bool)$userAnswer['isCorrect'];
+            } else {
+                $userMatches = is_array($userAnswer) && isset($userAnswer['matches']) ? $userAnswer['matches'] : (is_array($userAnswer) ? $userAnswer : []);
+                $targets = $dragDrop['targets'] ?? [];
+                $correctMatches = $dragDrop['correctMatches'] ?? [];
+
+                $groupExpected = [];
+                foreach ($targets as $t) {
+                    $trimmed = trim($t);
+                    $grp = (!preg_match('/^step\b/i', $trimmed) && !preg_match('/command\b/i', $trimmed) && preg_match('/^(.+?)\s+\d+$/', $trimmed, $m)) ? trim($m[1]) : $trimmed;
+                    if (!isset($groupExpected[$grp])) $groupExpected[$grp] = [];
+                    if (isset($correctMatches[$t])) $groupExpected[$grp][] = $correctMatches[$t];
+                }
+
+                $isAllOk = count($targets) > 0;
+                $rem = $groupExpected;
+                foreach ($targets as $t) {
+                    $trimmed = trim($t);
+                    $grp = (!preg_match('/^step\b/i', $trimmed) && !preg_match('/command\b/i', $trimmed) && preg_match('/^(.+?)\s+\d+$/', $trimmed, $m)) ? trim($m[1]) : $trimmed;
+                    $item = $userMatches[$t] ?? null;
+                    if (!$item || !isset($rem[$grp])) { $isAllOk = false; break; }
+                    $idx = array_search($item, $rem[$grp]);
+                    if ($idx === false) { $isAllOk = false; break; }
+                    array_splice($rem[$grp], $idx, 1);
+                }
+                $isCorrect = $isAllOk;
             }
         } else {
             $userIndices = [];

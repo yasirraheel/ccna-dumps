@@ -13,7 +13,7 @@ import AdminLayout from "./Admin/AdminLayout";
 import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
-import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats } from "../utils/examScoring";
+import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats, evaluateDragDrop } from "../utils/examScoring";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 import { enrichQuestionsList, setMasterQuestionsCache } from "../utils/questionSourceHelper";
 import { applyQuestionOverrides, getRealtimeChannel } from "../utils/questionSync";
@@ -620,20 +620,10 @@ function reducer(state, action) {
     case "confirmDragDrop": {
       if (state.isReviewMode || state.isPaused) return state;
       const currentQuestion = state.questions[state.index];
-      const correctMatches =
-        currentQuestion.dragDropData?.correctMatches || {};
       const userMatches = state.answer?.matches || {};
 
-      let allCorrect = true;
-      const targetKeys = Object.keys(correctMatches);
-      if (targetKeys.length === 0) allCorrect = false;
-
-      for (let key of targetKeys) {
-        if (userMatches[key] !== correctMatches[key]) {
-          allCorrect = false;
-          break;
-        }
-      }
+      const dndEval = evaluateDragDrop(currentQuestion.dragDropData, userMatches);
+      const allCorrect = dndEval.isAllCorrect;
 
       const newAnswersList = [...state.answers];
       newAnswersList[state.index] = {
