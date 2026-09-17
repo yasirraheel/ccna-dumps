@@ -1030,7 +1030,7 @@ if (preg_match('#^/api/history#', $basePath)) {
         // Deduplication guard: Check if an identical attempt was recorded in the last 15 seconds for this user/bank
         $userEmailParam = isset($b['userEmail']) ? strtolower($b['userEmail']) : null;
         $userIdParam = $b['userId'] ?? null;
-        $bankClean = cleanBankName($b['bankName'] ?? 'CCNA Exam');
+        $bankClean = $b['bankName'] ?? 'CCNA Exam';
         $scoreParam = $b['score'] ?? 0;
         $totalQParam = $b['totalQuestions'] ?? 0;
 
