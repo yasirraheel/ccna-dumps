@@ -1825,13 +1825,15 @@ export default function App() {
         ((points / (maxPossiblePoints || 1)) * 100).toFixed(2)
       );
       const passed = percentage >= 82.5;
-      const timeSpent =
-        secondsRemaining !== null
-          ? Math.max(0, numQuestions * 30 - secondsRemaining)
-          : 0;
+      const now = Date.now();
+      const timeSpent = startedAt
+        ? Math.max(0, Math.round((now - startedAt) / 1000))
+        : (secondsRemaining !== null
+          ? Math.max(0, (settings?.timerMinutes ? settings.timerMinutes * 60 : 7200) - secondsRemaining)
+          : 0);
 
       const completedRecord = {
-        id: `exam_${Date.now()}`,
+        id: activeSessionId || `exam_${now}`,
         sessionId: activeSessionId,
         activeSessionId: activeSessionId,
         userId: currentUser?.id || null,
@@ -1844,7 +1846,7 @@ export default function App() {
         percentage,
         passed,
         totalQuestions: numQuestions,
-        date: Date.now(),
+        date: now,
         timeSpentSeconds: timeSpent,
         questions: [...questions],
         answers: [...answers],
@@ -1865,7 +1867,12 @@ export default function App() {
         markExamFinishedId(completedRecord.id);
       }
 
-      setPastExams((prev) => [completedRecord, ...prev]);
+      setPastExams((prev) => {
+        const filtered = prev.filter(
+          (p) => p.id !== completedRecord.id && (!completedRecord.sessionId || p.sessionId !== completedRecord.sessionId)
+        );
+        return [completedRecord, ...filtered];
+      });
 
       // Remove completed session from active sessions
       if (activeSessionId) {
@@ -1877,7 +1884,9 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sanitizeRecordPayload(completedRecord)),
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn("Could not record completed exam to server history:", err);
+      });
 
       // Also clean active session from MySQL if present
       if (activeSessionId) {
@@ -1902,6 +1911,7 @@ export default function App() {
     settings,
     examMode,
     isReviewMode,
+    startedAt,
   ]);
 
   // 4. Candidate name persistence
@@ -2287,74 +2297,22 @@ export default function App() {
     }
   };
 
-  const handleFinishExam = async () => {
-    if (serverConnectionError) {
+  const handleFinishExam = () => {
+    if (serverConnectionError || (typeof navigator !== "undefined" && !navigator.onLine)) {
       setAlertDialog({
         isOpen: true,
         title: "⚠️ Cannot Grade Exam While Disconnected",
         message: "You are currently disconnected from the server. Your exam results cannot be saved. Please click Retry Connection to submit your exam.",
         confirmText: "Retry Connection Now",
-        cancelText: "Cancel",
+        cancelText: "Stay on Exam",
         type: "danger",
         onConfirm: () => handleRetryConnection(),
       });
       return;
     }
 
-    try {
-      const finalPoints = calculateTotalPoints(questions, answers);
-      const now = Date.now();
-      const completedRecord = {
-        id: activeSessionId || `exam_${now}`,
-        userId: currentUser?.id || null,
-        userEmail: currentUser?.email || null,
-        candidateName: currentUser?.name || candidateName || "Candidate",
-        bankName: selectedBankName || "CCNA Exam",
-        score: finalPoints,
-        maxScore: questions.length * 10,
-        percentage: Math.round((finalPoints / (questions.length * 10)) * 100),
-        passed: Math.round((finalPoints / (questions.length * 10)) * 100) >= 80,
-        totalQuestions: questions.length,
-        timeSpentSeconds: secondsRemaining !== null ? Math.max(0, 7200 - secondsRemaining) : 0,
-        examDate: now,
-        questions,
-        answers,
-        flaggedQuestions,
-        revealedQuestions,
-        settings,
-        examMode,
-      };
-
-      const res = await fetch(`${API_BASE_URL}/history`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sanitizeRecordPayload(completedRecord)),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
-      }
-
-      if (activeSessionId) {
-        fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(activeSessionId)}`, {
-          method: "DELETE",
-        }).catch(() => {});
-      }
-
-      dispatch({ type: "finish" });
-    } catch (err) {
-      console.error("Finish exam blocked due to server connection error:", err);
-      setServerConnectionError("Server connection failed: Could not record completed exam to server history. Please retry.");
-      setAlertDialog({
-        isOpen: true,
-        title: "⚠️ Submission Failed",
-        message: "Could not submit your completed exam to the server database. Please verify your connection and retry.",
-        confirmText: "Retry Submission",
-        cancelText: "Stay on Exam",
-        type: "danger",
-        onConfirm: () => handleFinishExam(),
-      });
-    }
+    // Trigger exam finish. The dedicated finish effect handles scoring, recording to pastExams, and saving to backend once.
+    dispatch({ type: "finish" });
   };
 
   // On /exam mount: fetch fresh session from server (ZERO LOCALSTORAGE CACHING)

@@ -1027,6 +1027,58 @@ if (preg_match('#^/api/history#', $basePath)) {
             }
         }
 
+        // Deduplication guard: Check if an identical attempt was recorded in the last 15 seconds for this user/bank
+        $userEmailParam = isset($b['userEmail']) ? strtolower($b['userEmail']) : null;
+        $userIdParam = $b['userId'] ?? null;
+        $bankClean = cleanBankName($b['bankName'] ?? 'CCNA Exam');
+        $scoreParam = $b['score'] ?? 0;
+        $totalQParam = $b['totalQuestions'] ?? 0;
+
+        if ($userIdParam || $userEmailParam) {
+            $checkDup = $pdo->prepare("SELECT id FROM exam_attempts 
+                WHERE (" . ($userIdParam && $userEmailParam ? "user_id = ? OR user_email = ?" : ($userIdParam ? "user_id = ?" : "user_email = ?")) . ") 
+                  AND bank_name = ? 
+                  AND score = ? 
+                  AND total_questions = ?
+                  AND created_at >= (NOW() - INTERVAL 15 SECOND)
+                ORDER BY id DESC LIMIT 1");
+            $checkParams = ($userIdParam && $userEmailParam) ? [$userIdParam, $userEmailParam, $bankClean, $scoreParam, $totalQParam] : [($userIdParam ?: $userEmailParam), $bankClean, $scoreParam, $totalQParam];
+            $checkDup->execute($checkParams);
+            $existingId = $checkDup->fetchColumn();
+
+            if ($existingId) {
+                // Update existing record rather than inserting a duplicate
+                $rawAttemptQs = $b['questions'] ?? [];
+                $cleanAttemptQuestions = [];
+                if (is_array($rawAttemptQs)) {
+                    foreach ($rawAttemptQs as $atq) {
+                        if (is_array($atq)) {
+                            unset($atq['explanation']);
+                            $cleanAttemptQuestions[] = $atq;
+                        } else {
+                            $cleanAttemptQuestions[] = $atq;
+                        }
+                    }
+                }
+                $upd = $pdo->prepare("UPDATE exam_attempts SET
+                    percentage = ?, passed = ?, questions = ?, answers = ?, flagged_questions = ?, revealed_questions = ?, settings = ?
+                    WHERE id = ?");
+                $upd->execute([
+                    $b['percentage'] ?? 0,
+                    !empty($b['passed']) ? 1 : 0,
+                    json_encode($cleanAttemptQuestions),
+                    json_encode($b['answers'] ?? []),
+                    json_encode($b['flaggedQuestions'] ?? []),
+                    json_encode($b['revealedQuestions'] ?? []),
+                    json_encode($b['settings'] ?? []),
+                    $existingId
+                ]);
+                http_response_code(200);
+                echo json_encode(["success" => true, "message" => "Exam attempt updated (deduplicated)", "examId" => (int)$existingId]);
+                exit;
+            }
+        }
+
         $stmt = $pdo->prepare("INSERT INTO exam_attempts 
             (id, user_id, user_email, candidate_name, bank_name, score, max_score, percentage, passed, total_questions, time_spent_seconds, exam_date, questions, answers, flagged_questions, revealed_questions, settings, exam_mode)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
