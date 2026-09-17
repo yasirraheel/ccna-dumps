@@ -8195,6 +8195,20 @@ body {
   max-width: 440px;
 }
 
+.boson-live-edit-toast.toast-error {
+  background: linear-gradient(135deg, #1e0505 0%, #450a0a 50%, #7f1d1d 100%);
+  border: 1.5px solid #ef4444;
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.7), 0 0 22px rgba(239, 68, 68, 0.45);
+  color: #fff1f2;
+}
+
+.boson-live-edit-toast.toast-warning {
+  background: linear-gradient(135deg, #1c1305 0%, #451a03 50%, #78350f 100%);
+  border: 1.5px solid #f59e0b;
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.7), 0 0 22px rgba(245, 158, 11, 0.45);
+  color: #fffbeb;
+}
+
 @keyframes slideInToast {
   from {
     opacity: 0;
@@ -8228,10 +8242,26 @@ body {
   text-transform: uppercase;
 }
 
+.boson-live-edit-toast.toast-error .toast-title {
+  color: #fca5a5;
+}
+
+.boson-live-edit-toast.toast-warning .toast-title {
+  color: #fcd34d;
+}
+
 .boson-live-edit-toast .toast-desc {
   font-size: 13px;
   color: #e2e8f0;
   line-height: 1.4;
+}
+
+.boson-live-edit-toast.toast-error .toast-desc {
+  color: #fecdd3;
+}
+
+.boson-live-edit-toast.toast-warning .toast-desc {
+  color: #fde68a;
 }
 
 .boson-live-edit-toast .toast-close {

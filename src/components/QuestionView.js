@@ -108,9 +108,60 @@ function QuestionView({
   );
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
+  const [toast, setToast] = useState(null); // { type, title, message }
   const [isCheckingAnswer, setIsCheckingAnswer] = useState(false);
   const toastTimeoutRef = useRef(null);
+
+  const showToast = (messageOrObj, type = "success", title = null, duration = 4000) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    if (!messageOrObj) {
+      setToast(null);
+      return;
+    }
+
+    if (typeof messageOrObj === "object") {
+      setToast({
+        type: messageOrObj.type || "info",
+        title:
+          messageOrObj.title ||
+          (messageOrObj.type === "error"
+            ? "Server Connection Lost"
+            : messageOrObj.type === "warning"
+            ? "Warning"
+            : "Update Applied"),
+        message: messageOrObj.message || messageOrObj.desc || "",
+      });
+      toastTimeoutRef.current = setTimeout(() => setToast(null), messageOrObj.duration || duration);
+      return;
+    }
+
+    const rawStr = String(messageOrObj);
+    const isError = type === "error" || /server\s+connection|offline|failed|error/i.test(rawStr);
+    const actualType = isError ? "error" : type;
+    const actualTitle =
+      title ||
+      (actualType === "error"
+        ? "Server Connection Lost"
+        : actualType === "warning"
+        ? "Warning"
+        : "Update Applied");
+
+    const cleanMsg = rawStr.replace(/^[⚠️❌✅ℹ️\s]+/, "");
+    setToast({
+      type: actualType,
+      title: actualTitle,
+      message: cleanMsg,
+    });
+    toastTimeoutRef.current = setTimeout(() => setToast(null), duration);
+  };
+
+  const setToastMsg = (msg) => {
+    if (!msg) {
+      setToast(null);
+      return;
+    }
+    showToast(msg);
+  };
 
   useEffect(() => {
     return () => {
@@ -670,9 +721,12 @@ function QuestionView({
     // Once answer is revealed, committed, in review mode, or time has expired, user cannot modify their selection
     if (isLocked) return;
     if (serverConnectionError) {
-      setToastMsg("⚠️ Server connection lost. You cannot submit or change answers while offline.");
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-      toastTimeoutRef.current = setTimeout(() => setToastMsg(""), 4000);
+      showToast({
+        type: "error",
+        title: "Server Connection Lost",
+        message: "You cannot submit or change answers while offline.",
+        duration: 4500,
+      });
       return;
     }
 
@@ -1853,30 +1907,35 @@ function QuestionView({
             if (dispatch) {
               dispatch({ type: "updateQuestion", payload: updatedQ });
             }
-            setToastMsg(
-              `Question ${updatedQ.questionNo || "#" + updatedQ.id} updated successfully! Changes applied across all exams.`
-            );
-            if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-            toastTimeoutRef.current = setTimeout(() => {
-              setToastMsg("");
-            }, 5000);
+            showToast({
+              type: "success",
+              title: "Update Applied",
+              message: `Question ${updatedQ.questionNo || "#" + updatedQ.id} updated successfully! Changes applied across all exams.`,
+              duration: 5000,
+            });
           }}
           onClose={() => setIsEditModalOpen(false)}
         />
       )}
 
-      {/* FLOATING SUCCESS TOAST NOTIFICATION */}
-      {toastMsg && (
-        <div className="boson-live-edit-toast" role="status" aria-live="polite">
-          <div className="toast-icon">✅</div>
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toast && (
+        <div
+          className={`boson-live-edit-toast toast-${toast.type || "success"}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="toast-icon">
+            {toast.type === "error" ? "⚠️" : toast.type === "warning" ? "⚠️" : "✅"}
+          </div>
           <div className="toast-content">
-            <div className="toast-title">Update Applied</div>
-            <div className="toast-desc">{toastMsg}</div>
+            <div className="toast-title">{toast.title}</div>
+            <div className="toast-desc">{toast.message}</div>
           </div>
           <button
             type="button"
             className="toast-close"
-            onClick={() => setToastMsg("")}
+            onClick={() => setToast(null)}
             title="Dismiss notification"
           >
             ✕
