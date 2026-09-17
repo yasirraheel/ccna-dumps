@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { evaluateDragDrop } from "../utils/examScoring";
 
 function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked, isRevealed = false }) {
+  const containerRef = useRef(null);
   const dragData = question.dragDropData || {
     items: [],
     targets: [],
@@ -144,15 +145,29 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
     setSelectedItem(null);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     dispatch({ type: "confirmDragDrop" });
+
+    const scrollToItems = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const targetY = Math.max(0, rect.top + scrollTop - 80);
+        window.scrollTo({ top: targetY, behavior: "smooth" });
+      }
+    };
+    requestAnimationFrame(scrollToItems);
+    setTimeout(scrollToItems, 50);
+    setTimeout(scrollToItems, 180);
   };
 
   const numAssigned = Object.keys(currentMatches).length;
   const numTargets = dragData.targets.length;
 
   return (
-    <div className="drag-drop-container">
+    <div className="drag-drop-container" ref={containerRef}>
       {!hasAnswered && (
         <div className="drag-drop-instructions">
           💡 <strong>Instructions:</strong> Drag items from the Left into matching Target slots on the Right, or <strong>click an item then click a slot</strong>.

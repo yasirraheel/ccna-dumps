@@ -170,31 +170,33 @@ function QuestionView({
     // 3. Close inline note box
     setIsNoteBoxOpen(false);
 
-    // 4. Scroll smoothly to top of question statement
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-    if (document.documentElement) document.documentElement.scrollTop = 0;
-    if (document.body) document.body.scrollTop = 0;
+    // 4. Fall strictly on top of the screen so candidate sees entire statement, header, and items
+    const scrollToScreenTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
 
-    const mainContainer =
-      document.querySelector(".cisco-simulator-root") ||
-      document.querySelector(".simulator-app-container") ||
-      document.querySelector(".boson-exsim-view");
-    if (mainContainer) mainContainer.scrollTop = 0;
+      const mainContainer =
+        document.querySelector(".cisco-simulator-root") ||
+        document.querySelector(".simulator-app-container") ||
+        document.querySelector(".boson-exsim-view") ||
+        document.getElementById("root");
+      if (mainContainer) mainContainer.scrollTop = 0;
+    };
 
-    requestAnimationFrame(() => {
-      const promptEl =
-        document.querySelector(".boson-question-prompt") ||
-        document.querySelector(".boson-question-title-row") ||
-        document.querySelector(".boson-question-body");
-      if (promptEl) {
-        promptEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
+    scrollToScreenTop();
+    requestAnimationFrame(scrollToScreenTop);
+    const scrollTimer1 = setTimeout(scrollToScreenTop, 50);
+    const scrollTimer2 = setTimeout(scrollToScreenTop, 180);
 
     const timer = setTimeout(() => {
       setIsNavTransitioning(false);
     }, 360);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(scrollTimer1);
+      clearTimeout(scrollTimer2);
+      clearTimeout(timer);
+    };
   }, [seqNumber]);
 
   const isBusyNavigating = Boolean(isNavTransitioning || isNavSaving);
@@ -763,6 +765,12 @@ function QuestionView({
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
+    const mainContainer =
+      document.querySelector(".cisco-simulator-root") ||
+      document.querySelector(".simulator-app-container") ||
+      document.querySelector(".boson-exsim-view") ||
+      document.getElementById("root");
+    if (mainContainer) mainContainer.scrollTop = 0;
 
     try {
       await onGoToQuestion(seqNumber);
@@ -778,6 +786,12 @@ function QuestionView({
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
+    const mainContainer =
+      document.querySelector(".cisco-simulator-root") ||
+      document.querySelector(".simulator-app-container") ||
+      document.querySelector(".boson-exsim-view") ||
+      document.getElementById("root");
+    if (mainContainer) mainContainer.scrollTop = 0;
 
     try {
       await onGoToQuestion(seqNumber - 2);
@@ -805,6 +819,21 @@ function QuestionView({
       }
     } else {
       dispatch({ type: "revealAnswer", payload: seqNumber - 1 });
+    }
+
+    if (isDragDrop) {
+      const scrollToDnd = () => {
+        const dndEl = document.querySelector(".drag-drop-container");
+        if (dndEl) {
+          const rect = dndEl.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const targetY = Math.max(0, rect.top + scrollTop - 80);
+          window.scrollTo({ top: targetY, behavior: "smooth" });
+        }
+      };
+      requestAnimationFrame(scrollToDnd);
+      setTimeout(scrollToDnd, 50);
+      setTimeout(scrollToDnd, 180);
     }
   };
 
