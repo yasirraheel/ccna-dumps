@@ -2634,6 +2634,7 @@ body {
 }
 
 .boson-explanation-card {
+  --expl-font-scale: 1;
   background-color: var(--color-green-light);
   border: 1px solid var(--color-green);
   border-radius: 0.8rem;
@@ -2641,27 +2642,154 @@ body {
   margin-top: 2rem;
 }
 
+.explanation-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
 .explanation-title {
   color: var(--color-green);
   font-size: 1.5rem;
-  margin-bottom: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0;
+}
+
+.explanation-font-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.font-ctrl-label {
+  font-size: 1.2rem;
+  color: #94a3b8;
+  font-weight: 600;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.font-ctrl-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 0.5rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+  user-select: none;
+}
+
+.font-ctrl-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+.font-ctrl-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.font-ctrl-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.font-ctrl-btn.reset {
+  width: auto;
+  padding: 0 0.8rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  gap: 0.3rem;
+}
+
+.font-ctrl-btn.reset.active {
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.font-ctrl-btn.reset.active:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+}
+
+.font-ctrl-level {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #38bdf8;
+  min-width: 4rem;
+  text-align: center;
+  user-select: none;
 }
 
 .explanation-body {
   color: #f8fafc;
-  font-size: 1.45rem;
-  line-height: 1.5;
+  font-size: calc(1.45rem * var(--expl-font-scale, 1));
+  line-height: calc(1.55 * var(--expl-font-scale, 1));
 }
 
-/* Rich HTML Explanation Styling */
-.explanation-rich-content {
+/* Dynamic font scaling across all Answer & Explanation items */
+.boson-explanation-card .explanation-body,
+.boson-explanation-card .explanation-correct-labels,
+.boson-explanation-card .correct-option-pill,
+.boson-explanation-card .correct-option-pill span,
+.boson-explanation-card .dnd-correct-summary,
+.boson-explanation-card .dnd-correct-summary span,
+.boson-explanation-card .plain-explanation-text {
+  font-size: calc(1.3rem * var(--expl-font-scale, 1)) !important;
+}
+
+.boson-explanation-card .explanation-rich-content {
   color: #e2e8f0;
-  font-size: 1.35rem;
-  line-height: 1.65;
+  font-size: calc(1.35rem * var(--expl-font-scale, 1)) !important;
+  line-height: calc(1.65 * var(--expl-font-scale, 1));
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
   margin-top: 0.8rem;
+}
+
+.boson-explanation-card .explanation-rich-content p,
+.boson-explanation-card .explanation-rich-content li,
+.boson-explanation-card .explanation-rich-content td,
+.boson-explanation-card .explanation-rich-content th,
+.boson-explanation-card .explanation-rich-content span,
+.boson-explanation-card .explanation-rich-content div:not(.expl-card) {
+  font-size: calc(1.35rem * var(--expl-font-scale, 1)) !important;
+  line-height: calc(1.65 * var(--expl-font-scale, 1));
+}
+
+.boson-explanation-card .explanation-rich-content h4,
+.boson-explanation-card .explanation-rich-content .section-title {
+  font-size: calc(1.45rem * var(--expl-font-scale, 1)) !important;
+}
+
+.boson-explanation-card .explanation-rich-content code,
+.boson-explanation-card .explanation-rich-content pre {
+  font-size: calc(1.25rem * var(--expl-font-scale, 1)) !important;
 }
 
 .explanation-rich-content p {

@@ -163,6 +163,47 @@ function QuestionView({
     showToast(msg);
   };
 
+  // Dynamic font size scaling for Answer and Explanation section
+  const [explFontScale, setExplFontScale] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ccna_expl_font_scale");
+      const num = parseFloat(saved);
+      if (!isNaN(num) && num >= 0.8 && num <= 1.8) {
+        return num;
+      }
+    } catch {
+      // ignore
+    }
+    return 1.0;
+  });
+
+  const handleIncreaseFont = () => {
+    setExplFontScale((prev) => {
+      const next = Math.min(1.8, Math.round((prev + 0.1) * 10) / 10);
+      try {
+        localStorage.setItem("ccna_expl_font_scale", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleDecreaseFont = () => {
+    setExplFontScale((prev) => {
+      const next = Math.max(0.8, Math.round((prev - 0.1) * 10) / 10);
+      try {
+        localStorage.setItem("ccna_expl_font_scale", String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleResetFont = () => {
+    setExplFontScale(1.0);
+    try {
+      localStorage.setItem("ccna_expl_font_scale", "1.0");
+    } catch {}
+  };
+
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
@@ -1650,9 +1691,49 @@ function QuestionView({
 
         {/* SHOW ANSWER INLINE BANNER */}
         {(isReviewMode || isRevealed || (isCommitted && settings?.showAnswersInline !== false)) && (
-          <div className="boson-explanation-card">
-            <div className="explanation-title">
-              <span className="explanation-icon">💡</span> Official Answer & Verification
+          <div
+            className="boson-explanation-card"
+            style={{ "--expl-font-scale": explFontScale }}
+          >
+            <div className="explanation-header-row">
+              <div className="explanation-title">
+                <span className="explanation-icon">💡</span> Official Answer & Verification
+              </div>
+              <div className="explanation-font-controls">
+                <span className="font-ctrl-label">🔤 Font:</span>
+                <button
+                  type="button"
+                  className="font-ctrl-btn"
+                  onClick={handleDecreaseFont}
+                  disabled={explFontScale <= 0.8}
+                  title="Decrease Font Size (-)"
+                  aria-label="Decrease Font Size"
+                >
+                  −
+                </button>
+                <span className="font-ctrl-level">
+                  {Math.round(explFontScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="font-ctrl-btn"
+                  onClick={handleIncreaseFont}
+                  disabled={explFontScale >= 1.8}
+                  title="Increase Font Size (+)"
+                  aria-label="Increase Font Size"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className={`font-ctrl-btn reset ${explFontScale !== 1.0 ? "active" : ""}`}
+                  onClick={handleResetFont}
+                  title="Reset Font Size (100%)"
+                  aria-label="Reset Font Size"
+                >
+                  ↺ Reset
+                </button>
+              </div>
             </div>
             <div className="explanation-body">
               <div className="explanation-header-banner">
@@ -1786,7 +1867,7 @@ function QuestionView({
                       );
                     }
                     return (
-                      <div style={{ color: "#f8fafc", fontSize: "1.35rem", lineHeight: "1.65", whiteSpace: "pre-line" }}>
+                      <div className="plain-explanation-text" style={{ color: "#f8fafc", fontSize: "1.35rem", lineHeight: "1.65", whiteSpace: "pre-line" }}>
                         {expl}
                       </div>
                     );
