@@ -2792,6 +2792,41 @@ body {
   font-size: calc(1.25rem * var(--expl-font-scale, 1)) !important;
 }
 
+/* Header font controls (always visible in sub-header across explanation / review pages) */
+.explanation-font-controls.header-font-controls {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.boson-exsim-view {
+  --expl-font-scale: 1;
+}
+
+/* Review / Explanation question prompt and options font scaling */
+.boson-exsim-view .boson-question-prompt {
+  font-size: calc(1.7rem * var(--expl-font-scale, 1)) !important;
+  line-height: calc(1.6 * var(--expl-font-scale, 1)) !important;
+}
+
+.boson-exsim-view .boson-option-content,
+.boson-exsim-view .option-text-inline,
+.boson-exsim-view .option-multiline-text {
+  font-size: calc(1.5rem * var(--expl-font-scale, 1)) !important;
+  line-height: calc(1.55 * var(--expl-font-scale, 1)) !important;
+}
+
+.boson-exsim-view .boson-option-letter {
+  font-size: calc(1.5rem * var(--expl-font-scale, 1)) !important;
+}
+
+.drag-drop-container .drag-text,
+.drag-drop-container .target-name,
+.drag-drop-container .assigned-text,
+.drag-drop-container .correct-text {
+  font-size: calc(1.4rem * var(--expl-font-scale, 1)) !important;
+}
+
 .explanation-rich-content p {
   margin: 0 0 0.65rem 0;
 }
@@ -6773,6 +6808,22 @@ body {
     display: inline-flex !important;
     padding: 0.4rem 0.8rem !important;
     font-size: 1.15rem !important;
+  }
+
+  .boson-sub-right-actions .header-font-controls {
+    display: inline-flex !important;
+    padding: 0.25rem 0.5rem !important;
+    gap: 0.4rem !important;
+  }
+
+  .boson-sub-right-actions .header-font-controls .font-ctrl-label {
+    display: none;
+  }
+
+  .boson-sub-right-actions .header-font-controls .font-ctrl-btn {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 1.4rem;
   }
 
   .boson-sub-left {

@@ -1001,7 +1001,10 @@ function QuestionView({
   const timerIsLow = !isUntimed && secondsRemaining !== null && secondsRemaining < 300;
 
   return (
-    <div className={`boson-exsim-view ${isPaused ? "is-paused" : ""}`}>
+    <div
+      className={`boson-exsim-view ${isPaused ? "is-paused" : ""}`}
+      style={{ "--expl-font-scale": explFontScale }}
+    >
       {/* SLIM THEME TRANSITION ANIMATED LOADER */}
       <div
         className={`boson-slim-transition-track ${isNavTransitioning ? "is-active" : ""}`}
@@ -1289,6 +1292,45 @@ function QuestionView({
                 </svg>
                 <span>Edit Question</span>
               </button>
+            )}
+
+            {/* FONT RESIZE CONTROLS - ALWAYS ACCESSIBLE AT TOP IN REVIEW & EXPLANATION MODE */}
+            {(isReviewMode || isRevealed || (isCommitted && settings?.showAnswersInline !== false)) && (
+              <div className="explanation-font-controls header-font-controls">
+                <span className="font-ctrl-label">🔤 Font:</span>
+                <button
+                  type="button"
+                  className="font-ctrl-btn"
+                  onClick={handleDecreaseFont}
+                  disabled={explFontScale <= 0.8}
+                  title="Decrease Font Size (-)"
+                  aria-label="Decrease Font Size"
+                >
+                  −
+                </button>
+                <span className="font-ctrl-level">
+                  {Math.round(explFontScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  className="font-ctrl-btn"
+                  onClick={handleIncreaseFont}
+                  disabled={explFontScale >= 1.8}
+                  title="Increase Font Size (+)"
+                  aria-label="Increase Font Size"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className={`font-ctrl-btn reset ${explFontScale !== 1.0 ? "active" : ""}`}
+                  onClick={handleResetFont}
+                  title="Reset Font Size (100%)"
+                  aria-label="Reset Font Size"
+                >
+                  ↺ Reset
+                </button>
+              </div>
             )}
           </div>
         </div>
