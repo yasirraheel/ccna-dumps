@@ -14,6 +14,7 @@ import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats, evaluateDragDrop } from "../utils/examScoring";
+import { getAllBanksIncorrectQuestions } from "../utils/incorrectQuestionPool";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 import { enrichQuestionsList, setMasterQuestionsCache } from "../utils/questionSourceHelper";
 import { applyQuestionOverrides, getRealtimeChannel } from "../utils/questionSync";
@@ -2614,6 +2615,43 @@ export default function App() {
     handleNavigate("exam");
   };
 
+  const handleStartAllBanksIncorrect = ({ examMode: requestedMode = "study", settings: requestedSettings = {} } = {}) => {
+    if (!requireAuth()) return;
+
+    let incorrectList = enrichQuestionsList(getAllBanksIncorrectQuestions(pastExams));
+    if (incorrectList.length === 0) {
+      setAlertDialog({
+        isOpen: true,
+        title: "No Incorrect Answers Yet",
+        message: "Complete an exam and answer at least one question incorrectly to create an all-banks practice exam.",
+        confirmText: "OK",
+        cancelText: null,
+        type: "info",
+      });
+      return;
+    }
+
+    if (requestedSettings?.randomizeQuestions) {
+      incorrectList = aggressiveShuffle(incorrectList);
+    }
+    if (requestedSettings?.randomizeAnswers) {
+      incorrectList = incorrectList.map(randomizeQuestionOptions);
+    }
+
+    setFlaggedQuestions([]);
+    dispatch({
+      type: "startExam",
+      payload: {
+        questions: incorrectList,
+        examMode: requestedMode,
+        settings: requestedSettings,
+        bankName: `Custom Review — Incorrect Answers (${incorrectList.length} Qs)`,
+        bankKey: "custom_all_incorrect",
+      },
+    });
+    handleNavigate("exam");
+  };
+
   const numQuestions = questions.length;
   const maxPossiblePoints = questions.reduce(
     (prev, cur) => prev + (cur.points || 10),
@@ -2768,6 +2806,7 @@ export default function App() {
               onRetakeAll={handleRetakeAllQuestions}
               onRetakeFlagged={handleRetakeFlaggedOnly}
               onRetakeIncorrect={handleRetakeIncorrectOnly}
+              onStartAllBanksIncorrect={handleStartAllBanksIncorrect}
               currentUser={effectiveUser}
               onOpenAuth={handleOpenAuth}
               onLogout={handleLogout}

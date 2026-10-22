@@ -13,6 +13,7 @@ import {
 } from "../utils/planPermissions";
 import { getExamQuestionStats } from "../utils/examScoring";
 import { getAllBanksAnalysis } from "../utils/bankStrengthAlgorithm";
+import { getAllBanksIncorrectQuestions } from "../utils/incorrectQuestionPool";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -41,6 +42,7 @@ function ExamDashboard({
   onRetakeAll,
   onRetakeFlagged,
   onRetakeIncorrect,
+  onStartAllBanksIncorrect,
   currentUser,
   onOpenAuth,
   onLogout,
@@ -451,6 +453,19 @@ function ExamDashboard({
     return getAllBanksAnalysis(pastExams, currentUser, EXAM_BANKS);
   }, [pastExams, currentUser]);
 
+  const allBanksIncorrectCount = React.useMemo(
+    () => getAllBanksIncorrectQuestions(pastExams).length,
+    [pastExams]
+  );
+
+  const handleStartAllBanksIncorrect = () => {
+    if (!currentUser) {
+      onOpenAuth?.("login");
+      return;
+    }
+    onStartAllBanksIncorrect?.({ examMode, settings: effectiveSettings });
+  };
+
   return (
     <div className="boson-dashboard-wrapper">
       {/* TOP NAVIGATION WITH HAMBURGER & AVATAR */}
@@ -721,6 +736,27 @@ function ExamDashboard({
                       </label>
                     );
                   })}
+
+                  <div className="all-banks-incorrect-card">
+                    <div className="all-banks-incorrect-copy">
+                      <span className="all-banks-incorrect-eyebrow">Custom practice exam</span>
+                      <strong>All Incorrect Answers</strong>
+                      <span>
+                        {allBanksIncorrectCount > 0
+                          ? `${allBanksIncorrectCount} question${allBanksIncorrectCount === 1 ? "" : "s"} from your latest results across every bank`
+                          : "Your incorrectly answered questions from every bank will appear here"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-all-banks-incorrect"
+                      onClick={handleStartAllBanksIncorrect}
+                      disabled={!currentUser || allBanksIncorrectCount === 0}
+                      title={!currentUser ? "Sign in to create a custom practice exam" : allBanksIncorrectCount === 0 ? "No incorrect answers are available yet" : "Start a custom exam from all incorrect answers"}
+                    >
+                      Start Practice
+                    </button>
+                  </div>
                 </div>
 
                 <div className="exam-mode-section">
