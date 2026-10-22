@@ -1770,9 +1770,7 @@ function QuestionView({
             style={{ "--expl-font-scale": explFontScale }}
           >
             <div className="explanation-header-row">
-              <div className="explanation-title">
-                <span className="explanation-icon">💡</span> Official Answer & Verification
-              </div>
+              <div className="explanation-title">Answer Review</div>
               <div className="explanation-font-controls">
                 <span className="font-ctrl-label">🔤 Font:</span>
                 <button
