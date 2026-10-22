@@ -8,6 +8,9 @@ function QuestionPaletteModal({
   questions,
   flaggedQuestions = [],
   comments = {},
+  revealedQuestions = [],
+  committedQuestions = [],
+  isReviewMode = false,
   onSelectQuestion,
   onClose,
 }) {
@@ -20,7 +23,7 @@ function QuestionPaletteModal({
     const hasNote = Boolean(comments[qKey] || comments[qObj?.id] || comments[String(qObj?.id)]);
     const ans = answers[idx];
 
-    const isAnswered =
+    const hasResponse =
       ans !== null &&
       ans !== undefined &&
       ans !== "" &&
@@ -31,11 +34,21 @@ function QuestionPaletteModal({
         (Array.isArray(ans?.selections) && ans.selections.length > 0) ||
         (ans?.matches && Object.keys(ans.matches).length > 0));
 
+    // A selected option remains in progress until the learner reveals it,
+    // confirms a drag-and-drop answer, or moves on. This keeps the current
+    // question blue until it has a final result to show.
+    const isEvaluated =
+      isReviewMode ||
+      revealedQuestions.includes(idx) ||
+      committedQuestions.includes(idx) ||
+      ans?.confirmed === true;
+    const isAnswered = isEvaluated;
+
     let isCorrect = false;
     let isIncorrect = false;
 
-    if (isAnswered) {
-      isCorrect = isQuestionAnswerCorrect(qObj, ans);
+    if (isEvaluated) {
+      isCorrect = hasResponse && isQuestionAnswerCorrect(qObj, ans);
       isIncorrect = !isCorrect;
     }
 
@@ -172,12 +185,13 @@ function QuestionPaletteModal({
               const { isFlagged, isAnswered, hasNote, isCorrect, isIncorrect } = allStatuses[i];
 
               let statusClass = "palette-cell";
-              if (isActive) statusClass += " cell-active";
-              else if (isIncorrect) statusClass += " cell-incorrect";
+              if (isIncorrect) statusClass += " cell-incorrect";
               else if (isCorrect) statusClass += " cell-correct cell-answered";
+              else if (isActive) statusClass += " cell-active";
               else if (isAnswered) statusClass += " cell-answered";
               else statusClass += " cell-unanswered";
 
+              if (isActive && (isCorrect || isIncorrect)) statusClass += " cell-current-result";
               if (isFlagged) statusClass += " cell-flagged";
               if (hasNote) statusClass += " cell-has-note";
 
@@ -192,7 +206,7 @@ function QuestionPaletteModal({
                     onSelectQuestion(i);
                     onClose();
                   }}
-                  title={`${qNo}${isIncorrect ? " (Incorrect)" : isCorrect ? " (Correct)" : ""}`}
+                  title={`${qNo}${isIncorrect ? " (Incorrect)" : isCorrect ? " (Correct)" : ""}${isActive ? " (Current)" : ""}`}
                 >
                   {isFlagged && <span className="cell-flag-pin">🚩</span>}
                   {hasNote && <span className="cell-note-pin">💬</span>}

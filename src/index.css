@@ -4338,6 +4338,12 @@ body {
   border-color: #f87171 !important;
 }
 
+/* Keep the current question identifiable without hiding its result color. */
+.cell-current-result {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
 .tab-btn.active-incorrect {
   background-color: #ef4444 !important;
   border-color: #ef4444 !important;

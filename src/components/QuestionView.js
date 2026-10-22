@@ -2055,6 +2055,9 @@ function QuestionView({
           questions={questions}
           flaggedQuestions={flaggedQuestions}
           comments={currentBankNotes}
+          revealedQuestions={revealedQuestions}
+          committedQuestions={committedQuestions}
+          isReviewMode={isReviewMode}
           onSelectQuestion={onGoToQuestion}
           onClose={() => setShowPaletteModal(false)}
         />
