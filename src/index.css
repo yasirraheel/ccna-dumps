@@ -2958,6 +2958,128 @@ body {
   border: 1px solid #ef4444;
 }
 
+/* Reading-focused explanation cards. Keep status in the heading and badges. */
+.boson-explanation-card .explanation-rich-content {
+  gap: 1.2rem;
+  line-height: 1.75;
+}
+
+.boson-explanation-card .explanation-rich-content .expl-card {
+  padding: 1.5rem;
+  border: 1px solid #344454;
+  border-radius: 14px;
+  background: #182530;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 10%);
+  overflow-wrap: anywhere;
+}
+
+.boson-explanation-card .explanation-rich-content .concept-card {
+  border-top: 3px solid #38bdf8;
+}
+
+.boson-explanation-card .explanation-rich-content .tip-card {
+  background: #29291f;
+  border-color: #665633;
+}
+
+.boson-explanation-card .explanation-rich-content .explanation-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.boson-explanation-card .explanation-rich-content .explanation-section-heading > span:last-child {
+  font-size: calc(1.4rem * var(--expl-font-scale, 1)) !important;
+  line-height: 1.4;
+}
+
+.boson-explanation-card .explanation-rich-content .explanation-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2.6rem;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 5%);
+}
+
+.explanation-section-icon svg {
+  display: block;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.boson-explanation-card .explanation-rich-content .expl-card > ul {
+  margin: 0;
+  list-style: none;
+}
+
+.boson-explanation-card .explanation-rich-content .expl-card > ul > li {
+  padding: 1rem 0;
+  margin: 0;
+  border-top: 1px solid rgb(148 163 184 / 18%);
+  line-height: 1.8;
+}
+
+.boson-explanation-card .explanation-rich-content .expl-card > ul > li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.boson-explanation-card .explanation-rich-content .expl-card > ul > li:last-child {
+  padding-bottom: 0;
+}
+
+.boson-explanation-card .explanation-rich-content .opt-tag {
+  padding: 0.15rem 0.6rem;
+  margin: 0 0.55rem 0.25rem 0;
+  border-radius: 6px;
+  font-size: calc(1.1rem * var(--expl-font-scale, 1)) !important;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+.boson-explanation-card .explanation-rich-content .opt-tag.correct {
+  background: rgb(34 197 94 / 12%);
+  border-color: rgb(74 222 128 / 35%);
+  color: #86efac;
+}
+
+.boson-explanation-card .explanation-rich-content .opt-tag.wrong {
+  background: rgb(248 113 113 / 10%);
+  border-color: rgb(248 113 113 / 35%);
+  color: #fca5a5;
+}
+
+.boson-explanation-card .explanation-rich-content p,
+.boson-explanation-card .explanation-rich-content li {
+  line-height: 1.8;
+}
+
+.boson-explanation-card .explanation-rich-content code {
+  background: #101b26;
+  color: #7dd3fc;
+  border-color: #344454;
+  box-decoration-break: clone;
+}
+
+@media (max-width: 600px) {
+  .boson-explanation-card .explanation-rich-content .expl-card {
+    padding: 1.1rem;
+    border-radius: 10px;
+  }
+
+  .boson-explanation-card .explanation-rich-content .explanation-section-heading {
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+}
+
 .correct-options-full-list {
   display: flex;
   flex-direction: column;

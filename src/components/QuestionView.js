@@ -5,6 +5,7 @@ import CustomConfirmModal from "./CustomConfirmModal";
 import QuestionNotesModal from "./QuestionNotesModal";
 import EditQuestionModal from "./Admin/EditQuestionModal";
 import MobileBottomBar from "./MobileBottomBar";
+import { formatExplanation } from "../utils/formatExplanation";
 import {
   resolveOriginalSourceImage,
   resolveExplanation,
@@ -1904,7 +1905,7 @@ function QuestionView({
                       return (
                         <div
                           className="explanation-rich-content"
-                          dangerouslySetInnerHTML={{ __html: expl }}
+                          dangerouslySetInnerHTML={{ __html: formatExplanation(expl) }}
                         />
                       );
                     }
