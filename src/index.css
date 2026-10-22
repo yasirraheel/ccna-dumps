@@ -2822,12 +2822,16 @@ body {
 /* Dynamic font scaling across all Answer & Explanation items */
 .boson-explanation-card .explanation-body,
 .boson-explanation-card .explanation-correct-labels,
-.boson-explanation-card .correct-option-pill,
-.boson-explanation-card .correct-option-pill span,
 .boson-explanation-card .dnd-correct-summary,
 .boson-explanation-card .dnd-correct-summary span,
 .boson-explanation-card .plain-explanation-text {
   font-size: calc(1.3rem * var(--expl-font-scale, 1)) !important;
+}
+
+/* Match the original question option size so the official answer is equally legible. */
+.boson-explanation-card .correct-option-pill,
+.boson-explanation-card .correct-option-pill span {
+  font-size: calc(1.5rem * var(--expl-font-scale, 1)) !important;
 }
 
 .boson-explanation-card .explanation-rich-content {
