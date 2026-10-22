@@ -248,6 +248,7 @@ function QuestionView({
   };
 
   const activeBankTitle = cleanBankTitle(selectedBankName || question?.bankName || "CCNA Exam");
+  const hasExhibitImage = Boolean(question?.exhibitImage);
 
   const [exhibitZoom, setExhibitZoom] = useState(1);
   const [exhibitPan, setExhibitPan] = useState({ x: 0, y: 0 });
@@ -257,11 +258,19 @@ function QuestionView({
   const [showOriginalSource, setShowOriginalSource] = useState(false);
 
   const handleToggleOriginalSource = () => {
-    setShowOriginalSource((prev) => !prev);
+    setShowOriginalSource((prev) => {
+      const shouldShow = !prev;
+      if (shouldShow) {
+        setSourceImgError(false);
+        setIsSourceImageLoading(true);
+      }
+      return shouldShow;
+    });
   };
 
   const handleCloseOriginalSource = () => {
     setShowOriginalSource(false);
+    setIsSourceImageLoading(false);
   };
 
   const [sourceZoom, setSourceZoom] = useState(1);
@@ -269,8 +278,10 @@ function QuestionView({
   const [isPanningSource, setIsPanningSource] = useState(false);
   const panSourceStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const [sourceImgError, setSourceImgError] = useState(false);
+  const [isSourceImageLoading, setIsSourceImageLoading] = useState(false);
 
   const [imgError, setImgError] = useState(false);
+  const [isExhibitImageLoading, setIsExhibitImageLoading] = useState(hasExhibitImage);
   const [isNavTransitioning, setIsNavTransitioning] = useState(false);
 
   useEffect(() => {
@@ -281,11 +292,13 @@ function QuestionView({
     setSourceZoom(1);
     setSourcePan({ x: 0, y: 0 });
     setSourceImgError(false);
+    setIsSourceImageLoading(false);
 
     // 2. Reset exhibit zoom/pan and image errors
     setExhibitZoom(1);
     setExhibitPan({ x: 0, y: 0 });
     setImgError(false);
+    setIsExhibitImageLoading(hasExhibitImage);
 
     // 3. Close inline note box
     setIsNoteBoxOpen(false);
@@ -317,7 +330,7 @@ function QuestionView({
       clearTimeout(scrollTimer2);
       clearTimeout(timer);
     };
-  }, [seqNumber]);
+  }, [seqNumber, hasExhibitImage]);
 
   const isBusyNavigating = Boolean(isNavTransitioning || isNavSaving);
   const [showPaletteModal, setShowPaletteModal] = useState(false);
@@ -1549,6 +1562,12 @@ function QuestionView({
                 position: "relative",
               }}
             >
+              {isSourceImageLoading && !sourceImgError && (
+                <div className="image-loading-overlay" role="status" aria-live="polite">
+                  <span className="image-loader-spinner" aria-hidden="true"></span>
+                  <span>Loading source image</span>
+                </div>
+              )}
               {!sourceImgError ? (
                 <img
                   src={originalSourceSrc}
@@ -1563,7 +1582,11 @@ function QuestionView({
                     userSelect: "none",
                     pointerEvents: "auto",
                   }}
-                  onError={() => setSourceImgError(true)}
+                  onLoad={() => setIsSourceImageLoading(false)}
+                  onError={() => {
+                    setIsSourceImageLoading(false);
+                    setSourceImgError(true);
+                  }}
                 />
               ) : (
                 <div className="source-error-wrap">
@@ -1650,6 +1673,12 @@ function QuestionView({
                 position: "relative",
               }}
             >
+              {isExhibitImageLoading && !imgError && (
+                <div className="image-loading-overlay" role="status" aria-live="polite">
+                  <span className="image-loader-spinner" aria-hidden="true"></span>
+                  <span>Loading exhibit image</span>
+                </div>
+              )}
               {!imgError ? (
                 <img
                   src={exhibitSrc}
@@ -1664,6 +1693,7 @@ function QuestionView({
                     userSelect: "none",
                     pointerEvents: "auto",
                   }}
+                  onLoad={() => setIsExhibitImageLoading(false)}
                   onError={(e) => {
                     const clean = (question.exhibitImage || "").replace(/^\/+/, "");
                     if (e.target.src.includes(clean)) {
@@ -1671,9 +1701,11 @@ function QuestionView({
                         e.target.dataset.triedFallback1 = "true";
                         e.target.src = `/${clean}`;
                       } else {
+                        setIsExhibitImageLoading(false);
                         setImgError(true);
                       }
                     } else {
+                      setIsExhibitImageLoading(false);
                       setImgError(true);
                     }
                   }}
@@ -1835,33 +1867,21 @@ function QuestionView({
               </div>
 
               {isDragDrop ? (
-                <div className="explanation-correct-labels dnd-correct-summary" style={{ marginTop: "10px" }}>
-                  <strong style={{ color: "#38bdf8", fontSize: "1.2rem" }}>✓ Official Correct Matches:</strong>
-                  <div className="dnd-summary-grid" style={{ display: "grid", gap: "8px", marginTop: "8px" }}>
+                <div className="explanation-correct-labels dnd-correct-summary">
+                  <div className="dnd-correct-heading">Official Correct Matches</div>
+                  <div className="dnd-summary-grid">
                     {Object.entries(question.dragDropData?.correctMatches || {}).map(([target, item], idx) => (
                       <div
                         key={idx}
-                        className="correct-option-pill"
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          alignItems: "center",
-                          gap: "10px",
-                          padding: "8px 14px",
-                          background: "rgba(16, 185, 129, 0.12)",
-                          border: "1px solid rgba(16, 185, 129, 0.3)",
-                          borderRadius: "6px",
-                          color: "#e2e8f0",
-                          fontSize: "1.15rem",
-                          lineHeight: 1.5,
-                        }}
+                        className="dnd-match-row"
                       >
-                        <span style={{ fontWeight: 700, color: "#10b981", minWidth: "160px" }}>
-                          🎯 {target}
+                        <span className="dnd-match-field">
+                          <span className="dnd-match-caption">Category</span>
+                          <span className="dnd-match-target">{target}</span>
                         </span>
-                        <span style={{ color: "#94a3b8", fontWeight: 700 }}>➔</span>
-                        <span style={{ fontWeight: 600, color: "#f8fafc" }}>
-                          {item}
+                        <span className="dnd-match-field dnd-match-answer">
+                          <span className="dnd-match-caption">Correct match</span>
+                          <span className="dnd-match-value">{item}</span>
                         </span>
                       </div>
                     ))}
