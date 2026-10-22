@@ -67,6 +67,33 @@ function renderFormattedPrompt(rawText) {
   return <div className="boson-question-prompt-content">{elements}</div>;
 }
 
+function AnswerStatus({ variant = "correct", children }) {
+  const isCorrect = variant === "correct";
+  const isNeutral = variant === "info";
+  const label = isCorrect ? "Correct answer" : isNeutral ? "Answer information" : "Incorrect answer";
+
+  return (
+    <div className={`answer-status answer-status-${variant}`} role="status">
+      <span className="answer-status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          {isCorrect ? (
+            <path d="m8 12 2.6 2.6L16.5 9" />
+          ) : isNeutral ? (
+            <path d="M12 10v5m0-8h.01" />
+          ) : (
+            <path d="m9 9 6 6m0-6-6 6" />
+          )}
+        </svg>
+      </span>
+      <span className="answer-status-label">
+        <span className="sr-only">{label}: </span>
+        {children}
+      </span>
+    </div>
+  );
+}
+
 function QuestionView({
   question,
   seqNumber,
@@ -904,6 +931,16 @@ function QuestionView({
     }
     if (isCheckingAnswer) return;
 
+    const mainContainer =
+      document.querySelector(".cisco-simulator-root") ||
+      document.querySelector(".simulator-app-container") ||
+      document.querySelector(".boson-exsim-view") ||
+      document.getElementById("root");
+    const viewportPosition = {
+      windowTop: window.pageYOffset || document.documentElement.scrollTop || 0,
+      containerTop: mainContainer?.scrollTop || 0,
+    };
+
     if (onRevealAnswer) {
       setIsCheckingAnswer(true);
       try {
@@ -917,20 +954,14 @@ function QuestionView({
       dispatch({ type: "revealAnswer", payload: seqNumber - 1 });
     }
 
-    if (isDragDrop) {
-      const scrollToDnd = () => {
-        const dndEl = document.querySelector(".drag-drop-container");
-        if (dndEl) {
-          const rect = dndEl.getBoundingClientRect();
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          const targetY = Math.max(0, rect.top + scrollTop - 80);
-          window.scrollTo({ top: targetY, behavior: "smooth" });
-        }
-      };
-      requestAnimationFrame(scrollToDnd);
-      setTimeout(scrollToDnd, 50);
-      setTimeout(scrollToDnd, 180);
-    }
+    // Keep the chosen option(s) in view after the answer panel mounts.
+    const restoreViewport = () => {
+      window.scrollTo({ top: viewportPosition.windowTop, left: 0, behavior: "instant" });
+      if (mainContainer) mainContainer.scrollTop = viewportPosition.containerTop;
+    };
+    requestAnimationFrame(() => requestAnimationFrame(restoreViewport));
+    setTimeout(restoreViewport, 60);
+    setTimeout(restoreViewport, 180);
   };
 
   const handleExitClick = () => {
@@ -1788,20 +1819,20 @@ function QuestionView({
                       return dndEval.isAllCorrect;
                     })();
                     if (dndCorrect) {
-                      return <span className="badge-correct">✓ Your Matches are Correct!</span>;
+                      return <AnswerStatus>Your Matches are Correct</AnswerStatus>;
                     }
                     return (
-                      <span className="badge-incorrect">
+                      <AnswerStatus variant={isRevealed && (!answer?.matches || Object.keys(answer.matches).length === 0) ? "info" : "incorrect"}>
                         {isRevealed && (!answer?.matches || Object.keys(answer.matches).length === 0)
                           ? "Official Drag & Drop Solution & Explanations"
-                          : "✗ Your Matches are Incorrect"}
-                      </span>
+                          : "Your Matches are Incorrect"}
+                      </AnswerStatus>
                     );
                   })()
                 ) : userIsFullyCorrect ? (
-                  <span className="badge-correct">✓ Your Answer is Correct!</span>
+                  <AnswerStatus>Your Answer is Correct</AnswerStatus>
                 ) : (
-                  <span className="badge-incorrect">✗ Your Answer is Incorrect</span>
+                  <AnswerStatus variant="incorrect">Your Answer is Incorrect</AnswerStatus>
                 )}
               </div>
 
