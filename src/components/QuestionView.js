@@ -68,6 +68,13 @@ function renderFormattedPrompt(rawText) {
   return <div className="boson-question-prompt-content">{elements}</div>;
 }
 
+function hasEmbeddedCliOptions(question) {
+  if (!Array.isArray(question?.options)) return false;
+
+  const optionsText = question.options.join(" ");
+  return /gateway of last resort/i.test(optionsText) && /\bO E2\b/.test(optionsText);
+}
+
 function AnswerStatus({ variant = "correct", children }) {
   const isCorrect = variant === "correct";
   const isNeutral = variant === "info";
@@ -1721,7 +1728,7 @@ function QuestionView({
         )}
 
         {/* CLI SNIPPET / CONSOLE OUTPUT */}
-        {question.cliSnippet && (
+        {question.cliSnippet && !hasEmbeddedCliOptions(question) && (
           <div className="boson-cli-box">
             <pre className="boson-cli-content">
               <code>{question.cliSnippet}</code>
