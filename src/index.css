@@ -994,6 +994,98 @@ body {
 .custom-builder-start:hover:not(:disabled) { background: #4ade80; }
 .custom-builder-start:disabled { cursor: not-allowed; opacity: 0.45; }
 
+/* Keep the custom builder in the same visual system as Exam Settings. */
+.custom-builder-card.settings-modal-card {
+  max-width: 650px;
+  background-color: var(--bg-card);
+  border-color: var(--color-border-hover);
+}
+
+.custom-builder-header.settings-modal-header {
+  background: transparent;
+}
+
+.custom-builder-eyebrow,
+.custom-builder-subtitle {
+  display: none;
+}
+
+.custom-builder-close.settings-modal-close {
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.4rem;
+}
+
+.custom-builder-body.settings-modal-body {
+  padding: 2rem 2.2rem;
+}
+
+.custom-builder-selection-summary {
+  justify-content: flex-start;
+  margin-bottom: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.custom-builder-summary-label {
+  color: var(--color-text-muted);
+  font-size: 1.45rem;
+}
+
+.custom-builder-selection-summary strong {
+  font-size: 1.6rem;
+}
+
+.custom-builder-dedupe-note {
+  margin-left: auto;
+  color: var(--color-text-dim);
+  font-size: 1.1rem;
+}
+
+.custom-source-option {
+  min-height: 4.8rem;
+  padding: 1.1rem 1.4rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.8rem;
+  background: #141824;
+}
+
+.custom-source-option:hover {
+  border-color: var(--color-border-hover);
+  background: #1a202c;
+  transform: none;
+}
+
+.custom-source-option.active {
+  border-color: var(--color-green);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.custom-source-copy strong { font-size: 1.45rem; }
+.custom-source-copy small { font-size: 1.05rem; }
+
+.custom-builder-footer.settings-modal-footer {
+  padding: 1.6rem 2.2rem;
+}
+
+.custom-builder-start.btn-settings-save {
+  min-height: 4.2rem;
+  padding: 0.9rem 2.2rem;
+  border-radius: 0.6rem;
+  font-size: 1.45rem;
+}
+
+.custom-builder-cancel {
+  min-height: 4.2rem;
+  padding: 0.9rem 2.2rem;
+  border-radius: 0.6rem;
+  font-size: 1.45rem;
+}
+
 @media (max-width: 640px) {
   .custom-builder-header,
   .custom-builder-body,

@@ -1138,19 +1138,19 @@ function ExamDashboard({
 
       {isCustomBuilderOpen && (
         <div className="modal-backdrop custom-builder-backdrop" onClick={() => setIsCustomBuilderOpen(false)}>
-          <div className="custom-builder-card" onClick={(event) => event.stopPropagation()}>
-            <div className="custom-builder-header">
+          <div className="custom-builder-card settings-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="custom-builder-header settings-modal-header">
               <div>
                 <span className="custom-builder-eyebrow">Custom practice exam</span>
-                <h3 className="custom-builder-title">Choose your question sources</h3>
+                <h3 className="custom-builder-title settings-modal-title">Custom Exam</h3>
                 <p className="custom-builder-subtitle">
                   Build one focused exam from every bank. Matching questions are automatically combined without duplicates.
                 </p>
               </div>
-              <button type="button" className="custom-builder-close" onClick={() => setIsCustomBuilderOpen(false)} aria-label="Close custom exam builder">×</button>
+              <button type="button" className="custom-builder-close settings-modal-close" onClick={() => setIsCustomBuilderOpen(false)} aria-label="Close custom exam builder">✕</button>
             </div>
 
-            <div className="custom-builder-body">
+            <div className="custom-builder-body settings-modal-body">
               <div className="custom-builder-selection-summary">
                 <div>
                   <span className="custom-builder-summary-label">Questions selected</span>
@@ -1213,9 +1213,9 @@ function ExamDashboard({
               )}
             </div>
 
-            <div className="custom-builder-footer">
+            <div className="custom-builder-footer settings-modal-footer">
               <button type="button" className="custom-builder-cancel" onClick={() => setIsCustomBuilderOpen(false)}>Cancel</button>
-              <button type="button" className="custom-builder-start" onClick={createCustomExam} disabled={customSelectedQuestions.length === 0}>
+              <button type="button" className="custom-builder-start btn-settings-save" onClick={createCustomExam} disabled={customSelectedQuestions.length === 0}>
                 Create Exam <span>→</span>
               </button>
             </div>
