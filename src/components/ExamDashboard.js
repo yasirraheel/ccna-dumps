@@ -1170,7 +1170,7 @@ function ExamDashboard({
                   <span className="custom-source-icon custom-source-icon-incorrect">!</span>
                   <span className="custom-source-copy">
                     <strong>All incorrect answers</strong>
-                    <small>Every incorrect response across your exam history</small>
+                    <small>Incorrect responses from the last 2 attempts per bank</small>
                   </span>
                   <span className="custom-source-count">{customIncorrectQuestions.length}</span>
                 </label>
@@ -1185,7 +1185,7 @@ function ExamDashboard({
                   <span className="custom-source-icon custom-source-icon-marked">⚑</span>
                   <span className="custom-source-copy">
                     <strong>Marked for review</strong>
-                    <small>Every question marked for review across your history</small>
+                    <small>Marked questions from the last 2 attempts per bank</small>
                   </span>
                   <span className="custom-source-count">{customMarkedQuestions.length}</span>
                 </label>

@@ -35,11 +35,34 @@ function sortNewestFirst(records) {
   });
 }
 
-function getQuestionStatesFromHistory(pastExams = []) {
-  const statesByQuestion = new Map();
+function getBankIdentity(record) {
+  const raw = record?.bankKey || record?.selectedBankKey || record?.bankName || "unknown";
+  return String(raw)
+    .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged|Custom Review|Custom Practice)[^)]*\)/gi, "")
+    .trim()
+    .toLowerCase();
+}
+
+function getRecentAttemptsPerBank(pastExams = [], limit = 2) {
+  const attemptsByBank = new Map();
 
   sortNewestFirst(pastExams).forEach((record) => {
     if (!Array.isArray(record?.questions) || record.questions.length === 0) return;
+    const bank = getBankIdentity(record);
+    const attempts = attemptsByBank.get(bank) || [];
+    if (attempts.length < limit) {
+      attempts.push(record);
+      attemptsByBank.set(bank, attempts);
+    }
+  });
+
+  return [...attemptsByBank.values()].flat();
+}
+
+function getQuestionStatesFromHistory(pastExams = []) {
+  const statesByQuestion = new Map();
+
+  getRecentAttemptsPerBank(pastExams, 2).forEach((record) => {
 
     const stats = getExamQuestionStats(record.questions, record.answers || []);
     const incorrectIndices = new Set(stats.incorrectIndices);
@@ -65,8 +88,8 @@ function getQuestionStatesFromHistory(pastExams = []) {
 }
 
 /**
- * Returns every question answered incorrectly in the user's exam history.
- * Questions are deduplicated across banks and retakes.
+ * Returns every question answered incorrectly in each bank's two most recent
+ * completed attempts. Questions are deduplicated across banks and retakes.
  */
 export function getAllBanksIncorrectQuestions(pastExams = []) {
   return getQuestionStatesFromHistory(pastExams)
@@ -74,7 +97,7 @@ export function getAllBanksIncorrectQuestions(pastExams = []) {
     .map(({ question }) => question);
 }
 
-/** Returns every question marked for review anywhere in the user's history. */
+/** Returns every question marked in each bank's two most recent attempts. */
 export function getAllBanksMarkedQuestions(pastExams = []) {
   return getQuestionStatesFromHistory(pastExams)
     .filter(({ isMarked }) => isMarked)
