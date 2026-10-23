@@ -1902,6 +1902,7 @@ function QuestionView({
                   {correctOptions.map((optIdx) => {
                     const optText = question.options?.[optIdx] || `Option ${optIdx + 1}`;
                     const cleanText = optText.replace(/^[A-E]\.\s*/, "");
+                      const displayText = formatOptionText(cleanText);
                     const letter = String.fromCharCode(65 + optIdx);
                     return (
                       <div
@@ -1909,7 +1910,7 @@ function QuestionView({
                         className="correct-option-pill"
                         style={{
                           display: "flex",
-                          alignItems: "baseline",
+                           alignItems: "flex-start",
                           gap: "8px",
                           margin: "6px 0",
                           padding: "6px 12px",
@@ -1930,8 +1931,8 @@ function QuestionView({
                         >
                           {letter}.
                         </span>
-                        <span className="pill-text" style={{ color: "#e2e8f0" }}>
-                          {cleanText}
+                        <span className="pill-text option-text-inline" style={{ color: "#e2e8f0" }}>
+                          {displayText}
                         </span>
                       </div>
                     );
