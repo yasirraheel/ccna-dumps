@@ -4167,26 +4167,26 @@ export const ccnaQuestions = [
         "id": 225,
         "type": "drag_drop",
         "questionNo": "Drag & Drop #7",
-        "question": "Drag and drop the Ansible automation features from the left onto the corresponding characteristics on the right.",
+        "question": "Drag and drop the Ansible features from the left to the right. Not all features are used. (Drag and Drop Question)",
         "points": 10,
         "exhibitImage": null,
         "cliSnippet": null,
         "dragDropData": {
             "items": [
                 "executes modules via SSH by default",
-                "uses playbooks written in YAML",
-                "operates as an agentless automation engine",
-                "requires custom agent software on target nodes"
+                "uses the YAML language",
+                "uses agents to manage hosts",
+                "operates without agents"
             ],
             "targets": [
-                "Connection Protocol",
-                "Playbook Syntax",
-                "Agent Architecture"
+                "feature1",
+                "feature2",
+                "feature3"
             ],
             "correctMatches": {
-                "Connection Protocol": "executes modules via SSH by default",
-                "Playbook Syntax": "uses playbooks written in YAML",
-                "Agent Architecture": "operates as an agentless automation engine"
+                "feature1": "executes modules via SSH by default",
+                "feature2": "uses the YAML language",
+                "feature3": "operates without agents"
             }
         },
         "originalSourceImage": null
@@ -4323,28 +4323,29 @@ export const ccnaQuestions = [
         "id": 221,
         "type": "drag_drop",
         "questionNo": "Drag & Drop #12",
-        "question": "Drag and drop the access control list (ACL) characteristics from the left onto the corresponding ACL types on the right.",
+        "question": "Drag and drop the statements about AAA from the left onto the corresponding AAA services on the right. Not all options are used. (Drag and Drop Question)",
         "points": 10,
         "exhibitImage": null,
         "cliSnippet": null,
         "dragDropData": {
             "items": [
-                "filters traffic based on source IP address only",
-                "placed as close to the destination as possible",
-                "filters traffic based on source and destination IP addresses and Layer 4 ports",
-                "placed as close to the source as possible"
+                "It assigns per-user attributes.",
+                "It restricts the CLI commands that a user is able to perform.",
+                "It permits and denies login attempts.",
+                "It records the amount of network resources consumed by the user.",
+                "It tracks the services that a user is using."
             ],
             "targets": [
-                "Standard ACL 1",
-                "Standard ACL 2",
-                "Extended ACL 1",
-                "Extended ACL 2"
+                "Accounting 1",
+                "Accounting 2",
+                "Authorization 1",
+                "Authorization 2"
             ],
             "correctMatches": {
-                "Standard ACL 1": "filters traffic based on source IP address only",
-                "Standard ACL 2": "placed as close to the destination as possible",
-                "Extended ACL 1": "filters traffic based on source and destination IP addresses and Layer 4 ports",
-                "Extended ACL 2": "placed as close to the source as possible"
+                "Accounting 1": "It records the amount of network resources consumed by the user.",
+                "Accounting 2": "It tracks the services that a user is using.",
+                "Authorization 1": "It assigns per-user attributes.",
+                "Authorization 2": "It restricts the CLI commands that a user is able to perform."
             }
         },
         "originalSourceImage": null
@@ -4420,31 +4421,31 @@ export const ccnaQuestions = [
         "id": 220,
         "type": "drag_drop",
         "questionNo": "Drag & Drop #15",
-        "question": "Drag and drop the steps in a standard recursive DNS lookup operation into the correct chronological order on the right.",
+        "question": "Drag and drop the steps in a standard DNS lookup operation from the left into the order on the right. (Drag and Drop Question)",
         "points": 10,
         "exhibitImage": null,
         "cliSnippet": null,
         "dragDropData": {
             "items": [
-                "An endpoint submits a request for the IP address of a domain to the local DNS server.",
-                "The local DNS server submits a request to a root DNS server.",
-                "The local DNS server queries the authoritative domain DNS server.",
-                "The local DNS server receives a reply containing the IP address from the domain DNS server.",
-                "The local DNS server responds with the resolved IP address to the endpoint."
+                "An endpoint submits a request for the IP address of a domain.",
+                "The DNS server receives a reply from the domain DNS server.",
+                "The DNS responds to the endpoint.",
+                "The DNS submits a request to a root DNS server.",
+                "The DNS submits a request to the domain DNS server."
             ],
             "targets": [
-                "Step 1",
-                "Step 2",
-                "Step 3",
-                "Step 4",
-                "Step 5"
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
             ],
             "correctMatches": {
-                "Step 1": "An endpoint submits a request for the IP address of a domain to the local DNS server.",
-                "Step 2": "The local DNS server submits a request to a root DNS server.",
-                "Step 3": "The local DNS server queries the authoritative domain DNS server.",
-                "Step 4": "The local DNS server receives a reply containing the IP address from the domain DNS server.",
-                "Step 5": "The local DNS server responds with the resolved IP address to the endpoint."
+                "1": "An endpoint submits a request for the IP address of a domain.",
+                "2": "The DNS submits a request to a root DNS server.",
+                "3": "The DNS submits a request to the domain DNS server.",
+                "4": "The DNS server receives a reply from the domain DNS server.",
+                "5": "The DNS responds to the endpoint."
             }
         },
         "originalSourceImage": null
