@@ -2659,7 +2659,25 @@ body {
 
 .boson-option-content {
   flex: 1;
+  min-width: 0;
   word-break: break-word;
+}
+
+.option-text-inline,
+.option-multiline-text {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: #f1f5f9;
+  font: inherit;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.option-multiline-text {
+  padding: 0;
 }
 
 .boson-opt-text {

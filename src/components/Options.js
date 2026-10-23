@@ -1,3 +1,5 @@
+import { formatOptionText } from "../utils/formatOptionText";
+
 function Options({ question, dispatch, answer }) {
   const correctOptions = Array.isArray(question.correctOption)
     ? question.correctOption
@@ -47,6 +49,7 @@ function Options({ question, dispatch, answer }) {
           const match = option.match(/^([A-E])\.\s*([\s\S]*)/);
           const letter = match ? match[1] : "";
           const text = match ? match[2] : option;
+          const displayText = formatOptionText(text);
 
           const isSelected = selectedIndices.includes(index);
           const isCorrectChoice = correctOptions.includes(index);
@@ -72,9 +75,9 @@ function Options({ question, dispatch, answer }) {
             >
               {letter && <span className="option-letter">{letter}</span>}
               {hasCli ? (
-                <span className="cli-option">{text}</span>
+                <span className="cli-option">{displayText}</span>
               ) : (
-                <span className="option-text">{text}</span>
+                <span className="option-text">{displayText}</span>
               )}
             </button>
           );

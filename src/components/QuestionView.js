@@ -13,6 +13,7 @@ import {
   getMasterQuestion,
 } from "../utils/questionSourceHelper";
 import { calculateTotalPoints, evaluateDragDrop } from "../utils/examScoring";
+import { formatOptionText } from "../utils/formatOptionText";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -1745,6 +1746,7 @@ function QuestionView({
                 const match = option.match(/^([A-E])\.\s*([\s\S]*)/);
                 const letter = match ? match[1] : "";
                 const text = match ? match[2] : option;
+                const displayText = formatOptionText(text);
 
                 const isSelected = selectedIndices.includes(index);
                 const isCorrectChoice = correctOptions.includes(index);
@@ -1783,10 +1785,10 @@ function QuestionView({
                     {letter && <span className="boson-option-letter">{letter}.</span>}
 
                     <div className="boson-option-content">
-                      {text.includes("\n") ? (
-                        <pre className="option-multiline-text">{text}</pre>
+                      {displayText.includes("\n") ? (
+                        <pre className="option-multiline-text">{displayText}</pre>
                       ) : (
-                        <span className="option-text-inline">{text}</span>
+                        <span className="option-text-inline">{displayText}</span>
                       )}
                     </div>
                   </div>
