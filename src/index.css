@@ -1065,8 +1065,14 @@ body {
   background: rgba(34, 197, 94, 0.1);
 }
 
-.custom-source-copy strong { font-size: 1.45rem; }
-.custom-source-copy small { font-size: 1.05rem; }
+.custom-source-copy strong { font-size: 1.8rem; line-height: 1.25; }
+.custom-source-copy small { font-size: 1.3rem; line-height: 1.35; }
+
+.custom-source-count {
+  min-width: 4.2rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 1.3rem;
+}
 
 .custom-builder-footer.settings-modal-footer {
   padding: 1.6rem 2.2rem;
@@ -1076,14 +1082,20 @@ body {
   min-height: 4.2rem;
   padding: 0.9rem 2.2rem;
   border-radius: 0.6rem;
-  font-size: 1.45rem;
+  font-size: 1.6rem;
 }
 
 .custom-builder-cancel {
   min-height: 4.2rem;
   padding: 0.9rem 2.2rem;
   border-radius: 0.6rem;
-  font-size: 1.45rem;
+  font-size: 1.6rem;
+}
+
+.custom-keyword-input {
+  min-height: 4.4rem;
+  padding: 0.9rem 1.1rem;
+  font-size: 1.55rem;
 }
 
 @media (max-width: 640px) {

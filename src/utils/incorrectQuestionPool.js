@@ -104,14 +104,18 @@ export function getAllBanksMarkedQuestions(pastExams = []) {
     .map(({ question }) => question);
 }
 
-/** Matches every word in a keyword query against prompt, options, and metadata. */
+/**
+ * Matches keyword groups against prompt, options, and metadata. Commas,
+ * semicolons, and new lines separate groups; words inside one group must all
+ * match, while separate groups are combined as an OR search.
+ */
 export function getKeywordQuestions(allQuestions = [], query = "") {
-  const terms = String(query || "")
-    .trim()
+  const groups = String(query || "")
     .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (terms.length === 0) return [];
+    .split(/[,;\n]+/)
+    .map((group) => group.trim().split(/\s+/).filter(Boolean))
+    .filter((group) => group.length > 0);
+  if (groups.length === 0) return [];
 
   const seen = new Set();
   return (Array.isArray(allQuestions) ? allQuestions : []).filter((question, index) => {
@@ -124,7 +128,8 @@ export function getKeywordQuestions(allQuestions = [], query = "") {
       .join(" ")
       .toLowerCase();
     const key = getQuestionKey(question, index);
-    if (!terms.every((term) => haystack.includes(term)) || seen.has(key)) return false;
+    const matches = groups.some((terms) => terms.every((term) => haystack.includes(term)));
+    if (!matches || seen.has(key)) return false;
     seen.add(key);
     return true;
   });

@@ -1194,7 +1194,7 @@ function ExamDashboard({
                   <span className="custom-source-icon custom-source-icon-keyword">⌕</span>
                   <span className="custom-source-copy">
                     <strong>Keyword or phrase</strong>
-                    <small>Search question text and answer choices across all banks</small>
+                    <small>Use commas for multiple searches: WLD, OSPF, DHCP</small>
                   </span>
                   <span className="custom-source-count">{customSources.keyword.trim() ? customKeywordQuestions.length : "—"}</span>
                   <input
