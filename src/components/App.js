@@ -14,7 +14,6 @@ import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats, evaluateDragDrop } from "../utils/examScoring";
-import { getAllBanksIncorrectQuestions } from "../utils/incorrectQuestionPool";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 import { enrichQuestionsList, setMasterQuestionsCache } from "../utils/questionSourceHelper";
 import { applyQuestionOverrides, getRealtimeChannel } from "../utils/questionSync";
@@ -2615,15 +2614,20 @@ export default function App() {
     handleNavigate("exam");
   };
 
-  const handleStartAllBanksIncorrect = ({ examMode: requestedMode = "study", settings: requestedSettings = {} } = {}) => {
+  const handleStartCustomExam = ({
+    questions: selectedQuestions = [],
+    examMode: requestedMode = "study",
+    settings: requestedSettings = {},
+    bankName = "Custom Practice Exam",
+  } = {}) => {
     if (!requireAuth()) return;
 
-    let incorrectList = enrichQuestionsList(getAllBanksIncorrectQuestions(pastExams));
-    if (incorrectList.length === 0) {
+    let customList = enrichQuestionsList(selectedQuestions);
+    if (customList.length === 0) {
       setAlertDialog({
         isOpen: true,
-        title: "No Incorrect Answers Yet",
-        message: "Complete an exam and answer at least one question incorrectly to create an all-banks practice exam.",
+        title: "No Questions Selected",
+        message: "Choose at least one custom exam source or keyword before starting.",
         confirmText: "OK",
         cancelText: null,
         type: "info",
@@ -2632,21 +2636,21 @@ export default function App() {
     }
 
     if (requestedSettings?.randomizeQuestions) {
-      incorrectList = aggressiveShuffle(incorrectList);
+      customList = aggressiveShuffle(customList);
     }
     if (requestedSettings?.randomizeAnswers) {
-      incorrectList = incorrectList.map(randomizeQuestionOptions);
+      customList = customList.map(randomizeQuestionOptions);
     }
 
     setFlaggedQuestions([]);
     dispatch({
       type: "startExam",
       payload: {
-        questions: incorrectList,
+        questions: customList,
         examMode: requestedMode,
         settings: requestedSettings,
-        bankName: `Custom Review — Incorrect Answers (${incorrectList.length} Qs)`,
-        bankKey: "custom_all_incorrect",
+        bankName: `${bankName} (${customList.length} Qs)`,
+        bankKey: "custom_practice",
       },
     });
     handleNavigate("exam");
@@ -2806,7 +2810,7 @@ export default function App() {
               onRetakeAll={handleRetakeAllQuestions}
               onRetakeFlagged={handleRetakeFlaggedOnly}
               onRetakeIncorrect={handleRetakeIncorrectOnly}
-              onStartAllBanksIncorrect={handleStartAllBanksIncorrect}
+              onStartCustomExam={handleStartCustomExam}
               currentUser={effectiveUser}
               onOpenAuth={handleOpenAuth}
               onLogout={handleLogout}

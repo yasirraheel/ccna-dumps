@@ -13,7 +13,12 @@ import {
 } from "../utils/planPermissions";
 import { getExamQuestionStats } from "../utils/examScoring";
 import { getAllBanksAnalysis } from "../utils/bankStrengthAlgorithm";
-import { getAllBanksIncorrectQuestions } from "../utils/incorrectQuestionPool";
+import {
+  getAllBanksIncorrectQuestions,
+  getAllBanksMarkedQuestions,
+  getKeywordQuestions,
+  mergeUniqueQuestions,
+} from "../utils/incorrectQuestionPool";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -42,7 +47,7 @@ function ExamDashboard({
   onRetakeAll,
   onRetakeFlagged,
   onRetakeIncorrect,
-  onStartAllBanksIncorrect,
+  onStartCustomExam,
   currentUser,
   onOpenAuth,
   onLogout,
@@ -77,6 +82,8 @@ function ExamDashboard({
   const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCustomBuilderOpen, setIsCustomBuilderOpen] = useState(false);
+  const [customSources, setCustomSources] = useState({ incorrect: true, marked: false, keyword: "" });
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -458,12 +465,45 @@ function ExamDashboard({
     [pastExams]
   );
 
-  const handleStartAllBanksIncorrect = () => {
+  const customIncorrectQuestions = React.useMemo(
+    () => getAllBanksIncorrectQuestions(pastExams),
+    [pastExams]
+  );
+  const customMarkedQuestions = React.useMemo(
+    () => getAllBanksMarkedQuestions(pastExams),
+    [pastExams]
+  );
+  const customKeywordQuestions = React.useMemo(
+    () => getKeywordQuestions(allQuestions, customSources.keyword),
+    [allQuestions, customSources.keyword]
+  );
+  const customSelectedQuestions = React.useMemo(
+    () => mergeUniqueQuestions(
+      customSources.incorrect ? customIncorrectQuestions : [],
+      customSources.marked ? customMarkedQuestions : [],
+      customSources.keyword.trim() ? customKeywordQuestions : []
+    ),
+    [customSources, customIncorrectQuestions, customMarkedQuestions, customKeywordQuestions]
+  );
+
+  const openCustomBuilder = () => {
     if (!currentUser) {
       onOpenAuth?.("login");
       return;
     }
-    onStartAllBanksIncorrect?.({ examMode, settings: effectiveSettings });
+    setCustomSources({ incorrect: true, marked: false, keyword: "" });
+    setIsCustomBuilderOpen(true);
+  };
+
+  const createCustomExam = () => {
+    if (customSelectedQuestions.length === 0) return;
+    setIsCustomBuilderOpen(false);
+    onStartCustomExam?.({
+      questions: customSelectedQuestions,
+      examMode,
+      settings: effectiveSettings,
+      bankName: `Custom Practice — ${customSelectedQuestions.length} Questions`,
+    });
   };
 
   return (
@@ -740,21 +780,21 @@ function ExamDashboard({
                   <div className="all-banks-incorrect-card">
                     <div className="all-banks-incorrect-copy">
                       <span className="all-banks-incorrect-eyebrow">Custom practice exam</span>
-                      <strong>All Incorrect Answers</strong>
+                        <strong>Build a Custom Practice Exam</strong>
                       <span>
                         {allBanksIncorrectCount > 0
-                          ? `${allBanksIncorrectCount} question${allBanksIncorrectCount === 1 ? "" : "s"} from your latest results across every bank`
-                          : "Your incorrectly answered questions from every bank will appear here"}
+                            ? "Combine incorrect, marked, or keyword-matched questions from every bank"
+                            : "Choose marked questions or search every bank by keyword"}
                       </span>
                     </div>
                     <button
                       type="button"
                       className="btn-all-banks-incorrect"
-                      onClick={handleStartAllBanksIncorrect}
-                      disabled={!currentUser || allBanksIncorrectCount === 0}
-                      title={!currentUser ? "Sign in to create a custom practice exam" : allBanksIncorrectCount === 0 ? "No incorrect answers are available yet" : "Start a custom exam from all incorrect answers"}
+                      onClick={openCustomBuilder}
+                      disabled={!currentUser}
+                      title={!currentUser ? "Sign in to create a custom practice exam" : "Choose questions for a custom practice exam"}
                     >
-                      Start Practice
+                      Configure Exam
                     </button>
                   </div>
                 </div>
@@ -1095,6 +1135,93 @@ function ExamDashboard({
           </section>
         )}
       </div>
+
+      {isCustomBuilderOpen && (
+        <div className="modal-backdrop custom-builder-backdrop" onClick={() => setIsCustomBuilderOpen(false)}>
+          <div className="custom-builder-card" onClick={(event) => event.stopPropagation()}>
+            <div className="custom-builder-header">
+              <div>
+                <span className="custom-builder-eyebrow">Custom practice exam</span>
+                <h3 className="custom-builder-title">Choose your question sources</h3>
+                <p className="custom-builder-subtitle">
+                  Build one focused exam from every bank. Matching questions are automatically combined without duplicates.
+                </p>
+              </div>
+              <button type="button" className="custom-builder-close" onClick={() => setIsCustomBuilderOpen(false)} aria-label="Close custom exam builder">×</button>
+            </div>
+
+            <div className="custom-builder-body">
+              <div className="custom-builder-selection-summary">
+                <div>
+                  <span className="custom-builder-summary-label">Questions selected</span>
+                  <strong>{customSelectedQuestions.length}</strong>
+                </div>
+                <span className="custom-builder-dedupe-note">✓ Duplicates removed across all filters</span>
+              </div>
+
+              <div className="custom-source-list">
+                <label className={`custom-source-option ${customSources.incorrect ? "active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={customSources.incorrect}
+                    onChange={(event) => setCustomSources((prev) => ({ ...prev, incorrect: event.target.checked }))}
+                  />
+                  <span className="custom-source-check">✓</span>
+                  <span className="custom-source-icon custom-source-icon-incorrect">!</span>
+                  <span className="custom-source-copy">
+                    <strong>All incorrect answers</strong>
+                    <small>Every incorrect response across your exam history</small>
+                  </span>
+                  <span className="custom-source-count">{customIncorrectQuestions.length}</span>
+                </label>
+
+                <label className={`custom-source-option ${customSources.marked ? "active" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={customSources.marked}
+                    onChange={(event) => setCustomSources((prev) => ({ ...prev, marked: event.target.checked }))}
+                  />
+                  <span className="custom-source-check">✓</span>
+                  <span className="custom-source-icon custom-source-icon-marked">⚑</span>
+                  <span className="custom-source-copy">
+                    <strong>Marked for review</strong>
+                    <small>Every question marked for review across your history</small>
+                  </span>
+                  <span className="custom-source-count">{customMarkedQuestions.length}</span>
+                </label>
+
+                <div className={`custom-source-option custom-source-keyword ${customSources.keyword.trim() ? "active" : ""}`}>
+                  <span className="custom-source-icon custom-source-icon-keyword">⌕</span>
+                  <span className="custom-source-copy">
+                    <strong>Keyword or phrase</strong>
+                    <small>Search question text and answer choices across all banks</small>
+                  </span>
+                  <span className="custom-source-count">{customSources.keyword.trim() ? customKeywordQuestions.length : "—"}</span>
+                  <input
+                    className="custom-keyword-input"
+                    type="search"
+                    value={customSources.keyword}
+                    onChange={(event) => setCustomSources((prev) => ({ ...prev, keyword: event.target.value }))}
+                    placeholder="e.g. OSPF, DHCP, subnet mask"
+                    aria-label="Search all questions by keyword"
+                  />
+                </div>
+              </div>
+
+              {customSelectedQuestions.length === 0 && (
+                <div className="custom-builder-empty">Select a source or enter a keyword to add questions to this exam.</div>
+              )}
+            </div>
+
+            <div className="custom-builder-footer">
+              <button type="button" className="custom-builder-cancel" onClick={() => setIsCustomBuilderOpen(false)}>Cancel</button>
+              <button type="button" className="custom-builder-start" onClick={createCustomExam} disabled={customSelectedQuestions.length === 0}>
+                Create Exam <span>→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal */}
       {isSettingsOpen && (
