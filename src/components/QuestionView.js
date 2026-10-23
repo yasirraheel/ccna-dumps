@@ -1163,9 +1163,9 @@ function QuestionView({
       </div>
 
       {isBusyNavigating && (
-        <div className="question-nav-loading" role="status" aria-live="polite">
+        <div className="question-nav-loading-overlay" role="status" aria-live="polite">
           <span className="question-nav-spinner" aria-hidden="true"></span>
-          <span>{isNavSaving ? "Saving your answer and loading the next question…" : "Loading question…"}</span>
+          <span className="sr-only">{isNavSaving ? "Saving your answer and loading the next question" : "Loading question"}</span>
         </div>
       )}
 

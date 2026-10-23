@@ -2329,22 +2329,14 @@ body {
   animation: bosonFadeInSlide 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.question-nav-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.9rem;
-  min-height: 4.4rem;
-  margin: 1rem 0 0;
-  padding: 0.9rem 1.4rem;
-  color: #dbeafe;
-  background: linear-gradient(90deg, rgba(14, 116, 144, 0.2), rgba(37, 99, 235, 0.16));
-  border: 1px solid rgba(56, 189, 248, 0.42);
-  border-radius: 0.8rem;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.12);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+.question-nav-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  pointer-events: none;
 }
 
 .question-nav-spinner,
@@ -2358,8 +2350,10 @@ body {
 }
 
 .question-nav-spinner {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 4.2rem;
+  height: 4.2rem;
+  border-width: 4px;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.8));
 }
 
 .btn-nav-spinner {
