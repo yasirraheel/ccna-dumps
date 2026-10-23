@@ -651,9 +651,9 @@ body {
   gap: 1.2rem;
   margin-top: 0.4rem;
   padding: 1rem 1.1rem;
-  border: 1px solid rgba(248, 113, 113, 0.34);
+  border: 1px solid rgba(56, 189, 248, 0.35);
   border-radius: 0.75rem;
-  background: linear-gradient(90deg, rgba(127, 29, 29, 0.2), rgba(15, 23, 42, 0.16));
+  background: rgba(14, 116, 144, 0.12);
 }
 
 .all-banks-incorrect-copy {
@@ -664,7 +664,7 @@ body {
 }
 
 .all-banks-incorrect-eyebrow {
-  color: #fda4af;
+  color: #7dd3fc;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -685,10 +685,10 @@ body {
 .btn-all-banks-incorrect {
   flex: 0 0 auto;
   padding: 0.65rem 0.9rem;
-  border: 1px solid rgba(251, 113, 133, 0.55);
+  border: 1px solid rgba(56, 189, 248, 0.55);
   border-radius: 0.5rem;
-  color: #fff1f2;
-  background: rgba(225, 29, 72, 0.2);
+  color: #e0f2fe;
+  background: rgba(14, 116, 144, 0.22);
   font: inherit;
   font-size: 1.1rem;
   font-weight: 700;
@@ -697,8 +697,8 @@ body {
 }
 
 .btn-all-banks-incorrect:hover:not(:disabled) {
-  background: rgba(225, 29, 72, 0.34);
-  border-color: #fb7185;
+  background: rgba(14, 116, 144, 0.38);
+  border-color: #38bdf8;
   transform: translateY(-1px);
 }
 
