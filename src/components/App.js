@@ -107,7 +107,40 @@ export async function syncActiveSessionToServer(sessionData) {
   }
 }
 
-export const syncActiveSessionToLocalStorage = syncActiveSessionToServer;
+const ACTIVE_SESSION_STORAGE_KEY = "ccna_active_session";
+
+export function readLocalActiveSession() {
+  try {
+    const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearLocalActiveSession() {
+  try {
+    localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
+  } catch {}
+}
+
+// Keep a small client-side recovery copy as well as the authoritative server copy.
+// This lets a browser refresh restore the current question while the server request is
+// still starting or temporarily unavailable.
+export function syncActiveSessionToLocalStorage(sessionData) {
+  if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
+    return;
+  }
+  try {
+    localStorage.setItem(
+      ACTIVE_SESSION_STORAGE_KEY,
+      JSON.stringify(sanitizeSessionPayload(sessionData))
+    );
+  } catch (error) {
+    console.warn("Could not cache the active exam session locally:", error);
+  }
+  syncActiveSessionToServer(sessionData).catch(() => {});
+}
 
 function getInitialExamState() {
   return {
@@ -2372,22 +2405,47 @@ export default function App() {
         const session = urlSessionId ? list.find((s) => s.id === urlSessionId) : list[0];
         if (session && !isExamFinishedId(session.id)) {
           handleResumeSession(session);
-        } else {
-          handleNavigate("dashboard");
-          dispatch({ type: "sessionNotFound" });
-          if (urlSessionId) {
-            setAlertDialog({
-              isOpen: true,
-              title: "Exam Session Not Found",
-              message: "The requested exam session could not be found or has expired. You have been returned to the dashboard.",
-              confirmText: "OK",
-              type: "info",
-            });
-          }
+          return;
+        }
+
+        const localSession = readLocalActiveSession();
+        const sameSession = !urlSessionId || localSession?.id === urlSessionId;
+        const sameUser = (!userObj.id || !localSession?.userId || String(localSession.userId) === String(userObj.id)) &&
+          (!userObj.email || !localSession?.userEmail || String(localSession.userEmail).toLowerCase() === String(userObj.email).toLowerCase());
+        const hasUnansweredQuestions = localSession?.questions?.length > 0 &&
+          (localSession.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length < localSession.questions.length;
+
+        if (localSession && sameSession && sameUser && hasUnansweredQuestions && !isExamFinishedId(localSession.id)) {
+          handleResumeSession(localSession);
+          return;
+        }
+
+        handleNavigate("dashboard");
+        dispatch({ type: "sessionNotFound" });
+        if (urlSessionId) {
+          setAlertDialog({
+            isOpen: true,
+            title: "Exam Session Not Found",
+            message: "The requested exam session could not be found or has expired. You have been returned to the dashboard.",
+            confirmText: "OK",
+            type: "info",
+          });
         }
       })
       .catch((err) => {
         console.warn("Could not resume session from server:", err);
+        const localSession = readLocalActiveSession();
+        const sameSession = !urlSessionId || localSession?.id === urlSessionId;
+        const sameUser = (!userObj.id || !localSession?.userId || String(localSession.userId) === String(userObj.id)) &&
+          (!userObj.email || !localSession?.userEmail || String(localSession.userEmail).toLowerCase() === String(userObj.email).toLowerCase());
+        const hasUnansweredQuestions = localSession?.questions?.length > 0 &&
+          (localSession.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length < localSession.questions.length;
+
+        if (localSession && sameSession && sameUser && hasUnansweredQuestions && !isExamFinishedId(localSession.id)) {
+          handleResumeSession(localSession);
+          return;
+        }
+
         handleNavigate("dashboard");
         dispatch({ type: "sessionNotFound" });
       });
