@@ -21,7 +21,9 @@ export function evaluateDragDrop(dragDropData, userMatches = {}) {
     if (/^step\b/i.test(trimmed) || /command\b/i.test(trimmed)) {
       return trimmed;
     }
-    const match = trimmed.match(/^(.+?)\s+\d+$/);
+    // Numbered slots may be written as "Feature 1" or "feature1".
+    // They represent one unordered group unless the target is an explicit step/command.
+    const match = trimmed.match(/^(.+?)\s*\d+$/);
     if (match) {
       return match[1].trim();
     }

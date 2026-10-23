@@ -860,7 +860,7 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
                 $groupExpected = [];
                 foreach ($targets as $t) {
                     $trimmed = trim($t);
-                    $grp = (!preg_match('/^step\b/i', $trimmed) && !preg_match('/command\b/i', $trimmed) && preg_match('/^(.+?)\s+\d+$/', $trimmed, $m)) ? trim($m[1]) : $trimmed;
+                    $grp = (!preg_match('/^step\b/i', $trimmed) && !preg_match('/command\b/i', $trimmed) && preg_match('/^(.+?)\s*\d+$/', $trimmed, $m)) ? trim($m[1]) : $trimmed;
                     if (!isset($groupExpected[$grp])) $groupExpected[$grp] = [];
                     if (isset($correctMatches[$t])) $groupExpected[$grp][] = $correctMatches[$t];
                 }
@@ -869,7 +869,7 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
                 $rem = $groupExpected;
                 foreach ($targets as $t) {
                     $trimmed = trim($t);
-                    $grp = (!preg_match('/^step\b/i', $trimmed) && !preg_match('/command\b/i', $trimmed) && preg_match('/^(.+?)\s+\d+$/', $trimmed, $m)) ? trim($m[1]) : $trimmed;
+                    $grp = (!preg_match('/^step\b/i', $trimmed) && !preg_match('/command\b/i', $trimmed) && preg_match('/^(.+?)\s*\d+$/', $trimmed, $m)) ? trim($m[1]) : $trimmed;
                     $item = $userMatches[$t] ?? null;
                     if (!$item || !isset($rem[$grp])) { $isAllOk = false; break; }
                     $idx = array_search($item, $rem[$grp]);
