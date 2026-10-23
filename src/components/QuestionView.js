@@ -1162,6 +1162,13 @@ function QuestionView({
         </div>
       </div>
 
+      {isBusyNavigating && (
+        <div className="question-nav-loading" role="status" aria-live="polite">
+          <span className="question-nav-spinner" aria-hidden="true"></span>
+          <span>{isNavSaving ? "Saving your answer and loading the next question…" : "Loading question…"}</span>
+        </div>
+      )}
+
       {/* MAIN TITLE HEADER */}
       <div className="boson-main-header">
         <div className="boson-title-bank-row">
@@ -1999,8 +2006,8 @@ function QuestionView({
             onClick={handleNextClick}
             disabled={!canGoNext || isBusyNavigating || Boolean(serverConnectionError)}
           >
-            <span>{isNavSaving ? "Saving to Server..." : "Next"}</span>
-            {isBusyNavigating && <span className="btn-nav-pulse-dot"></span>}
+            {isBusyNavigating && <span className="btn-nav-spinner" aria-hidden="true"></span>}
+            <span>{isBusyNavigating ? "Loading…" : "Next"}</span>
           </button>
         </div>
 
