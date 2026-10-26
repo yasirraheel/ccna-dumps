@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { evaluateDragDrop } from "../utils/examScoring";
 
-function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked, isRevealed = false }) {
+function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, isLocked: propIsLocked, isRevealed = false, isInteractionDisabled = false }) {
   const containerRef = useRef(null);
   const dragData = question.dragDropData || {
     items: [],
@@ -10,6 +10,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   };
 
   const isLocked = propIsLocked !== undefined ? propIsLocked : ((answer !== null && answer.confirmed === true) || isReviewMode || isRevealed);
+  const interactionBlocked = isLocked || isInteractionDisabled;
   const hasAnswered = isLocked || isRevealed;
   const currentMatches = answer?.matches || {};
 
@@ -93,14 +94,14 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   };
 
   const assignItemToTarget = (targetName, itemName) => {
-    if (isLocked) return;
+    if (interactionBlocked) return;
     const newMatches = { ...currentMatches, [targetName]: itemName };
     dispatch({ type: "dragDropAnswer", payload: { matches: newMatches } });
     setSelectedItem(null);
   };
 
   const removeItemFromTarget = (targetName) => {
-    if (isLocked) return;
+    if (interactionBlocked) return;
     const newMatches = { ...currentMatches };
     delete newMatches[targetName];
     dispatch({ type: "dragDropAnswer", payload: { matches: newMatches } });
@@ -108,20 +109,20 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   };
 
   const handleDragStart = (e, item) => {
-    if (isLocked) return;
+    if (interactionBlocked) return;
     setDraggedItem(item);
     e.dataTransfer.setData("text/plain", item);
     e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragOver = (e) => {
-    if (isLocked) return;
+    if (interactionBlocked) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   };
 
   const handleDropOnTarget = (e, targetName) => {
-    if (isLocked) return;
+    if (interactionBlocked) return;
     e.preventDefault();
     const item = e.dataTransfer.getData("text/plain") || draggedItem;
     if (item) {
@@ -131,7 +132,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   };
 
   const handleTargetClick = (targetName) => {
-    if (hasAnswered) return;
+    if (interactionBlocked) return;
     if (selectedItem) {
       assignItemToTarget(targetName, selectedItem);
     } else if (currentMatches[targetName]) {
@@ -140,7 +141,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
   };
 
   const handleReset = () => {
-    if (hasAnswered) return;
+    if (interactionBlocked) return;
     dispatch({ type: "dragDropAnswer", payload: { matches: {} } });
     setSelectedItem(null);
   };
@@ -195,15 +196,15 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
                     className="drag-item-card is-assigned"
                     draggable={false}
                     onClick={() => {
-                      if (hasAnswered) return;
+                      if (interactionBlocked) return;
                       const targetKey = getAssignedTargetForItem(item);
                       if (targetKey) removeItemFromTarget(targetKey);
                     }}
-                    title={hasAnswered ? "" : "Assigned to right side. Click to recall/unassign."}
+                    title={interactionBlocked ? "" : "Assigned to right side. Click to recall/unassign."}
                   >
                     <span className="drag-handle is-assigned-icon">✓</span>
                     <span className="drag-text is-assigned-text">{item}</span>
-                    {!hasAnswered && (
+                    {!interactionBlocked && (
                       <span className="drag-assigned-badge">
                         <span className="badge-used">Used</span>
                         <span className="badge-recall">Recall ✕</span>
@@ -217,13 +218,13 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
                 <div
                   key={`${item}-${idx}`}
                   className={`drag-item-card ${isSelected ? "selected" : ""}`}
-                  draggable={!hasAnswered}
+                  draggable={!interactionBlocked}
                   onDragStart={(e) => handleDragStart(e, item)}
                   onClick={() => {
-                    if (hasAnswered) return;
+                    if (interactionBlocked) return;
                     setSelectedItem(isSelected ? null : item);
                   }}
-                  title={hasAnswered ? "" : "Click to select or drag to target"}
+                  title={interactionBlocked ? "" : "Click to select or drag to target"}
                 >
                   <span className="drag-handle">⠿</span>
                   <span className="drag-text">{item}</span>
@@ -232,7 +233,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
             })}
           </div>
 
-          {!hasAnswered && numAssigned > 0 && (
+          {!interactionBlocked && numAssigned > 0 && (
             <button
               type="button"
               className="btn btn-ui btn-reset-dd"
@@ -262,8 +263,8 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
               const isMissing = hasAnswered && slotEval.isMissing;
 
               let slotClass = "target-slot-card";
-              if (assignedItem && !hasAnswered) slotClass += " filled";
-              if (selectedItem && !hasAnswered && !assignedItem)
+              if (assignedItem && !interactionBlocked) slotClass += " filled";
+              if (selectedItem && !interactionBlocked && !assignedItem)
                 slotClass += " ready-for-drop";
               if (hasAnswered) {
                 if (isMatchCorrect) slotClass += " correct-slot";
@@ -290,7 +291,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
                     {assignedItem ? (
                       <div className="assigned-item">
                         <span className="assigned-text">{assignedItem}</span>
-                        {!hasAnswered && (
+                        {!interactionBlocked && (
                           <button
                             type="button"
                             className="remove-item-btn"
@@ -311,7 +312,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
                       </div>
                     ) : (
                       <div className="drop-placeholder">
-                        {selectedItem && !hasAnswered ? (
+                        {selectedItem && !interactionBlocked ? (
                           <span className="click-to-place">
                             👈 Click to place "{selectedItem.length > 25 ? selectedItem.slice(0, 25) + "..." : selectedItem}"
                           </span>
@@ -337,7 +338,7 @@ function DragDropQuestion({ question, dispatch, answer, isReviewMode = false, is
       </div>
 
       {/* Confirm Button */}
-      {!hasAnswered && numAssigned > 0 && (
+      {!interactionBlocked && numAssigned > 0 && (
         <div className="dd-confirm-wrapper">
           <button
             type="button"

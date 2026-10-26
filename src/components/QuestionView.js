@@ -1749,8 +1749,9 @@ function QuestionView({
             question={question}
             dispatch={dispatch}
             answer={answer}
-            isReviewMode={isReviewMode || isTimeOver || isLocked || Boolean(serverConnectionError)}
-            isLocked={isLocked || Boolean(serverConnectionError)}
+            isReviewMode={isReviewMode || isTimeOver || isLocked}
+            isLocked={isLocked}
+            isInteractionDisabled={Boolean(serverConnectionError)}
             isRevealed={isRevealed}
           />
         ) : (
