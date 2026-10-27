@@ -9575,6 +9575,41 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* Keep the question summary and Original Source control in one compact row. */
+  .boson-sub-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 0.45rem !important;
+  }
+
+  .boson-sub-left {
+    width: auto !important;
+    min-width: 0;
+    overflow: hidden !important;
+    align-content: center;
+  }
+
+  .boson-sub-right-actions {
+    width: auto !important;
+    min-width: 0;
+    display: flex !important;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+  }
+
+  .boson-sub-right-actions .header-font-controls {
+    display: none !important;
+  }
+
+  .boson-sub-right-actions .btn-boson-source-toggle {
+    display: inline-flex !important;
+    max-width: 10.5rem;
+    padding: 0.4rem 0.6rem !important;
+    font-size: 1rem !important;
+    white-space: nowrap;
+  }
 }
 
 .boson-live-edit-toast.toast-error .toast-title {
