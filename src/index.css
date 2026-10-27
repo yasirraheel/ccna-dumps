@@ -7841,6 +7841,93 @@ body {
   }
 }
 
+/* Final mobile card layout: use real rows instead of flattening controls into
+   grid cells, which can stretch the Pause button into a large empty panel. */
+@media (max-width: 768px) {
+  .boson-exam-info-card {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
+
+  .boson-exam-info-card .boson-exam-context-row,
+  .boson-exam-info-card .boson-main-header {
+    display: block !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .boson-exam-info-card .context-bank-tag {
+    display: flex;
+    width: 100%;
+    max-width: none;
+    min-height: 2.8rem;
+  }
+
+  .boson-exam-info-card .context-actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    min-height: 3.2rem;
+    gap: 0.5rem;
+  }
+
+  .boson-exam-info-card .context-actions .exam-timer-pill {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .boson-exam-info-card .context-actions .btn-boson-pause {
+    flex: 0 0 3.15rem;
+    width: 3.15rem;
+    min-width: 3.15rem;
+    height: 3.15rem;
+    min-height: 3.15rem;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .boson-exam-info-card .context-actions .btn-top-notes-summary {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .boson-exam-info-card .boson-title-bank-row {
+    display: none !important;
+  }
+
+  .boson-exam-info-card .boson-sub-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    width: 100%;
+  }
+
+  .boson-exam-info-card .boson-sub-left {
+    display: flex !important;
+    grid-column: 1;
+    width: auto !important;
+    min-width: 0;
+    overflow: hidden !important;
+  }
+
+  .boson-exam-info-card .boson-sub-right-actions {
+    display: flex !important;
+    grid-column: 2;
+    width: auto !important;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 480px) {
   .panel-title {
     font-size: 1.45rem;
@@ -9849,6 +9936,90 @@ body {
   opacity: 0.55;
   cursor: not-allowed !important;
   pointer-events: none;
+}
+
+/* Last override for the compact mobile exam card. */
+@media (max-width: 768px) {
+  .boson-exam-info-card {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .boson-exam-info-card .boson-exam-context-row,
+  .boson-exam-info-card .boson-main-header {
+    display: block !important;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .boson-exam-info-card .context-bank-tag {
+    display: flex;
+    width: 100%;
+    max-width: none;
+  }
+
+  .boson-exam-info-card .context-actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    min-height: 3.2rem;
+    gap: 0.5rem;
+  }
+
+  .boson-exam-info-card .context-actions .exam-timer-pill {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .boson-exam-info-card .context-actions .btn-boson-pause {
+    flex: 0 0 3.15rem;
+    width: 3.15rem;
+    min-width: 3.15rem;
+    height: 3.15rem;
+    min-height: 3.15rem;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .boson-exam-info-card .context-actions .btn-top-notes-summary {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .boson-exam-info-card .boson-title-bank-row {
+    display: none !important;
+  }
+
+  .boson-exam-info-card .boson-sub-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    width: 100%;
+  }
+
+  .boson-exam-info-card .boson-sub-left {
+    display: flex !important;
+    grid-column: 1;
+    width: auto !important;
+    min-width: 0;
+    overflow: hidden !important;
+  }
+
+  .boson-exam-info-card .boson-sub-right-actions {
+    display: flex !important;
+    grid-column: 2;
+    width: auto !important;
+    min-width: 0;
+  }
 }
 
 
