@@ -1,15 +1,7 @@
 import React, { useState } from "react";
 import Timer from "./Timer";
 import CustomConfirmModal from "./CustomConfirmModal";
-
-const cleanBankTitle = (name) => {
-  if (!name) return "";
-  return String(name)
-    .replace(/spoto-?/gi, "")
-    .replace(/\(\s*\)/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-};
+import { cleanBankTitle } from "../utils/bankTitle";
 
 function Header({
   status,

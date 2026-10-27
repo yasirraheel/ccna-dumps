@@ -3,6 +3,7 @@ import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
 import FinishScreen from "./FinishScreen";
 import { getExamQuestionStats } from "../utils/examScoring";
+import { cleanBankTitle } from "../utils/bankTitle";
 
 function ExamHistoryView({
   pastExams = [],
@@ -38,15 +39,6 @@ function ExamHistoryView({
     type: "danger",
     onConfirm: () => {},
   });
-
-  const cleanBankTitle = (name) => {
-    if (!name) return "";
-    return String(name)
-      .replace(/spoto-?/gi, "")
-      .replace(/\(\s*\)/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  };
 
   const handleDeleteItemClick = (exam) => {
     setConfirmDialog({

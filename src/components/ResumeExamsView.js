@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import NavigationMenu from "./NavigationMenu";
 import CustomConfirmModal from "./CustomConfirmModal";
+import { cleanBankTitle } from "../utils/bankTitle";
 
 function ResumeExamsView({
   savedSessions = [],
@@ -48,15 +49,6 @@ function ResumeExamsView({
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  };
-
-  const cleanBankTitle = (name) => {
-    if (!name) return "";
-    return String(name)
-      .replace(/spoto-?/gi, "")
-      .replace(/\(\s*\)/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
   };
 
   const handleDeleteSessionClick = (session) => {

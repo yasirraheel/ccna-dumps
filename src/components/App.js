@@ -2701,13 +2701,16 @@ export default function App() {
     }
 
     setFlaggedQuestions([]);
+    const customBankName = /^Custom Practice\b/i.test(String(bankName).trim())
+      ? `Custom Practice (${customList.length} Qs)`
+      : `${bankName} (${customList.length} Qs)`;
     dispatch({
       type: "startExam",
       payload: {
         questions: customList,
         examMode: requestedMode,
         settings: requestedSettings,
-        bankName: `${bankName} (${customList.length} Qs)`,
+        bankName: customBankName,
         bankKey: "custom_practice",
       },
     });

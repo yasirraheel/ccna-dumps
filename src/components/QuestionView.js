@@ -14,6 +14,7 @@ import {
 } from "../utils/questionSourceHelper";
 import { calculateTotalPoints, evaluateDragDrop } from "../utils/examScoring";
 import { formatOptionText } from "../utils/formatOptionText";
+import { cleanBankTitle } from "../utils/bankTitle";
 
 function renderFormattedPrompt(rawText) {
   if (!rawText) return null;
@@ -246,15 +247,6 @@ function QuestionView({
     };
   }, []);
 
-  const cleanBankTitle = (name) => {
-    if (!name) return "";
-    return String(name)
-      .replace(/spoto-?/gi, "")
-      .replace(/\(\s*\)/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  };
-
   const activeBankTitle = cleanBankTitle(selectedBankName || question?.bankName || "CCNA Exam");
   const hasExhibitImage = Boolean(question?.exhibitImage);
 
@@ -286,6 +278,7 @@ function QuestionView({
   const [sourcePan, setSourcePan] = useState({ x: 0, y: 0 });
   const [isPanningSource, setIsPanningSource] = useState(false);
   const panSourceStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const pinchSourceStartRef = useRef(null);
   const [sourceImgError, setSourceImgError] = useState(false);
   const [isSourceImageLoading, setIsSourceImageLoading] = useState(false);
 
@@ -596,7 +589,21 @@ function QuestionView({
   };
 
   const handleSourceTouchStart = (e) => {
-    if (sourceZoom <= 1 || !e.touches || e.touches.length === 0) return;
+    if (!e.touches || e.touches.length === 0) return;
+
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchSourceStartRef.current = {
+        distance: Math.hypot(dx, dy),
+        zoom: sourceZoom,
+      };
+      setIsPanningSource(false);
+      return;
+    }
+
+    if (sourceZoom <= 1) return;
     const touch = e.touches[0];
     setIsPanningSource(true);
     panSourceStartRef.current = {
@@ -608,7 +615,24 @@ function QuestionView({
   };
 
   const handleSourceTouchMove = (e) => {
-    if (!isPanningSource || sourceZoom <= 1 || !e.touches || e.touches.length === 0) return;
+    if (!e.touches || e.touches.length === 0) return;
+
+    if (e.touches.length === 2 && pinchSourceStartRef.current) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.hypot(dx, dy);
+      const nextZoom = Math.min(
+        3.5,
+        Math.max(1, +(pinchSourceStartRef.current.zoom * (distance / pinchSourceStartRef.current.distance)).toFixed(2))
+      );
+      setSourceZoom(nextZoom);
+      if (nextZoom === 1) setSourcePan({ x: 0, y: 0 });
+      return;
+    }
+
+    if (!isPanningSource || sourceZoom <= 1 || e.touches.length !== 1) return;
+    e.preventDefault();
     const touch = e.touches[0];
     const dx = touch.clientX - panSourceStartRef.current.x;
     const dy = touch.clientY - panSourceStartRef.current.y;
@@ -618,7 +642,8 @@ function QuestionView({
     });
   };
 
-  const handleSourceTouchEnd = () => {
+  const handleSourceTouchEnd = (e) => {
+    if (!e.touches || e.touches.length < 2) pinchSourceStartRef.current = null;
     if (isPanningSource) setIsPanningSource(false);
   };
 
@@ -1600,9 +1625,10 @@ function QuestionView({
               onTouchStart={handleSourceTouchStart}
               onTouchMove={handleSourceTouchMove}
               onTouchEnd={handleSourceTouchEnd}
+              onTouchCancel={handleSourceTouchEnd}
               style={{
                 cursor: sourceZoom > 1 ? (isPanningSource ? "grabbing" : "grab") : "default",
-                touchAction: sourceZoom > 1 ? "none" : "auto",
+                touchAction: "none",
                 overflow: "hidden",
                 position: "relative",
               }}
@@ -1711,6 +1737,7 @@ function QuestionView({
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
               style={{
                 cursor: exhibitZoom > 1 ? (isPanning ? "grabbing" : "grab") : "default",
                 touchAction: "none",

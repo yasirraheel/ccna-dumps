@@ -19,6 +19,7 @@ import {
   getKeywordQuestions,
   mergeUniqueQuestions,
 } from "../utils/incorrectQuestionPool";
+import { cleanBankTitle } from "../utils/bankTitle";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -414,15 +415,6 @@ function ExamDashboard({
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-  };
-
-  const cleanBankTitle = (name) => {
-    if (!name) return "";
-    return String(name)
-      .replace(/spoto-?/gi, "")
-      .replace(/\(\s*\)/g, "")
-      .replace(/\s{2,}/g, " ")
-      .trim();
   };
 
   const isSessionActiveAndUnfinished = (s) => {
