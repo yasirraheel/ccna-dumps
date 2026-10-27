@@ -10022,6 +10022,27 @@ body {
   }
 }
 
+/* Bank label should hug its text instead of becoming a full-width capsule. */
+.boson-exam-info-card .context-bank-tag {
+  display: inline-flex !important;
+  align-self: flex-start;
+  width: fit-content !important;
+  max-width: 100% !important;
+  gap: 0;
+  padding: 0.35rem 0.75rem;
+}
+
+.boson-exam-info-card .context-bank-tag .bank-tag-icon {
+  display: none !important;
+}
+
+.boson-exam-info-card .context-bank-tag .bank-tag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
 
 

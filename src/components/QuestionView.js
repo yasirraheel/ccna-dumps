@@ -1129,7 +1129,6 @@ function QuestionView({
         <div className="boson-exam-context-row">
         {activeBankTitle && (
           <div className="top-bar-bank-tag context-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
-            <span className="bank-tag-icon">🏷️</span>
             <span className="bank-tag-name">{activeBankTitle}</span>
           </div>
         )}
