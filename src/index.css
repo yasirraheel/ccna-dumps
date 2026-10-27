@@ -10025,6 +10025,7 @@ body {
 /* Bank label should hug its text instead of becoming a full-width capsule. */
 .boson-exam-info-card .context-bank-tag {
   display: inline-flex !important;
+  flex: 0 0 auto !important;
   align-self: flex-start;
   width: fit-content !important;
   max-width: 100% !important;
