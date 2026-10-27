@@ -262,6 +262,7 @@ function QuestionView({
   const [exhibitPan, setExhibitPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const pinchStartRef = useRef(null);
 
   const [showOriginalSource, setShowOriginalSource] = useState(false);
 
@@ -501,6 +502,17 @@ function QuestionView({
   };
 
   const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartRef.current = {
+        distance: Math.hypot(dx, dy),
+        zoom: exhibitZoom,
+      };
+      setIsPanning(false);
+      return;
+    }
     if (exhibitZoom <= 1 || e.touches.length !== 1) return;
     setIsPanning(true);
     panStartRef.current = {
@@ -512,7 +524,18 @@ function QuestionView({
   };
 
   const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && pinchStartRef.current) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.hypot(dx, dy);
+      const nextZoom = Math.min(3.5, Math.max(1, +(pinchStartRef.current.zoom * (distance / pinchStartRef.current.distance)).toFixed(2)));
+      setExhibitZoom(nextZoom);
+      if (nextZoom === 1) setExhibitPan({ x: 0, y: 0 });
+      return;
+    }
     if (!isPanning || exhibitZoom <= 1 || e.touches.length !== 1) return;
+    e.preventDefault();
     const dx = e.touches[0].clientX - panStartRef.current.x;
     const dy = e.touches[0].clientY - panStartRef.current.y;
     setExhibitPan({
@@ -521,7 +544,8 @@ function QuestionView({
     });
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
+    if (!e.touches || e.touches.length < 2) pinchStartRef.current = null;
     setIsPanning(false);
   };
 
@@ -1630,7 +1654,7 @@ function QuestionView({
                 <span className="exhibit-tag">📸 Exhibit Diagram</span>
                 {exhibitZoom > 1 && (
                   <span className="exhibit-drag-hint">
-                    ↔ Drag image to explore
+                    ↔ Pinch or drag to explore
                   </span>
                 )}
               </div>
@@ -1683,7 +1707,7 @@ function QuestionView({
               onTouchEnd={handleTouchEnd}
               style={{
                 cursor: exhibitZoom > 1 ? (isPanning ? "grabbing" : "grab") : "default",
-                touchAction: exhibitZoom > 1 ? "none" : "auto",
+                touchAction: "none",
                 overflow: "hidden",
                 position: "relative",
               }}
@@ -2016,7 +2040,7 @@ function QuestionView({
           {!isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
             <button
               type="button"
-              className={`btn-boson-action ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) ? "disabled" : ""}`}
+              className={`btn-boson-action btn-show-answer ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) ? "disabled" : ""}`}
               onClick={handleShowAnswerClick}
               disabled={isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) || isCheckingAnswer}
             >
