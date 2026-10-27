@@ -502,7 +502,7 @@ function ExamDashboard({
       questions: customSelectedQuestions,
       examMode,
       settings: effectiveSettings,
-      bankName: `Custom Practice — ${customSelectedQuestions.length} Questions`,
+      bankName: `Custom Practice (${customSelectedQuestions.length} Qs)`,
     });
   };
 
