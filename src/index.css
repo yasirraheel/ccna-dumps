@@ -9416,6 +9416,91 @@ body {
   text-transform: uppercase;
 }
 
+/* Final narrow-phone overrides. These come after the legacy mobile rules so
+   question metadata never gets forced back into a clipped single row. */
+@media (max-width: 600px) {
+  .boson-top-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  .top-bar-left-actions {
+    gap: 0.35rem;
+  }
+
+  .top-bar-left-actions .btn-boson-back {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.55rem !important;
+  }
+
+  .top-bar-left-actions .top-bar-bank-tag {
+    max-width: none;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+  }
+
+  .top-bar-right-group {
+    gap: 0.35rem;
+  }
+
+  /* Pause keeps its familiar play/pause icon while removing the clipped word. */
+  .top-bar-right-group .btn-boson-pause {
+    width: 3.15rem;
+    min-width: 3.15rem;
+    height: 3.15rem;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .top-bar-right-group .btn-boson-pause span {
+    display: none;
+  }
+
+  .top-bar-right-group .boson-user-avatar {
+    width: 3rem;
+    height: 3rem;
+    min-width: 3rem;
+  }
+
+  .boson-sub-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .boson-sub-left {
+    width: 100% !important;
+    min-width: 0;
+    flex-wrap: wrap !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    row-gap: 0.35rem;
+  }
+
+  .boson-q-count,
+  .boson-live-score,
+  .boson-qno-pill {
+    flex: 0 0 auto;
+  }
+
+  .boson-qno-pill {
+    max-width: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  .boson-sub-right-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    width: 100% !important;
+    gap: 0.5rem;
+  }
+}
+
 .boson-live-edit-toast.toast-error .toast-title {
   color: #fca5a5;
 }
