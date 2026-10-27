@@ -1117,8 +1117,16 @@ function QuestionView({
         </div>
       </div>
 
-      {/* SECONDARY EXAM CONTROLS: bank context, timer, pause, and notes. */}
-      <div className="boson-exam-context-row">
+      {isBusyNavigating && (
+        <div className="question-nav-loading-overlay" role="status" aria-live="polite">
+          <span className="question-nav-spinner" aria-hidden="true"></span>
+          <span className="sr-only">{isNavSaving ? "Saving your answer and loading the next question" : "Loading question"}</span>
+        </div>
+      )}
+
+      <div className="boson-exam-info-card">
+        {/* SECONDARY EXAM CONTROLS: bank context, timer, pause, and notes. */}
+        <div className="boson-exam-context-row">
         {activeBankTitle && (
           <div className="top-bar-bank-tag context-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
             <span className="bank-tag-icon">🏷️</span>
@@ -1185,17 +1193,10 @@ function QuestionView({
             <span>💬 Notes ({currentBankNotesCount})</span>
           </button>
         </div>
-      </div>
-
-      {isBusyNavigating && (
-        <div className="question-nav-loading-overlay" role="status" aria-live="polite">
-          <span className="question-nav-spinner" aria-hidden="true"></span>
-          <span className="sr-only">{isNavSaving ? "Saving your answer and loading the next question" : "Loading question"}</span>
         </div>
-      )}
 
-      {/* MAIN TITLE HEADER */}
-      <div className="boson-main-header">
+        {/* MAIN TITLE HEADER */}
+        <div className="boson-main-header">
         <div className="boson-title-bank-row">
           <h1 className="boson-exam-title">
             Cisco 200-301 CCNA Exam Simulator
@@ -1418,6 +1419,7 @@ function QuestionView({
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
 

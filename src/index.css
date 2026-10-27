@@ -9533,7 +9533,62 @@ body {
   flex: 0 1 auto;
 }
 
+.boson-exam-info-card {
+  width: 100%;
+  min-width: 0;
+}
+
 @media (max-width: 768px) {
+  .boson-exam-info-card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.62);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 0.9rem;
+  }
+
+  .boson-exam-info-card .boson-exam-context-row,
+  .boson-exam-info-card .context-actions,
+  .boson-exam-info-card .boson-main-header,
+  .boson-exam-info-card .boson-title-bank-row,
+  .boson-exam-info-card .boson-sub-header {
+    display: contents !important;
+  }
+
+  .boson-exam-info-card .boson-exam-title {
+    display: none !important;
+  }
+
+  .boson-exam-info-card .context-bank-tag {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+  }
+
+  .boson-exam-info-card .boson-sub-left {
+    grid-column: span 2;
+    width: auto !important;
+    min-width: 0;
+    overflow: hidden !important;
+  }
+
+  .boson-exam-info-card .boson-sub-right-actions {
+    grid-column: span 1;
+    width: auto !important;
+    min-width: 0;
+    display: flex !important;
+  }
+
+  .boson-exam-info-card .context-actions .exam-timer-pill,
+  .boson-exam-info-card .context-actions .btn-boson-pause,
+  .boson-exam-info-card .context-actions .btn-top-notes-summary {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
   .boson-exam-context-row {
     flex-wrap: wrap;
     margin: -0.45rem 0 1rem;
@@ -9565,6 +9620,15 @@ body {
 }
 
 @media (max-width: 600px) {
+  .boson-exam-info-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .boson-exam-info-card .boson-sub-left,
+  .boson-exam-info-card .boson-sub-right-actions {
+    grid-column: span 1;
+  }
+
   .boson-exam-context-row {
     margin-top: -0.3rem;
   }
