@@ -10192,6 +10192,13 @@ body {
   background: var(--bg-card) !important;
 }
 
+/* The toolbar is part of the header surface, not a nested card. */
+.boson-exam-info-card .boson-exam-context-row {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 
 
 
