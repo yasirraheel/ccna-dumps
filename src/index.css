@@ -10199,6 +10199,26 @@ body {
   box-shadow: none !important;
 }
 
+/* On phones the bottom navigation owns Pause and Notes. Do not leave an
+   empty controls row behind, and let the bank label sit directly on the
+   mobile header card surface. */
+@media (max-width: 768px) {
+  .boson-exam-info-card .boson-exam-context-row {
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .boson-exam-info-card .boson-exam-context-row .context-bank-tag {
+    padding: 0 !important;
+  }
+
+  .boson-exam-info-card .boson-exam-context-row .context-actions {
+    display: none !important;
+    min-height: 0 !important;
+  }
+}
+
 
 
 
