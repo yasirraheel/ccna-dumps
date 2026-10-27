@@ -1204,38 +1204,42 @@ function QuestionView({
 
         <div className="boson-sub-header">
           <div className="boson-sub-left">
-            <span className="boson-q-count">
-              Question {seqNumber} of {numQuestions}
-            </span>
-            {settings?.showScoreLive !== false && (
-              <>
-                <span className="boson-dot-sep">•</span>
-                <span
-                  className="boson-live-score"
-                  title={`${effectiveScore || 0} / ${maxPossiblePoints} pts`}
-                >
-                  {livePercentage}% correct
-                </span>
-              </>
-            )}
-            {question.questionNo && (
-              <>
-                <span className="boson-dot-sep">•</span>
-                <span className="boson-qno-pill">{question.questionNo}</span>
-              </>
-            )}
-            {isReviewMode && (
-              <>
-                <span className="boson-dot-sep">•</span>
-                <span className="boson-review-badge">🔍 Review Mode (Read-Only)</span>
-              </>
-            )}
-            {!isReviewMode && isLocked && (
-              <>
-                <span className="boson-dot-sep">•</span>
-                <span className="boson-review-badge" style={{ background: "rgba(100, 116, 139, 0.2)", color: "#94a3b8", border: "1px solid rgba(148, 163, 184, 0.3)" }}>🔒 Answer Locked</span>
-              </>
-            )}
+            <div className="boson-mobile-summary-row">
+              <span className="boson-q-count">
+                Question {seqNumber} of {numQuestions}
+              </span>
+              {settings?.showScoreLive !== false && (
+                <>
+                  <span className="boson-dot-sep">•</span>
+                  <span
+                    className="boson-live-score"
+                    title={`${effectiveScore || 0} / ${maxPossiblePoints} pts`}
+                  >
+                    {livePercentage}% correct
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="boson-mobile-detail-row">
+              {question.questionNo && (
+                <>
+                  <span className="boson-dot-sep">•</span>
+                  <span className="boson-qno-pill">{question.questionNo}</span>
+                </>
+              )}
+              {isReviewMode && (
+                <>
+                  <span className="boson-dot-sep">•</span>
+                  <span className="boson-review-badge">🔍 Review Mode (Read-Only)</span>
+                </>
+              )}
+              {!isReviewMode && isLocked && (
+                <>
+                  <span className="boson-dot-sep">•</span>
+                  <span className="boson-review-badge" style={{ background: "rgba(100, 116, 139, 0.2)", color: "#94a3b8", border: "1px solid rgba(148, 163, 184, 0.3)" }}>🔒 Answer Locked</span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="boson-sub-right-actions">

@@ -10104,6 +10104,94 @@ body {
   }
 }
 
+/* Mobile question metadata uses two intentional rows:
+   question count + score, then question number + Original Source. */
+.boson-mobile-summary-row,
+.boson-mobile-detail-row {
+  display: contents;
+}
+
+@media (max-width: 768px) {
+  .boson-exam-info-card .boson-sub-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-rows: auto auto;
+    align-items: center !important;
+    justify-content: initial !important;
+    gap: 0.45rem 0.6rem !important;
+  }
+
+  .boson-exam-info-card .boson-sub-left {
+    display: contents !important;
+  }
+
+  .boson-exam-info-card .boson-mobile-summary-row {
+    display: flex !important;
+    grid-column: 1 / -1;
+    align-items: center;
+    min-width: 0;
+    gap: 0.45rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .boson-exam-info-card .boson-mobile-detail-row {
+    display: flex !important;
+    grid-column: 1;
+    align-items: center;
+    min-width: 0;
+    gap: 0.45rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .boson-exam-info-card .boson-mobile-detail-row .boson-dot-sep {
+    display: none;
+  }
+
+  .boson-exam-info-card .boson-mobile-summary-row .boson-q-count,
+  .boson-exam-info-card .boson-mobile-summary-row .boson-live-score,
+  .boson-exam-info-card .boson-mobile-detail-row .boson-qno-pill {
+    flex: 0 0 auto;
+  }
+
+  .boson-exam-info-card .boson-mobile-detail-row .boson-review-badge {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .boson-exam-info-card .boson-sub-right-actions {
+    grid-column: 2;
+    grid-row: 2;
+    width: auto !important;
+    min-width: 0;
+    justify-self: end;
+    align-self: center;
+    display: flex !important;
+    gap: 0.35rem;
+  }
+
+  .boson-exam-info-card .boson-sub-right-actions .btn-boson-source-toggle {
+    max-width: min(10.5rem, 42vw);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* One exact surface for the three exam context items; no gradient or child
+   tint can make the bank, pause, and notes look like separate cards. */
+.boson-exam-info-card .boson-exam-context-row,
+.boson-exam-info-card .boson-exam-context-row .context-bank-tag,
+.boson-exam-info-card .boson-exam-context-row .exam-timer-pill,
+.boson-exam-info-card .boson-exam-context-row .btn-boson-pause,
+.boson-exam-info-card .boson-exam-context-row .btn-top-notes-summary {
+  background: var(--bg-card) !important;
+}
+
 
 
 
