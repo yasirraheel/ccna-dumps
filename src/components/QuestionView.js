@@ -1091,7 +1091,7 @@ function QuestionView({
         <div className="boson-slim-transition-glow"></div>
       </div>
 
-      {/* TOP NAVIGATION BAR: Back to Exam, Notes Button, Timer & User Avatar */}
+      {/* PRIMARY NAVIGATION: keep this row intentionally minimal on every screen. */}
       <div className="boson-top-bar">
         <div className="top-bar-left-actions">
           <button
@@ -1105,28 +1105,28 @@ function QuestionView({
             </svg>
             <span>Exam</span>
           </button>
-
-          {activeBankTitle && (
-            <div className="top-bar-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
-              <span className="bank-tag-icon">🏷️</span>
-              <span className="bank-tag-name">{activeBankTitle}</span>
-            </div>
-          )}
-
-          <button
-            type="button"
-            className={`btn-top-notes-summary ${
-              currentBankNotesCount > 0 ? "has-notes" : ""
-            }`}
-            onClick={() => setIsAllNotesModalOpen(true)}
-            title="View question notes in this exam bank"
-          >
-            <span>💬 Notes ({currentBankNotesCount})</span>
-          </button>
         </div>
 
         <div className="top-bar-right-group">
-          {/* TIMER PILL */}
+          <div
+            className="boson-user-avatar"
+            title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
+          >
+            <span>{candidateInitials}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* SECONDARY EXAM CONTROLS: bank context, timer, pause, and notes. */}
+      <div className="boson-exam-context-row">
+        {activeBankTitle && (
+          <div className="top-bar-bank-tag context-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
+            <span className="bank-tag-icon">🏷️</span>
+            <span className="bank-tag-name">{activeBankTitle}</span>
+          </div>
+        )}
+
+        <div className="context-actions">
           {timerDisplay && (
             <div
               className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""} ${isPaused || Boolean(serverConnectionError) ? "timer-paused" : ""}`}
@@ -1150,7 +1150,6 @@ function QuestionView({
             </div>
           )}
 
-          {/* PAUSE / RESUME BUTTON */}
           {!isReviewMode && onTogglePause && (
             <button
               type="button"
@@ -1177,12 +1176,14 @@ function QuestionView({
             </button>
           )}
 
-          <div
-            className="boson-user-avatar"
-            title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
+          <button
+            type="button"
+            className={`btn-top-notes-summary ${currentBankNotesCount > 0 ? "has-notes" : ""}`}
+            onClick={() => setIsAllNotesModalOpen(true)}
+            title="View question notes in this exam bank"
           >
-            <span>{candidateInitials}</span>
-          </div>
+            <span>💬 Notes ({currentBankNotesCount})</span>
+          </button>
         </div>
       </div>
 

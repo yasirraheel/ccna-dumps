@@ -7134,7 +7134,8 @@ body {
     padding: 0.4rem 0.65rem;
   }
 
-  .top-bar-right-group .btn-boson-pause {
+  .top-bar-right-group .btn-boson-pause,
+  .context-actions .btn-boson-pause {
     min-width: 0;
     padding: 0.5rem 0.7rem;
     font-size: 1.15rem;
@@ -9454,7 +9455,8 @@ body {
     border-radius: 50%;
   }
 
-  .top-bar-right-group .btn-boson-pause span {
+  .top-bar-right-group .btn-boson-pause span,
+  .context-actions .btn-boson-pause span {
     display: none;
   }
 
@@ -9498,6 +9500,80 @@ body {
     grid-template-columns: minmax(0, 1fr) auto !important;
     width: 100% !important;
     gap: 0.5rem;
+  }
+}
+
+/* Professional secondary control strip beneath the minimal navigation bar. */
+.boson-exam-context-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  margin: -0.65rem 0 1.25rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 0.85rem;
+}
+
+.context-bank-tag {
+  min-width: 0;
+  max-width: 48%;
+  flex: 1 1 auto;
+}
+
+.context-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+@media (max-width: 768px) {
+  .boson-exam-context-row {
+    flex-wrap: wrap;
+    margin: -0.45rem 0 1rem;
+    padding: 0.65rem;
+    gap: 0.65rem;
+  }
+
+  .context-bank-tag {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .context-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .context-actions .exam-timer-pill {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .context-actions .btn-top-notes-summary {
+    flex: 0 0 auto;
+    padding: 0.55rem 0.7rem;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .boson-exam-context-row {
+    margin-top: -0.3rem;
+  }
+
+  .context-actions .btn-top-notes-summary {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
