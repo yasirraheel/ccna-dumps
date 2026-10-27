@@ -12,6 +12,10 @@ function CustomConfirmModal({
 }) {
   if (!isOpen) return null;
 
+  // The dialog renders a dedicated status icon, so avoid repeating any
+  // leading emoji that may be included in a caller-provided title.
+  const displayTitle = String(title || "Confirmation").replace(/^[\s⚠️❌✅ℹ️🎉]+/, "");
+
   const handleBackdropClick = () => {
     if (onCancel) {
       onCancel();
@@ -33,7 +37,7 @@ function CustomConfirmModal({
             {type === "info" && <span className="icon-info">ℹ️</span>}
             {type === "success" && <span className="icon-success">🎉</span>}
           </div>
-          <h3 className="custom-confirm-title">{title}</h3>
+          <h3 className="custom-confirm-title">{displayTitle}</h3>
         </div>
 
         <div className="custom-confirm-body">

@@ -4881,6 +4881,66 @@ body {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* Compact confirmation dialogs on phones. Keep the status icon, title, and
+   actions readable without clipping or awkward wrapping. */
+@media (max-width: 768px) {
+  .custom-modal-backdrop {
+    padding: 0.8rem;
+  }
+
+  .custom-confirm-card {
+    width: min(100%, 34rem);
+    max-width: calc(100vw - 1.6rem);
+    border-radius: 1rem;
+  }
+
+  .custom-confirm-header {
+    gap: 0.7rem;
+    padding: 1.15rem 1.25rem;
+  }
+
+  .confirm-icon-wrap {
+    flex: 0 0 auto;
+    font-size: 1.7rem;
+  }
+
+  .custom-confirm-title {
+    min-width: 0;
+    margin: 0;
+    font-size: 1.45rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .custom-confirm-body {
+    padding: 1.25rem;
+  }
+
+  .custom-confirm-message {
+    font-size: 1.2rem;
+    line-height: 1.45;
+  }
+
+  .custom-confirm-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.7rem;
+    padding: 1rem 1.25rem 1.15rem;
+  }
+
+  .custom-confirm-actions .btn-modal-cancel,
+  .custom-confirm-actions .btn-modal-confirm {
+    min-width: 0;
+    min-height: 4rem;
+    padding: 0.7rem 0.45rem;
+    font-size: 1.05rem;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+}
+
 /* ==========================================================================
    FINISH SCREEN SCORE REPORT
    ========================================================================== */
