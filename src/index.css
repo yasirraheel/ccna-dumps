@@ -10219,6 +10219,21 @@ body {
   }
 }
 
+/* Keep sticky/fixed exam chrome on a compositor-friendly opaque surface.
+   Backdrop blur forces a full repaint of the large question/exhibit area when
+   the page wakes from idle, which makes the first scroll hitch. */
+.boson-top-bar {
+  background: #1a1f28 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.mobile-app-bottom-bar {
+  background: #0f141d !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 
 
 
