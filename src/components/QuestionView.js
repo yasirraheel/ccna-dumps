@@ -2005,13 +2005,13 @@ function QuestionView({
                 </div>
               )}
 
-              {(question.explanation || resolveExplanation(question)) && (
+              {(resolveExplanation(question) || question.explanation) && (
                 <div className="question-explanation-text" style={{ marginTop: "1.1rem", paddingTop: "0.95rem", borderTop: "1px solid rgba(255,255,255,0.18)" }}>
                   <div style={{ fontWeight: 700, color: "#38bdf8", marginBottom: "0.5rem", fontSize: "1.3rem", display: "flex", alignItems: "center", gap: "6px" }}>
                     <span>📖</span> Explanation & Key Concept:
                   </div>
                   {(() => {
-                    const rawExpl = question.explanation || resolveExplanation(question);
+                    const rawExpl = resolveExplanation(question) || question.explanation;
                     if (!rawExpl) return null;
 
                     const masterQ =

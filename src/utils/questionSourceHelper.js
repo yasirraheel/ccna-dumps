@@ -5,6 +5,42 @@ const explanationById = new Map();
 const explanationByQuestionNo = new Map();
 const explanationByPrompt = new Map();
 
+// Question-specific corrections take precedence over stale explanations that
+// may still be attached to a question returned by the live API.
+const explanationOverridesByQuestionNo = new Map([
+  [
+    "drag & drop #12",
+    `<div class="explanation-rich-content">
+  <div class="expl-card concept-card">
+    <div class="section-title-concept">📌 Core Concept: AAA separates identity, permissions, and activity tracking</div>
+    <p><strong>Authentication</strong> verifies who the user is, <strong>Authorization</strong> determines what that user is allowed to do, and <strong>Accounting</strong> records what the user used or did. This question includes only Accounting and Authorization targets, so the Authentication statement is intentionally unused.</p>
+  </div>
+
+  <div class="expl-card correct-card">
+    <h4 class="section-title-correct">✓ Why the Official Matches are Correct:</h4>
+    <ul>
+      <li><span class="opt-tag correct">Accounting 1</span> <strong>It records the amount of network resources consumed by the user.</strong> Accounting records usage such as bytes transferred, services used, and session activity.</li>
+      <li><span class="opt-tag correct">Accounting 2</span> <strong>It tracks the services that a user is using.</strong> Accounting keeps an audit trail of the services and sessions associated with the user.</li>
+      <li><span class="opt-tag correct">Authorization 1</span> <strong>It assigns per-user attributes.</strong> Authorization applies permissions and attributes such as privilege level, VLAN, ACL, or downloadable policy.</li>
+      <li><span class="opt-tag correct">Authorization 2</span> <strong>It restricts the CLI commands that a user is able to perform.</strong> Command authorization decides which commands and privilege levels the authenticated user may use.</li>
+    </ul>
+  </div>
+
+  <div class="expl-card incorrect-card">
+    <h4 class="section-title-incorrect">✕ Why the Unused Option is Not a Match:</h4>
+    <ul>
+      <li><span class="opt-tag wrong">Unused</span> <strong>It permits and denies login attempts.</strong> This is <strong>Authentication</strong>, because it verifies credentials and decides whether the user may log in. There is no Authentication target in this drag-and-drop set.</li>
+    </ul>
+  </div>
+
+  <div class="expl-card tip-card">
+    <h4 class="section-title-tip">💡 CCNA Exam Tip:</h4>
+    <p><strong>Authentication</strong> = Who are you? &nbsp; <strong>Authorization</strong> = What can you do? &nbsp; <strong>Accounting</strong> = What did you use or do?</p>
+  </div>
+</div>`,
+  ],
+]);
+
 /**
  * Resolves the originalSourceImage path (e.g. 'original_sources/22.webp')
  * for any question object, even if it comes from an older saved session,
@@ -61,6 +97,11 @@ export function resolveOriginalSourceImage(q) {
  */
 export function resolveExplanation(q) {
   if (!q) return null;
+
+  if (q.questionNo) {
+    const override = explanationOverridesByQuestionNo.get(String(q.questionNo).trim().toLowerCase());
+    if (override) return override;
+  }
 
   // 1. If already present and valid
   if (q.explanation && typeof q.explanation === "string" && q.explanation.trim()) {
