@@ -9,6 +9,45 @@ const explanationByPrompt = new Map();
 // may still be attached to a question returned by the live API.
 const explanationOverridesByQuestionNo = new Map([
   [
+    "question #175",
+    `<div class="explanation-rich-content">
+  <div class="expl-card concept-card">
+    <div class="section-title-concept">📌 Core Concept: Longest-prefix match decides the route</div>
+    <p>Router Y compares every route that contains the destination IP address. It then chooses the matching route with the <strong>longest prefix length</strong> (the most specific network), before considering any route metric.</p>
+  </div>
+
+  <div class="expl-card correct-card">
+    <h4 class="section-title-correct">✓ Why the Correct Answer (Option D) is Correct:</h4>
+    <ul>
+      <li><span class="opt-tag correct">Option D</span> <strong>router D</strong> is the next hop at <code>10.224.1.5</code>.</li>
+      <li>The destination is <code>10.227.225.255</code>. The relevant entries in Router Y's table are:
+        <ul>
+          <li><code>10.0.0.0/8</code> via Router A — matches, but is broad.</li>
+          <li><code>10.128.0.0/9</code> via Router B — matches, but is less specific.</li>
+          <li><code>10.224.0.0/11</code> via <code>10.224.1.5</code> (Router D) — matches because the second octet <code>227</code> is in the <code>224–255</code> range.</li>
+        </ul>
+      </li>
+      <li>The <code>10.224.0.0/15</code> route via Router C does <strong>not</strong> match: a /15 covers second-octet values <code>224–225</code>, while the destination uses <code>227</code>.</li>
+      <li>Therefore, <code>/11</code> is the longest matching prefix, so Router Y forwards the traffic through <strong>Router D</strong>.</li>
+    </ul>
+  </div>
+
+  <div class="expl-card incorrect-card">
+    <h4 class="section-title-incorrect">✕ Why the Other Options are Incorrect:</h4>
+    <ul>
+      <li><span class="opt-tag wrong">Option A</span> <strong>router A</strong>: Its <code>/8</code> route matches, but it is less specific than <code>/9</code> and <code>/11</code>.</li>
+      <li><span class="opt-tag wrong">Option B</span> <strong>router B</strong>: Its <code>/9</code> route matches, but <code>/11</code> is more specific.</li>
+      <li><span class="opt-tag wrong">Option C</span> <strong>router C</strong>: Its <code>10.224.0.0/15</code> range ends at <code>10.225.255.255</code>, so it does not include <code>10.227.225.255</code>.</li>
+    </ul>
+  </div>
+
+  <div class="expl-card tip-card">
+    <h4 class="section-title-tip">💡 CCNA Exam Tip:</h4>
+    <p>When several routes match, ignore the shorter matches and select the route with the largest prefix length: <code>/11</code> beats <code>/9</code>, which beats <code>/8</code>.</p>
+  </div>
+</div>`,
+  ],
+  [
     "drag & drop #12",
     `<div class="explanation-rich-content">
   <div class="expl-card concept-card">
