@@ -82,6 +82,30 @@ function AdminLabs() {
     event.target.value = '';
   };
 
+  const saveTaskImage = (taskIndex, file) => {
+    uploadImage(file, 'lab_solution', (url) => {
+      setEditor((previous) => {
+        const tasks = [...previous.tasks];
+        tasks[taskIndex] = { ...tasks[taskIndex], solutionImage: url };
+        return { ...previous, tasks };
+      });
+    }, `lab_solution_${taskIndex}`);
+  };
+
+  const handleClipboardPaste = (event, target, taskIndex = null) => {
+    const items = Array.from(event.clipboardData?.items || []);
+    const imageItem = items.find((item) => item.kind === 'file' && item.type.startsWith('image/'));
+    if (!imageItem) return;
+    event.preventDefault();
+    const file = imageItem.getAsFile();
+    if (!file) return;
+    if (target === 'topology') {
+      uploadImage(file, 'lab_topology', (url) => updateEditor({ topologyImage: url }));
+    } else if (taskIndex !== null) {
+      saveTaskImage(taskIndex, file);
+    }
+  };
+
   const updateTask = (taskIndex, patch) => {
     setEditor((previous) => {
       const tasks = [...previous.tasks];
@@ -172,7 +196,7 @@ function AdminLabs() {
         </div>
       )}
 
-      <div className="admin-card">
+      <div className={`admin-card admin-lab-list-shell ${editor ? 'is-editing' : ''}`}>
         <div className="admin-card-header">
           <div>
             <h3 className="admin-card-title"><span>🧪</span> Guided Labs</h3>
@@ -212,17 +236,16 @@ function AdminLabs() {
       </div>
 
       {editor && (
-        <div className="admin-modal-backdrop" onClick={() => setEditor(null)}>
-          <form className="admin-modal-card admin-lab-editor" onSubmit={saveLab} onClick={(event) => event.stopPropagation()}>
-            <div className="admin-modal-header">
+          <form className="admin-card admin-lab-editor-page" onSubmit={saveLab}>
+            <div className="admin-card-header admin-lab-editor-header">
               <div>
-                <h4 className="admin-modal-title">{editor.id ? 'Edit Guided Lab' : 'Add Guided Lab'}</h4>
-                <p className="admin-lab-modal-subtitle">Upload the original artwork, then build the task-by-task reveal.</p>
+                <h3 className="admin-card-title"><span>🧪</span> {editor.id ? 'Edit Guided Lab' : 'Add Guided Lab'}</h3>
+                <p className="admin-lab-modal-subtitle">Upload original artwork, then build the task-by-task reveal in one workspace.</p>
               </div>
-              <button type="button" className="admin-modal-close" onClick={() => setEditor(null)}>×</button>
+              <button type="button" className="btn-admin-secondary" onClick={() => setEditor(null)}>← Back to Labs</button>
             </div>
 
-            <div className="admin-modal-body admin-lab-editor-body">
+            <div className="admin-lab-editor-body">
               <div className="admin-lab-form-grid">
                 <label className="admin-field-label">
                   Lab name
@@ -239,8 +262,14 @@ function AdminLabs() {
                   <div className="admin-section-heading">Topology image</div>
                   <p>Use the original topology screenshot. It will be shown before the learner reveals tasks.</p>
                 </div>
-                <div className="admin-lab-upload-row">
+                <div
+                  className="admin-lab-upload-row admin-lab-paste-zone"
+                  tabIndex="0"
+                  onPaste={(event) => handleClipboardPaste(event, 'topology')}
+                  title="Click here and press Ctrl+V to paste an image"
+                >
                   {editor.topologyImage && <img className="admin-lab-upload-preview" src={editor.topologyImage} alt="Topology preview" />}
+                  <span className="admin-lab-paste-hint">Click here, then press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste an image</span>
                   <button type="button" className="btn-admin-secondary" onClick={() => topologyInputRef.current?.click()} disabled={uploading === 'lab_topology'}>
                     {uploading === 'lab_topology' ? 'Uploading…' : editor.topologyImage ? 'Replace topology' : 'Upload topology'}
                   </button>
@@ -253,7 +282,7 @@ function AdminLabs() {
                   <div className="admin-section-heading">Tasks and solutions</div>
                   <p>Each task can include learner-facing instructions, typed CLI commands, and an original command screenshot.</p>
                 </div>
-                <button type="button" className="btn-admin-secondary" onClick={addTask}>+ Add task</button>
+                <button type="button" className="btn-admin-primary admin-add-task-button" onClick={addTask}>+ Add another task</button>
               </div>
 
               <div className="admin-lab-task-editor-list">
@@ -272,10 +301,16 @@ function AdminLabs() {
                       Written commands (optional)
                       <textarea className="admin-textarea admin-command-textarea" rows="6" value={task.commandText || ''} onChange={(event) => updateTask(taskIndex, { commandText: event.target.value })} placeholder="R1# configure terminal&#10;R1(config)# …" />
                     </label>
-                    <div className="admin-task-screenshot-row">
+                    <div
+                      className="admin-task-screenshot-row admin-lab-paste-zone"
+                      tabIndex="0"
+                      onPaste={(event) => handleClipboardPaste(event, 'solution', taskIndex)}
+                      title="Click here and press Ctrl+V to paste a command screenshot"
+                    >
                       <div>
                         <div className="admin-field-label">Command screenshot (optional)</div>
                         {task.solutionImage && <img className="admin-task-screenshot-preview" src={task.solutionImage} alt={`Solution for ${task.label}`} />}
+                        <div className="admin-lab-paste-hint">Click here, then press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste a screenshot</div>
                       </div>
                       <label className="btn-admin-secondary admin-upload-button">
                         {uploading === `lab_solution_${taskIndex}` ? 'Uploading…' : task.solutionImage ? 'Replace screenshot' : 'Attach screenshot'}
@@ -287,12 +322,11 @@ function AdminLabs() {
               </div>
             </div>
 
-            <div className="admin-modal-footer">
+            <div className="admin-modal-footer admin-lab-editor-footer">
               <button type="button" className="btn-admin-secondary" onClick={() => setEditor(null)}>Cancel</button>
               <button type="submit" className="btn-admin-primary" disabled={saving || Boolean(uploading)}>{saving ? 'Saving…' : 'Save Lab'}</button>
             </div>
           </form>
-        </div>
       )}
     </div>
   );
