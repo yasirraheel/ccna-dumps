@@ -10845,6 +10845,46 @@ body {
   gap: .65rem;
 }
 
+.lab-footer-right-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+/* Keep Lab artwork compact while preserving enough scale to read labels and
+   commands. Learners can still open the original image separately when needed. */
+.lab-source-frame {
+  max-width: 980px;
+  max-height: 460px;
+  margin-inline: auto;
+}
+
+.lab-source-frame img {
+  max-height: 460px;
+}
+
+.lab-source-parts {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+.lab-source-parts img {
+  max-height: 320px;
+  object-fit: contain;
+}
+
+.lab-solution-slice,
+.lab-solution-image-wrap {
+  max-width: 860px;
+  max-height: 460px;
+  margin-inline: auto;
+}
+
+.lab-solution-image-wrap img {
+  max-height: 460px;
+}
+
 @media (max-width: 900px) {
   .lab-exsim-view {
     padding: 1.8rem 2rem !important;
@@ -10900,6 +10940,27 @@ body {
   .lab-footer-actions .btn-lab-next,
   .lab-footer-actions .lab-footer-review-button {
     width: 100%;
+  }
+
+  .lab-footer-right-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: .8rem;
+  }
+
+  .lab-footer-right-actions > * {
+    width: 100%;
+  }
+
+  .lab-source-frame img,
+  .lab-source-parts img,
+  .lab-solution-slice,
+  .lab-solution-image-wrap {
+    max-height: 320px;
+  }
+
+  .lab-solution-image-wrap img {
+    max-height: 320px;
   }
 
   .lab-rating-button {

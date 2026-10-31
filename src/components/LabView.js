@@ -411,25 +411,27 @@ function LabView({
 
           <div className="lab-footer-actions">
             <button type="button" className="btn-boson-nav" onClick={onExitToDashboard}>Save & Exit</button>
-            <button type="button" className="btn-boson-action lab-footer-review-button" onClick={() => setShowReviewMatrix(true)}>
-              Question Review
-            </button>
-            <button
-              type="button"
-              className={`btn-boson-action btn-lab-next ${!canProceed || isNavSaving ? "disabled" : ""}`}
-              disabled={!canProceed || isNavSaving}
-              onClick={handleNext}
-            >
-              {isNavSaving
-                ? "Saving…"
-                : !allSolutionsRevealed
-                ? "Reveal all tasks"
-                : !rating
-                ? "Choose a rating"
-                : canGoNext
-                ? "Next Lab →"
-                : "Finish Labs"}
-            </button>
+            <div className="lab-footer-right-actions">
+              <button type="button" className="btn-boson-action lab-footer-review-button" onClick={() => setShowReviewMatrix(true)}>
+                Question Review
+              </button>
+              <button
+                type="button"
+                className={`btn-boson-action btn-lab-next ${!canProceed || isNavSaving ? "disabled" : ""}`}
+                disabled={!canProceed || isNavSaving}
+                onClick={handleNext}
+              >
+                {isNavSaving
+                  ? "Saving…"
+                  : !allSolutionsRevealed
+                  ? "Reveal all tasks"
+                  : !rating
+                  ? "Choose a rating"
+                  : canGoNext
+                  ? "Next Lab →"
+                  : "Finish Labs"}
+              </button>
+            </div>
           </div>
         </section>
       </main>
