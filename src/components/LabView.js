@@ -147,7 +147,6 @@ function LabView({
         <section className="lab-question-card" aria-labelledby="lab-item-title">
           <div className="lab-item-heading-row">
             <div>
-              <span className="lab-eyebrow">Guided configuration lab</span>
               <h1 id="lab-item-title">{question?.labItemLabel || `ITEM ${seqNumber}`}</h1>
             </div>
             <span className="lab-question-count">Lab {seqNumber} of {numQuestions}</span>
@@ -164,7 +163,6 @@ function LabView({
           <div className="lab-task-reveal-header">
             <div>
               <h2>Tasks</h2>
-              <p>Select each task in order to reveal its solution.</p>
             </div>
             <span className="lab-task-progress">{Math.min(revealedTasks.length, tasks.length)} / {tasks.length} revealed</span>
           </div>
@@ -185,7 +183,6 @@ function LabView({
                     <span className="lab-task-number">{taskIndex + 1}</span>
                     <span className="lab-task-copy">
                       <strong>{task.label}</strong>
-                      <span>{isRevealed ? "Solution revealed" : isAvailable ? "Click to reveal solution" : "Complete the previous task first"}</span>
                     </span>
                     <span className="lab-task-chevron" aria-hidden="true">{isRevealed ? "✓" : isAvailable ? "→" : "•"}</span>
                   </button>
