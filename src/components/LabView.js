@@ -57,10 +57,14 @@ function LabView({
   isNavSaving = false,
   isPaused = false,
   onTogglePause,
+  isFlagged = false,
+  onToggleFlag,
 }) {
   const tasks = Array.isArray(question?.tasks) ? question.tasks : [];
   const [revealedTasks, setRevealedTasks] = useState([]);
   const [rating, setRating] = useState(null);
+  const [labNote, setLabNote] = useState("");
+  const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
 
   const progressStorageKey = useMemo(
     () => `${LAB_PROGRESS_PREFIX}${activeSessionId || "local"}_${question?.id || seqNumber}`,
@@ -71,15 +75,17 @@ function LabView({
     const saved = readSavedProgress(activeSessionId || "local", question?.id || seqNumber);
     setRevealedTasks(Array.isArray(saved?.revealedTasks) ? saved.revealedTasks : []);
     setRating(saved?.rating || null);
+    setLabNote(saved?.note || "");
   }, [activeSessionId, question?.id, seqNumber]);
 
-  const persistProgress = (nextRevealedTasks, nextRating) => {
+  const persistProgress = (nextRevealedTasks, nextRating, nextNote = labNote) => {
     try {
       localStorage.setItem(
         progressStorageKey,
         JSON.stringify({
           revealedTasks: nextRevealedTasks,
           rating: nextRating,
+          note: nextNote,
           updatedAt: Date.now(),
         })
       );
@@ -102,6 +108,11 @@ function LabView({
     if (isPaused) return;
     setRating(nextRating);
     persistProgress(revealedTasks, nextRating);
+  };
+
+  const saveLabNote = () => {
+    persistProgress(revealedTasks, rating, labNote);
+    setIsNoteEditorOpen(false);
   };
 
   const allSolutionsRevealed = tasks.length > 0 && revealedTasks.length >= tasks.length;
@@ -178,8 +189,8 @@ function LabView({
                 )}
               </button>
             )}
-            <div className="btn-top-notes-summary" aria-label="Lab notes (0)">
-              <span>💬 Notes (0)</span>
+            <div className={`btn-top-notes-summary ${labNote ? "has-notes" : ""}`} aria-label={`Lab notes (${labNote ? 1 : 0})`}>
+              <span>💬 Notes ({labNote ? 1 : 0})</span>
             </div>
           </div>
         </div>
@@ -213,6 +224,26 @@ function LabView({
                 </svg>
                 <span>Original Source</span>
               </button>
+              <button
+                type="button"
+                className={`btn-boson-note-toggle ${labNote ? "has-active-note" : ""}`}
+                onClick={() => setIsNoteEditorOpen((previous) => !previous)}
+              >
+                <svg className="note-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span>{labNote ? "Note Attached ✓" : "Add Note"}</span>
+              </button>
+              <button
+                type="button"
+                className={`btn-boson-flag ${isFlagged ? "is-flagged" : ""}`}
+                onClick={() => onToggleFlag?.(seqNumber - 1)}
+              >
+                <svg className="flag-svg-icon flag-outline" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" />
+                </svg>
+                <span>{isFlagged ? "Marked for Review" : "Mark for Review"}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -231,6 +262,21 @@ function LabView({
               style={{ width: "100%", maxWidth: "none" }}
             />
           </div>
+
+          {isNoteEditorOpen && (
+            <div className="lab-note-editor">
+              <textarea
+                value={labNote}
+                onChange={(event) => setLabNote(event.target.value)}
+                placeholder="Add a note about this lab"
+                aria-label="Lab note"
+              />
+              <div className="lab-note-editor-actions">
+                <button type="button" className="btn-boson-nav" onClick={() => setIsNoteEditorOpen(false)}>Cancel</button>
+                <button type="button" className="btn-boson-action" onClick={saveLabNote}>Save Note</button>
+              </div>
+            </div>
+          )}
 
           <div className="lab-task-reveal-header">
             <div>
