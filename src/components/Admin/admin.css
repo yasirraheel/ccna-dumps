@@ -90,6 +90,185 @@
 .admin-remove-image-button { display: block; margin-top: 7px; padding: 0; }
 .admin-lab-editor-footer { margin-top: 4px; }
 
+/* Guided Lab Builder: use the same readable scale as the learner view and
+   give every authoring stage its own surface. */
+.admin-lab-editor-page {
+  border-color: #334155;
+  background: #111827;
+}
+
+.admin-lab-editor-page .admin-card-title {
+  font-size: 1.45rem;
+}
+
+.admin-lab-editor-page .admin-lab-modal-subtitle,
+.admin-lab-editor-page .admin-lab-description {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.admin-lab-editor-body {
+  padding: 2rem 2.25rem 2.5rem;
+}
+
+.admin-lab-form-grid {
+  gap: 1.25rem;
+  padding: 1.35rem;
+  border: 1px solid #334155;
+  border-radius: 0.9rem;
+  background: #0f172a;
+}
+
+.admin-field-label {
+  gap: 0.6rem;
+  color: #e2e8f0;
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.admin-input,
+.admin-textarea {
+  min-height: 3.1rem;
+  padding: 0.85rem 1rem;
+  border-color: #475569;
+  border-radius: 0.7rem;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.admin-textarea {
+  min-height: 8.5rem;
+}
+
+.admin-command-textarea {
+  color: #bbf7d0;
+  font-size: 1rem;
+}
+
+.admin-section-heading {
+  color: #f8fafc;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.admin-lab-upload-panel,
+.admin-lab-task-editor {
+  margin-top: 1.6rem;
+  padding: 1.5rem;
+  border-color: #334155;
+  border-radius: 0.95rem;
+  background: #0f172a;
+}
+
+.admin-lab-upload-panel p,
+.admin-lab-tasks-heading p {
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.admin-lab-tasks-heading {
+  margin-top: 2.25rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #334155;
+  border-radius: 0.9rem;
+  background: #162033;
+}
+
+.admin-lab-task-editor-list {
+  gap: 1.5rem;
+}
+
+.admin-lab-task-editor {
+  border-color: #3b4b64;
+  background: #101a2c;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.2);
+}
+
+.admin-lab-task-editor-header {
+  gap: 0.9rem;
+  margin: -0.1rem 0 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #334155;
+}
+
+.admin-lab-task-index {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-basis: 2.35rem;
+  font-size: 1.15rem;
+}
+
+.admin-task-label-input {
+  min-height: 3.25rem;
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+
+.admin-task-screenshot-row {
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  padding: 1.2rem 1.25rem;
+  border: 1px solid #334155;
+  border-radius: 0.8rem;
+  background: #0b1220;
+}
+
+.admin-task-reference-upload {
+  border-top: 1px solid #334155;
+  padding-top: 1.2rem;
+}
+
+.admin-task-screenshot-row .admin-field-label {
+  font-size: 1rem;
+}
+
+.admin-lab-paste-hint {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.admin-task-screenshot-preview {
+  width: min(420px, 100%);
+  max-height: 220px;
+  margin-top: 0.65rem;
+  border-color: #64748b;
+}
+
+.admin-lab-task-details-grid {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #334155;
+}
+
+.admin-add-task-bottom {
+  margin: 1.5rem auto 0;
+  min-height: 3.2rem;
+  padding-inline: 1.5rem;
+  font-size: 1rem;
+}
+
+.admin-lab-editor-footer {
+  padding: 1.25rem 2.25rem;
+  border-top: 1px solid #334155;
+}
+
+@media (max-width: 680px) {
+  .admin-lab-editor-body {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .admin-lab-editor-footer {
+    padding: 1rem;
+  }
+
+  .admin-lab-upload-panel,
+  .admin-lab-task-editor {
+    padding: 1rem;
+  }
+}
+
 @media (max-width: 680px) {
   .admin-lab-form-grid { grid-template-columns: 1fr; }
   .admin-lab-row { align-items: flex-start; flex-wrap: wrap; }
