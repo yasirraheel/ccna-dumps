@@ -247,16 +247,6 @@ function LabView({
             <h1 className="boson-exam-title">Cisco 200-301 CCNA Exam Simulator</h1>
           </div>
           <div className="boson-sub-header">
-            <div className="boson-sub-left">
-              <div className="lab-header-identity">
-                <span className="lab-name-label">{labName}</span>
-                <span className="boson-dot-sep">•</span>
-                <span className="boson-q-count">Lab {seqNumber} of {numQuestions}</span>
-                <span className="boson-dot-sep">•</span>
-                <span className="boson-live-score">Guided practice</span>
-                <span className="boson-qno-pill lab-item-label">{labItemLabel}</span>
-              </div>
-            </div>
             <div className="boson-sub-right-actions">
               <button
                 type="button"
@@ -314,7 +304,11 @@ function LabView({
         <section className="lab-question-card" aria-label="Lab topology and tasks">
           <div className="lab-study-layout">
             <aside className="lab-topology-column" aria-label="Lab topology">
-              <div className="lab-topology-heading">Topology</div>
+              <div className="lab-topology-heading">
+                <span className="lab-section-caption">Lab</span>
+                <strong>{labName}</strong>
+                <span className="lab-section-subtitle">Topology</span>
+              </div>
               {sourceParts.length > 0 ? (
                 <div id="lab-source-image" className="lab-source-parts">
                   {(topologyParts.length > 0 ? topologyParts : sourceParts).map((part) => (
@@ -362,8 +356,9 @@ function LabView({
           )}
 
               <div className="lab-task-reveal-header">
-            <div>
-              <h2>Tasks</h2>
+            <div className="lab-task-heading-copy">
+              <span className="lab-section-caption">Tasks</span>
+              <h2>{labItemLabel}</h2>
             </div>
             <span className="lab-task-progress">{Math.min(revealedTasks.length, tasks.length)} / {tasks.length} revealed</span>
           </div>
