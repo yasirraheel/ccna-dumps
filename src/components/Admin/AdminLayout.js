@@ -33,6 +33,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
     const targetUrl = tab === "dashboard" ? "/admin" : `/admin/${tab}`;
     if (window.location.pathname !== targetUrl) {
       window.history.pushState({ adminTab: tab }, "", targetUrl);
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   };
 

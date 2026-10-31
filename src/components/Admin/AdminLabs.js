@@ -18,6 +18,24 @@ const blankLab = () => ({
   tasks: [newTask(0)]
 });
 
+function getLabEditorRoute() {
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (path === '/admin/labs/new') return { mode: 'new' };
+  const match = path.match(/^\/admin\/labs\/([^/]+)\/edit$/);
+  return match ? { mode: 'edit', id: decodeURIComponent(match[1]) } : { mode: 'list' };
+}
+
+function pushLabRoute(route) {
+  const nextPath = route === 'new'
+    ? '/admin/labs/new'
+    : route
+      ? `/admin/labs/${encodeURIComponent(route)}/edit`
+      : '/admin/labs';
+  if (window.location.pathname !== nextPath) {
+    window.history.pushState({ adminLabRoute: nextPath }, '', nextPath);
+  }
+}
+
 function AdminLabs() {
   const [labs, setLabs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +44,25 @@ function AdminLabs() {
   const [uploading, setUploading] = useState('');
   const [feedback, setFeedback] = useState(null);
   const topologyInputRef = useRef(null);
+
+  const editorFromLab = (lab) => {
+    const topologyPart = (lab.sourceParts || []).find((part) => /topology/i.test(`${part?.id || ''} ${part?.alt || ''}`)) || lab.sourceParts?.[0];
+    return {
+      id: lab.id || '',
+      title: lab.title || '',
+      itemLabel: lab.labItemLabel || lab.itemLabel || '',
+      topologyImage: lab.topologyImage || lab.sourceImage || topologyPart?.src || '',
+      sourceParts: Array.isArray(lab.sourceParts) ? lab.sourceParts : [],
+      sourceWidth: lab.sourceWidth || '',
+      sourceHeight: lab.sourceHeight || '',
+      sourceDisplayWidth: lab.sourceDisplayWidth || '',
+      sourceDisplayHeight: lab.sourceDisplayHeight || '',
+      topologyCropHeight: lab.topologyCropHeight || '',
+      tasks: Array.isArray(lab.tasks) && lab.tasks.length > 0
+        ? lab.tasks.map((task, index) => ({ ...newTask(index), ...task }))
+        : [newTask(0)]
+    };
+  };
 
   const loadLabs = async () => {
     try {
@@ -42,6 +79,23 @@ function AdminLabs() {
   };
 
   useEffect(() => { loadLabs(); }, []);
+
+  useEffect(() => {
+    const syncEditorRoute = () => {
+      const route = getLabEditorRoute();
+      if (route.mode === 'list') {
+        setEditor(null);
+      } else if (route.mode === 'new') {
+        setEditor((current) => current || blankLab());
+      } else {
+        const lab = labs.find((item) => item.id === route.id);
+        if (lab) setEditor((current) => current?.id === lab.id ? current : editorFromLab(lab));
+      }
+    };
+    syncEditorRoute();
+    window.addEventListener('popstate', syncEditorRoute);
+    return () => window.removeEventListener('popstate', syncEditorRoute);
+  }, [labs]);
 
   const updateEditor = (patch) => setEditor((previous) => ({ ...previous, ...patch }));
 
@@ -149,27 +203,14 @@ function AdminLabs() {
 
   const openCreate = () => {
     setFeedback(null);
+    pushLabRoute('new');
     setEditor(blankLab());
   };
 
   const openEdit = (lab) => {
     setFeedback(null);
-    const topologyPart = (lab.sourceParts || []).find((part) => /topology/i.test(`${part?.id || ''} ${part?.alt || ''}`)) || lab.sourceParts?.[0];
-    setEditor({
-      id: lab.id || '',
-      title: lab.title || '',
-      itemLabel: lab.labItemLabel || lab.itemLabel || '',
-      topologyImage: lab.topologyImage || lab.sourceImage || topologyPart?.src || '',
-      sourceParts: Array.isArray(lab.sourceParts) ? lab.sourceParts : [],
-      sourceWidth: lab.sourceWidth || '',
-      sourceHeight: lab.sourceHeight || '',
-      sourceDisplayWidth: lab.sourceDisplayWidth || '',
-      sourceDisplayHeight: lab.sourceDisplayHeight || '',
-      topologyCropHeight: lab.topologyCropHeight || '',
-      tasks: Array.isArray(lab.tasks) && lab.tasks.length > 0
-        ? lab.tasks.map((task, index) => ({ ...newTask(index), ...task }))
-        : [newTask(0)]
-    });
+    pushLabRoute(lab.id);
+    setEditor(editorFromLab(lab));
   };
 
   const saveLab = async (event) => {
@@ -191,6 +232,7 @@ function AdminLabs() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Unable to save lab.');
       setFeedback({ type: 'success', message: 'Lab saved successfully.' });
+      pushLabRoute(null);
       setEditor(null);
       await loadLabs();
     } catch (error) {
@@ -268,7 +310,7 @@ function AdminLabs() {
                 <h3 className="admin-card-title"><span>🧪</span> {editor.id ? 'Edit Guided Lab' : 'Add Guided Lab'}</h3>
                 <p className="admin-lab-modal-subtitle">Upload original artwork, then build the task-by-task reveal in one workspace.</p>
               </div>
-              <button type="button" className="btn-admin-secondary" onClick={() => setEditor(null)}>← Back to Labs</button>
+              <button type="button" className="btn-admin-secondary" onClick={() => { pushLabRoute(null); setEditor(null); }}>← Back to Labs</button>
             </div>
 
             <div className="admin-lab-editor-body">
@@ -388,7 +430,7 @@ function AdminLabs() {
             </div>
 
             <div className="admin-modal-footer admin-lab-editor-footer">
-              <button type="button" className="btn-admin-secondary" onClick={() => setEditor(null)}>Cancel</button>
+              <button type="button" className="btn-admin-secondary" onClick={() => { pushLabRoute(null); setEditor(null); }}>Cancel</button>
               <button type="submit" className="btn-admin-primary" disabled={saving || Boolean(uploading)}>{saving ? 'Saving…' : 'Save Lab'}</button>
             </div>
           </form>
