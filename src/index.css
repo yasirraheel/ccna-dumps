@@ -10923,6 +10923,38 @@ body {
   background: #fff;
 }
 
+.lab-task-written-content {
+  margin: 0 1.6rem 1rem 5.2rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  border: 1px solid rgba(56, 189, 248, .25);
+  border-radius: .65rem;
+  color: #dbeafe;
+  background: rgba(15, 23, 42, .72);
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.lab-task-image-wrap {
+  max-width: 860px;
+  max-height: 360px;
+  margin: 0 1.6rem 1.2rem 5.2rem;
+  overflow: auto;
+  border: 1px solid rgba(56, 189, 248, .25);
+  border-radius: .7rem;
+  background: #0b0f17;
+}
+
+.lab-task-image-wrap img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
+}
+
 .lab-task-reveal-header h2 {
   color: #f1f5f9 !important;
   font-size: 1.7rem !important;
@@ -11013,9 +11045,15 @@ body {
   }
 
   .lab-task-prompt,
-  .lab-solution-panel {
+  .lab-solution-panel,
+  .lab-task-written-content,
+  .lab-task-image-wrap {
     margin-left: 1.2rem !important;
     padding-left: 1rem !important;
+  }
+
+  .lab-task-image-wrap {
+    padding-left: 0 !important;
   }
 
   .lab-rating-actions,

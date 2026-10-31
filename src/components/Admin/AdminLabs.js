@@ -92,6 +92,22 @@ function AdminLabs() {
     }, `lab_solution_${taskIndex}`);
   };
 
+  const saveTaskReferenceImage = (taskIndex, file) => {
+    uploadImage(file, 'lab_task', (url) => {
+      setEditor((previous) => {
+        const tasks = [...previous.tasks];
+        tasks[taskIndex] = { ...tasks[taskIndex], taskImage: url };
+        return { ...previous, tasks };
+      });
+    }, `lab_task_${taskIndex}`);
+  };
+
+  const handleTaskReferenceUpload = (taskIndex, event) => {
+    const file = event.target.files?.[0];
+    saveTaskReferenceImage(taskIndex, file);
+    event.target.value = '';
+  };
+
   const handleClipboardPaste = (event, target, taskIndex = null) => {
     const items = Array.from(event.clipboardData?.items || []);
     const imageItem = items.find((item) => item.kind === 'file' && item.type.startsWith('image/'));
@@ -101,6 +117,8 @@ function AdminLabs() {
     if (!file) return;
     if (target === 'topology') {
       uploadImage(file, 'lab_topology', (url) => updateEditor({ topologyImage: url }));
+    } else if (target === 'task' && taskIndex !== null) {
+      saveTaskReferenceImage(taskIndex, file);
     } else if (taskIndex !== null) {
       saveTaskImage(taskIndex, file);
     }
@@ -301,6 +319,31 @@ function AdminLabs() {
                       Task instructions
                       <textarea className="admin-textarea" rows="4" value={task.text} onChange={(event) => updateTask(taskIndex, { text: event.target.value })} placeholder="Write exactly what the learner must configure…" />
                     </label>
+                    <label className="admin-field-label">
+                      Task written content (optional)
+                      <textarea className="admin-textarea" rows="4" value={task.taskText || ''} onChange={(event) => updateTask(taskIndex, { taskText: event.target.value })} placeholder="Add extra task details, addressing tables, or reference notes…" />
+                    </label>
+                    <div
+                      className="admin-task-screenshot-row admin-lab-paste-zone admin-task-reference-upload"
+                      tabIndex="0"
+                      onPaste={(event) => handleClipboardPaste(event, 'task', taskIndex)}
+                      title="Click here and press Ctrl+V to paste a task screenshot"
+                    >
+                      <div>
+                        <div className="admin-field-label">Task screenshot (optional)</div>
+                        {task.taskImage && <img className="admin-task-screenshot-preview" src={task.taskImage} alt={`Reference for ${task.label}`} />}
+                        <div className="admin-lab-paste-hint">Click here, then press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste a task screenshot</div>
+                        {task.taskImage && (
+                          <button type="button" className="admin-text-danger admin-remove-image-button" onClick={() => updateTask(taskIndex, { taskImage: '' })}>
+                            Remove task screenshot
+                          </button>
+                        )}
+                      </div>
+                      <label className="btn-admin-secondary admin-upload-button">
+                        {uploading === `lab_task_${taskIndex}` ? 'Uploading…' : task.taskImage ? 'Replace task screenshot' : 'Attach task screenshot'}
+                        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => handleTaskReferenceUpload(taskIndex, event)} hidden />
+                      </label>
+                    </div>
                     <label className="admin-field-label">
                       Written commands (optional)
                       <textarea className="admin-textarea admin-command-textarea" rows="6" value={task.commandText || ''} onChange={(event) => updateTask(taskIndex, { commandText: event.target.value })} placeholder="R1# configure terminal&#10;R1(config)# …" />

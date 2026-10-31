@@ -388,6 +388,16 @@ function LabView({
 
                   <div className="lab-task-prompt">{task.text}</div>
 
+                  {task.taskText && (
+                    <pre className="lab-task-written-content">{task.taskText}</pre>
+                  )}
+
+                  {task.taskImage && (
+                    <div className="lab-task-image-wrap">
+                      <img src={task.taskImage} alt={`Reference for ${task.label}`} />
+                    </div>
+                  )}
+
                   {isRevealed && (
                     <div className="lab-solution-panel">
                       <div className="lab-solution-heading">Solution</div>

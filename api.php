@@ -2368,6 +2368,8 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 "id" => trim((string)($task['id'] ?? ('lab-task-' . ($index + 1)))) ?: ('lab-task-' . ($index + 1)),
                 "label" => trim((string)($task['label'] ?? ('Task ' . ($index + 1)))) ?: ('Task ' . ($index + 1)),
                 "text" => $taskText,
+                "taskText" => trim((string)($task['taskText'] ?? $task['task_text'] ?? '')),
+                "taskImage" => trim((string)($task['taskImage'] ?? $task['task_image'] ?? '')),
                 "commandText" => trim((string)($task['commandText'] ?? $task['command_text'] ?? '')),
                 "solutionImage" => trim((string)($task['solutionImage'] ?? $task['solution_image'] ?? '')),
             ];
@@ -2679,7 +2681,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
 
         $file = $_FILES['image'];
         $uploadType = strtolower(trim($_POST['type'] ?? 'exhibit'));
-        $targetSubdir = in_array($uploadType, ['lab', 'lab_topology', 'lab_solution', 'lab_source'], true)
+        $targetSubdir = in_array($uploadType, ['lab', 'lab_topology', 'lab_task', 'lab_solution', 'lab_source'], true)
             ? 'lab_assets'
             : (($uploadType === 'original_source' || $uploadType === 'source') ? 'original_sources' : 'exhibits');
 
