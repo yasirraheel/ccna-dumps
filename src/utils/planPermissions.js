@@ -8,6 +8,7 @@ export const EXAM_BANKS = [
   { key: 'bank_d', name: 'Exam Bank D (151-207)', totalQuestions: 57, defaultMax: 57 },
   { key: 'bank_dragdrop', name: 'Drag & Drop Special Bank', totalQuestions: 21, defaultMax: 21 },
   { key: 'bank_all', name: 'All Questions Bank', totalQuestions: 228, defaultMax: 228 },
+  { key: 'bank_labs', name: 'Labs', totalQuestions: 1, defaultMax: 1 },
 ];
 
 export const normalizePlan = (plan) => {
@@ -42,6 +43,10 @@ const resolveUserPlanConfig = (user, plans = []) => {
 
 export const isPlanAllowedForBank = (user, bankKey, plans = []) => {
   if (isUserAdmin(user)) return true;
+
+  // Guided Labs are a separate study experience and are intentionally
+  // available without changing access rules for the scored exam banks.
+  if (bankKey === 'bank_labs') return true;
 
   const planConfig = resolveUserPlanConfig(user, plans);
   if (planConfig && planConfig[bankKey]) {
@@ -94,6 +99,7 @@ export const isPlanAllowedForMode = (user, mode, plans = []) => {
 };
 
 export const getBankRequiredPlanName = (bankKey) => {
+  if (bankKey === 'bank_labs') return 'Free Study Pass';
   if (bankKey === 'bank_a' || bankKey === 'bank_b') return 'Free Study Pass';
   return 'CCNA Pro Pass';
 };

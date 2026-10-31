@@ -12,7 +12,7 @@ const PASSING_PERCENTAGE = 82.5;
 
 /**
  * Matches an exam attempt record to one of the canonical bank keys:
- * 'bank_a' | 'bank_b' | 'bank_c' | 'bank_d' | 'bank_dragdrop' | 'bank_all'
+ * 'bank_a' | 'bank_b' | 'bank_c' | 'bank_d' | 'bank_dragdrop' | 'bank_all' | 'bank_labs'
  */
 export function matchExamToBankKey(exam) {
   if (!exam) return null;
@@ -27,7 +27,12 @@ export function matchExamToBankKey(exam) {
     exam.bankName || exam.selectedBankName || exam.name || ""
   ).toLowerCase();
 
-  // 1. Drag & Drop Special Bank
+  // 1. Guided Labs
+  if (rawName === "labs" || rawName.startsWith("labs ") || rawName.includes("lab exam")) {
+    return "bank_labs";
+  }
+
+  // 2. Drag & Drop Special Bank
   if (
     rawName.includes("drag & drop") ||
     rawName.includes("drag and drop") ||
@@ -36,7 +41,7 @@ export function matchExamToBankKey(exam) {
     return "bank_dragdrop";
   }
 
-  // 2. Exam C (101-150) - Check before A to prevent 101-150 from triggering 1-50
+  // 3. Exam C (101-150) - Check before A to prevent 101-150 from triggering 1-50
   if (
     rawName.includes("exam c") ||
     rawName.includes("bank c") ||
@@ -45,7 +50,7 @@ export function matchExamToBankKey(exam) {
     return "bank_c";
   }
 
-  // 3. Exam D (151-207)
+  // 4. Exam D (151-207)
   if (
     rawName.includes("exam d") ||
     rawName.includes("bank d") ||
@@ -54,7 +59,7 @@ export function matchExamToBankKey(exam) {
     return "bank_d";
   }
 
-  // 4. Exam B (51-100)
+  // 5. Exam B (51-100)
   if (
     rawName.includes("exam b") ||
     rawName.includes("bank b") ||
@@ -63,7 +68,7 @@ export function matchExamToBankKey(exam) {
     return "bank_b";
   }
 
-  // 5. Exam A (1-50)
+  // 6. Exam A (1-50)
   if (
     rawName.includes("exam a") ||
     rawName.includes("bank a") ||
@@ -74,7 +79,7 @@ export function matchExamToBankKey(exam) {
     return "bank_a";
   }
 
-  // 6. All Questions / Full Pool
+  // 7. All Questions / Full Pool
   if (
     rawName.includes("all questions") ||
     rawName.includes("all available") ||

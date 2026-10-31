@@ -20,6 +20,7 @@ import {
   mergeUniqueQuestions,
 } from "../utils/incorrectQuestionPool";
 import { cleanBankTitle } from "../utils/bankTitle";
+import { LAB_QUESTIONS } from "../data/labQuestions";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -261,6 +262,10 @@ function ExamDashboard({
     let bankTitle = "Full Question Bank";
 
     switch (selectedBank) {
+      case "bank_labs":
+        filtered = LAB_QUESTIONS;
+        bankTitle = "Labs";
+        break;
       case "bank_a":
         filtered = nonDD.slice(0, 50);
         bankTitle = "Exam A (1–50)";
@@ -299,6 +304,7 @@ function ExamDashboard({
   };
 
   const isSimulation = examMode === "simulation";
+  const isLabBank = selectedBank === "bank_labs";
 
   const handleBankSelect = (bankKey, bankLabel) => {
     if (!isPlanAllowedForBank(currentUser, bankKey, availablePlans)) {
@@ -311,10 +317,16 @@ function ExamDashboard({
       return;
     }
     setSelectedBank(bankKey);
-    savePreferencesToServer({ selectedBank: bankKey });
+    if (bankKey === "bank_labs") {
+      setExamMode("study");
+      savePreferencesToServer({ selectedBank: bankKey, examMode: "study" });
+    } else {
+      savePreferencesToServer({ selectedBank: bankKey });
+    }
   };
 
   const handleModeSelect = (mode) => {
+    if (isLabBank) return;
     if (!isPlanAllowedForMode(currentUser, mode, availablePlans)) {
       if (onOpenUpgrade) {
         onOpenUpgrade({
@@ -351,7 +363,7 @@ function ExamDashboard({
       return;
     }
 
-    if (!isPlanAllowedForMode(currentUser, examMode, availablePlans)) {
+    if (!isLabBank && !isPlanAllowedForMode(currentUser, examMode, availablePlans)) {
       if (onOpenUpgrade) {
         onOpenUpgrade({
           title: "🔒 Simulation Mode is Locked",
@@ -362,6 +374,26 @@ function ExamDashboard({
     }
 
     let { filtered, bankTitle } = getBankFilteredQuestions();
+
+    if (isLabBank) {
+      onStartExam({
+        questions: filtered,
+        examMode: "study",
+        settings: {
+          ...settings,
+          randomizeQuestions: false,
+          randomizeAnswers: false,
+          includeShowAnswerBtn: false,
+          showAnswersInline: false,
+          showScoreLive: false,
+          timerMode: "not_timed",
+          labMode: true,
+        },
+        bankName: "Labs",
+        bankKey: "bank_labs",
+      });
+      return;
+    }
 
     if (isSimulation) {
       if (selectedBank === "bank_all") {
@@ -678,7 +710,9 @@ function ExamDashboard({
                 <div className="bank-options-list">
                   {EXAM_BANKS.map((bank) => {
                     const isLocked = !isPlanAllowedForBank(currentUser, bank.key, availablePlans);
-                    const totalInBank = bank.key === "bank_dragdrop"
+                    const totalInBank = bank.key === "bank_labs"
+                      ? LAB_QUESTIONS.length
+                      : bank.key === "bank_dragdrop"
                       ? allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length
                       : (bank.key === "bank_all" ? totalQuestionsCount : bank.totalQuestions);
                     const allowedCount = getBankAllowedQuestionCount(currentUser, bank.key, totalInBank, availablePlans);

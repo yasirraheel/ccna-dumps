@@ -1,6 +1,7 @@
 import React, { useReducer, useEffect, useState, useRef, useCallback } from "react";
 import ExamDashboard from "./ExamDashboard";
 import QuestionView from "./QuestionView";
+import LabView from "./LabView";
 import FinishScreen from "./FinishScreen";
 import Loader from "./Loader";
 import Error from "./Error";
@@ -342,6 +343,7 @@ function reducer(state, action) {
         examMode,
         settings,
         selectedBankName,
+        selectedBankKey,
         activeSessionId,
         revealedQuestions,
         committedQuestions,
@@ -402,6 +404,9 @@ function reducer(state, action) {
           examMode: examMode || "study",
           settings: effectiveSettings,
         selectedBankName: selectedBankName || "Resumed CCNA Exam",
+        selectedBankKey: selectedBankKey || matchExamToBankKey({
+          bankName: selectedBankName || "Resumed CCNA Exam",
+        }),
         status: "active",
         activeSessionId: finalSessionId,
         startedAt: initialStartTime,
@@ -2125,6 +2130,9 @@ export default function App() {
         examMode: session.examMode || "study",
         settings: effectiveSettings,
         selectedBankName: session.selectedBankName || session.bankName || "Resumed CCNA Exam",
+        selectedBankKey: session.selectedBankKey || matchExamToBankKey({
+          bankName: session.selectedBankName || session.bankName || "Resumed CCNA Exam",
+        }),
         activeSessionId: session.id,
         revealedQuestions: session.revealedQuestions || [],
         startedAt: initialStartTime,
@@ -2912,6 +2920,73 @@ export default function App() {
 
         {/* 2. ACTIVE EXAM VIEW */}
         {status === "active" && questions[index] && (
+          selectedBankKey === "bank_labs" ? (
+          <LabView
+            question={questions[index]}
+            seqNumber={index + 1}
+            numQuestions={numQuestions}
+            selectedBankName={selectedBankName}
+            candidateName={currentUser?.name || candidateName}
+            activeSessionId={activeSessionId}
+            onGoToQuestion={handleGoToQuestion}
+            onExitToDashboard={() => {
+              const now = Date.now();
+              const sessionSnapshot = {
+                id: activeSessionId || `session_${startedAt || now}`,
+                userId: currentUser?.id || null,
+                userEmail: currentUser?.email || null,
+                candidateName: currentUser?.name || candidateName,
+                status: "active",
+                questions,
+                index,
+                answer,
+                answers,
+                points,
+                secondsRemaining,
+                examMode,
+                settings,
+                selectedBankName,
+                selectedBankKey: selectedBankKey || matchExamToBankKey({ bankName: selectedBankName }),
+                bankName: selectedBankName,
+                flaggedQuestions,
+                revealedQuestions: revealedQuestions || [],
+                committedQuestions: committedQuestions || [],
+                startedAt: startedAt || now,
+                savedAt: now,
+                updatedAt: now,
+                isPaused: false,
+              };
+
+              syncActiveSessionToLocalStorage(sessionSnapshot);
+
+              try {
+                fetch(`${API_BASE_URL}/sessions`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(sanitizeSessionPayload(sessionSnapshot)),
+                  keepalive: true,
+                }).catch(() => {});
+              } catch (e) {}
+
+              setSavedSessions((prev) => {
+                const existingIdx = prev.findIndex((s) => s.id === sessionSnapshot.id);
+                let updated;
+                if (existingIdx >= 0) {
+                  updated = [...prev];
+                  updated[existingIdx] = sessionSnapshot;
+                } else {
+                  updated = [sessionSnapshot, ...prev];
+                }
+                return updated;
+              });
+
+              dispatch({ type: "suspendToDashboard" });
+              handleNavigate("dashboard");
+              loadFreshDashboardData();
+            }}
+            isNavSaving={isNavTransitioning}
+          />
+        ) : (
           <QuestionView
             question={questions[index]}
             seqNumber={index + 1}
@@ -3006,6 +3081,7 @@ export default function App() {
             currentUser={currentUser}
             secondsRemaining={secondsRemaining}
           />
+          )
         )}
 
         {/* 3. FINISH / SCORE REPORT */}
