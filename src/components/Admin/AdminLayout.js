@@ -9,6 +9,23 @@ import AdminSettings from './AdminSettings';
 import { adminFetch } from '../../utils/adminApi';
 
 function AdminLayout({ currentUser, onExitAdmin }) {
+  // ── ROOT FONT-SIZE FIX ────────────────────────────────────────────────────
+  // index.css sets html { font-size: 62.5% } (= 10px) so the frontend can use
+  // convenient rem units (1.6rem = 16px). BUT rem always resolves from the html
+  // root, so every rem value inside admin.css renders at 10px-based scale —
+  // making all admin text, buttons, and form controls tiny.
+  // Solution: temporarily restore the html font-size to 100% (= 16px) while
+  // the admin panel is mounted, then put it back when the user exits.
+  useEffect(() => {
+    const html = document.documentElement;
+    const previous = html.style.fontSize;
+    html.style.fontSize = '100%';           // 1rem = 16px while admin is open
+    return () => {
+      html.style.fontSize = previous;       // restore when admin unmounts
+    };
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const getInitialAdminTab = () => {
     const path = window.location.pathname.toLowerCase().replace(/\/+$/, "");
     const search = new URLSearchParams(window.location.search);
