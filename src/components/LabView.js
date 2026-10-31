@@ -120,6 +120,10 @@ function LabView({
   const canProceed = allSolutionsRevealed && Boolean(rating);
   const initials = getCandidateInitials(candidateName);
   const bankLabel = selectedBankName || "Labs";
+  const sourceWidth = question?.sourceWidth || 1312;
+  const sourceHeight = question?.sourceHeight || 1199;
+  const sourceDisplayWidth = question?.sourceDisplayWidth || sourceWidth;
+  const sourceDisplayHeight = question?.sourceDisplayHeight || question?.topologyCropHeight || sourceHeight;
 
   const handleNext = async () => {
     if (!canProceed || isNavSaving) return;
@@ -254,12 +258,12 @@ function LabView({
           <div
             id="lab-source-image"
             className="lab-source-frame"
-            style={{ aspectRatio: `${question?.sourceWidth || 1312} / ${question?.topologyCropHeight || 545}` }}
+            style={{ aspectRatio: `${sourceDisplayWidth} / ${sourceDisplayHeight}` }}
           >
             <img
               src={question?.sourceImage}
               alt="Lab topology and tasks"
-              style={{ width: "100%", maxWidth: "none" }}
+              style={{ width: `${(sourceWidth / sourceDisplayWidth) * 100}%`, maxWidth: "none" }}
             />
           </div>
 
@@ -312,8 +316,8 @@ function LabView({
                       <div className="lab-solution-heading">Solution</div>
                       <LabSolutionSlice
                         sourceImage={question.sourceImage}
-                        sourceWidth={question.sourceWidth || 1312}
-                        sourceHeight={question.sourceHeight || 1199}
+                        sourceWidth={sourceWidth}
+                        sourceHeight={sourceHeight}
                         slice={task.solutionSlice}
                       />
                     </div>
