@@ -18,6 +18,7 @@ import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
 import { enrichQuestionsList, setMasterQuestionsCache } from "../utils/questionSourceHelper";
 import { applyQuestionOverrides, getRealtimeChannel } from "../utils/questionSync";
+import { LAB_QUESTIONS } from "../data/labQuestions";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || "/api";
 
@@ -926,6 +927,7 @@ function reducer(state, action) {
 }
 
 export default function App() {
+  const [labQuestions, setLabQuestions] = useState(LAB_QUESTIONS);
   const [
     {
       allQuestions,
@@ -1153,6 +1155,33 @@ export default function App() {
       .catch((err) => {
         console.warn("Could not load /api/questions, fallback to static bundle:", err);
       });
+  }, []);
+
+  // Load admin-created guided Labs while keeping the supplied built-in Labs as
+  // the offline fallback. A matching id replaces a built-in item; new ids are
+  // appended in the order they were created.
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/labs?_t=${Date.now()}`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        const customLabs = Array.isArray(data?.labs) ? data.labs : [];
+        if (customLabs.length === 0) return;
+        setLabQuestions((previous) => {
+          const merged = [...previous];
+          customLabs.forEach((lab) => {
+            const normalized = {
+              ...lab,
+              sourceImage: lab.sourceImage || lab.topologyImage,
+              type: "lab",
+            };
+            const existingIndex = merged.findIndex((item) => item.id === normalized.id);
+            if (existingIndex >= 0) merged[existingIndex] = { ...merged[existingIndex], ...normalized };
+            else merged.push(normalized);
+          });
+          return merged;
+        });
+      })
+      .catch(() => {});
   }, []);
 
   // Listen to live question update events across the application and cross-tab storage
@@ -2884,6 +2913,7 @@ export default function App() {
               onOpenAuth={handleOpenAuth}
               onLogout={handleLogout}
               onOpenUpgrade={handleOpenUpgrade}
+              labQuestions={labQuestions}
             />
           )
         )}

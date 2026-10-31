@@ -10927,6 +10927,40 @@ body {
   margin-top: 0.8rem;
 }
 
+.lab-solution-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.lab-solution-command {
+  margin: 0;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 0.65rem;
+  color: #bbf7d0;
+  background: #07130f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.15rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.lab-solution-image-wrap {
+  overflow: hidden;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 0.7rem;
+  background: #080d12;
+}
+
+.lab-solution-image-wrap img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 720px;
+  object-fit: contain;
+}
+
 
 
 

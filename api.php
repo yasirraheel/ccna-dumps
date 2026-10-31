@@ -89,6 +89,19 @@ try {
         UNIQUE KEY unique_user_settings (user_email)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    // Guided Labs are stored separately from scored question-bank records. Each
+    // lab keeps its original topology image plus a JSON task list so admins can
+    // build new guided walkthroughs without changing the exam question schema.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS labs (
+        id VARCHAR(100) PRIMARY KEY,
+        item_label VARCHAR(120) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        topology_image TEXT NULL,
+        tasks LONGTEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
     $defaultFreePerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
         'bank_b' => ['enabled' => true, 'max_questions' => 50],
@@ -787,6 +800,53 @@ if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
         ];
     }, $rows);
     echo json_encode(["questions" => $formatted]);
+    exit;
+}
+
+// 9.1 Guided Labs API. These records are intentionally separate from scored
+// questions so the Labs experience can reveal tasks and command solutions in
+// sequence without affecting exam grading.
+if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET') {
+    $labId = !empty($lm[1]) ? urldecode($lm[1]) : null;
+    if ($labId) {
+        $stmt = $pdo->prepare("SELECT * FROM labs WHERE id = ? LIMIT 1");
+        $stmt->execute([$labId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            http_response_code(404);
+            echo json_encode(["error" => "Lab not found"]);
+            exit;
+        }
+        $tasks = json_decode($row['tasks'] ?? '[]', true) ?: [];
+        echo json_encode(["lab" => [
+            "id" => $row['id'],
+            "type" => "lab",
+            "questionNo" => $row['title'] ?: $row['item_label'],
+            "labItemLabel" => $row['item_label'],
+            "title" => $row['title'],
+            "sourceImage" => $row['topology_image'],
+            "tasks" => $tasks,
+            "createdAt" => $row['created_at'],
+            "updatedAt" => $row['updated_at']
+        ]]);
+        exit;
+    }
+
+    $rows = $pdo->query("SELECT * FROM labs ORDER BY created_at ASC, id ASC")->fetchAll();
+    $labs = array_map(function($row) {
+        return [
+            "id" => $row['id'],
+            "type" => "lab",
+            "questionNo" => $row['title'] ?: $row['item_label'],
+            "labItemLabel" => $row['item_label'],
+            "title" => $row['title'],
+            "sourceImage" => $row['topology_image'],
+            "tasks" => json_decode($row['tasks'] ?? '[]', true) ?: [],
+            "createdAt" => $row['created_at'],
+            "updatedAt" => $row['updated_at']
+        ];
+    }, $rows);
+    echo json_encode(["labs" => $labs]);
     exit;
 }
 
@@ -2258,6 +2318,96 @@ function checkAdminAuth($pdo, $jwtSecret, $body = null) {
 if (preg_match('#^/api/admin/#', $basePath)) {
     checkAdminAuth($pdo, $jwtSecret, $body);
 
+    // 13.0 Guided Labs management: create and maintain lab walkthroughs from
+    // the admin portal. Tasks may contain both typed commands and an uploaded
+    // command screenshot.
+    if (preg_match('#^/api/admin/labs$#', $basePath) && $method === 'GET') {
+        $rows = $pdo->query("SELECT * FROM labs ORDER BY created_at ASC, id ASC")->fetchAll();
+        $labs = array_map(function($row) {
+            return [
+                "id" => $row['id'],
+                "type" => "lab",
+                "questionNo" => $row['title'] ?: $row['item_label'],
+                "labItemLabel" => $row['item_label'],
+                "title" => $row['title'],
+                "topologyImage" => $row['topology_image'],
+                "sourceImage" => $row['topology_image'],
+                "tasks" => json_decode($row['tasks'] ?? '[]', true) ?: [],
+                "createdAt" => $row['created_at'],
+                "updatedAt" => $row['updated_at']
+            ];
+        }, $rows);
+        echo json_encode(["labs" => $labs]);
+        exit;
+    }
+
+    if (preg_match('#^/api/admin/labs$#', $basePath) && $method === 'POST') {
+        $rawId = trim((string)($body['id'] ?? ''));
+        $title = trim((string)($body['title'] ?? ''));
+        $itemLabel = trim((string)($body['itemLabel'] ?? $body['item_label'] ?? ''));
+        $topologyImage = trim((string)($body['topologyImage'] ?? $body['topology_image'] ?? ''));
+        $tasks = $body['tasks'] ?? [];
+
+        if (!$title || !$itemLabel || !is_array($tasks) || count($tasks) === 0) {
+            http_response_code(400);
+            echo json_encode(["error" => "Lab title, item label, and at least one task are required."]);
+            exit;
+        }
+        if (!$topologyImage) {
+            http_response_code(400);
+            echo json_encode(["error" => "Upload a topology image before saving the lab."]);
+            exit;
+        }
+
+        $normalizedTasks = [];
+        foreach ($tasks as $index => $task) {
+            if (!is_array($task)) continue;
+            $taskText = trim((string)($task['text'] ?? ''));
+            if ($taskText === '') continue;
+            $normalizedTasks[] = [
+                "id" => trim((string)($task['id'] ?? ('lab-task-' . ($index + 1)))) ?: ('lab-task-' . ($index + 1)),
+                "label" => trim((string)($task['label'] ?? ('Task ' . ($index + 1)))) ?: ('Task ' . ($index + 1)),
+                "text" => $taskText,
+                "commandText" => trim((string)($task['commandText'] ?? $task['command_text'] ?? '')),
+                "solutionImage" => trim((string)($task['solutionImage'] ?? $task['solution_image'] ?? '')),
+            ];
+        }
+        if (count($normalizedTasks) === 0) {
+            http_response_code(400);
+            echo json_encode(["error" => "Add task instructions before saving the lab."]);
+            exit;
+        }
+
+        $id = $rawId !== '' ? preg_replace('/[^a-zA-Z0-9_-]/', '-', $rawId) : ('lab-custom-' . time());
+        $stmt = $pdo->prepare("INSERT INTO labs (id, item_label, title, topology_image, tasks) VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE item_label = VALUES(item_label), title = VALUES(title), topology_image = VALUES(topology_image), tasks = VALUES(tasks), updated_at = CURRENT_TIMESTAMP");
+        $stmt->execute([$id, $itemLabel, $title, $topologyImage, json_encode($normalizedTasks, JSON_UNESCAPED_UNICODE)]);
+
+        echo json_encode([
+            "success" => true,
+            "message" => "Lab saved successfully.",
+            "lab" => [
+                "id" => $id,
+                "type" => "lab",
+                "questionNo" => $title,
+                "labItemLabel" => $itemLabel,
+                "title" => $title,
+                "topologyImage" => $topologyImage,
+                "sourceImage" => $topologyImage,
+                "tasks" => $normalizedTasks
+            ]
+        ]);
+        exit;
+    }
+
+    if (preg_match('#^/api/admin/labs/([^/]+)$#', $basePath, $lm) && $method === 'DELETE') {
+        $labId = urldecode($lm[1]);
+        $stmt = $pdo->prepare("DELETE FROM labs WHERE id = ?");
+        $stmt->execute([$labId]);
+        echo json_encode(["success" => true, "message" => "Lab deleted."]);
+        exit;
+    }
+
     // 13.1 Admin Stats: GET /api/admin/stats
     if (preg_match('#^/api/admin/stats#', $basePath) && $method === 'GET') {
         $totalUsers = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
@@ -2529,7 +2679,9 @@ if (preg_match('#^/api/admin/#', $basePath)) {
 
         $file = $_FILES['image'];
         $uploadType = strtolower(trim($_POST['type'] ?? 'exhibit'));
-        $targetSubdir = ($uploadType === 'original_source' || $uploadType === 'source') ? 'original_sources' : 'exhibits';
+        $targetSubdir = in_array($uploadType, ['lab', 'lab_topology', 'lab_solution', 'lab_source'], true)
+            ? 'lab_assets'
+            : (($uploadType === 'original_source' || $uploadType === 'source') ? 'original_sources' : 'exhibits');
 
         $originalName = basename($file['name']);
         $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));

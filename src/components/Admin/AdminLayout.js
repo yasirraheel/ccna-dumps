@@ -4,6 +4,7 @@ import AdminDashboard from './AdminDashboard';
 import AdminUsers from './AdminUsers';
 import AdminPlans from './AdminPlans';
 import AdminQuestions from './AdminQuestions';
+import AdminLabs from './AdminLabs';
 import AdminSettings from './AdminSettings';
 import { adminFetch } from '../../utils/adminApi';
 
@@ -16,6 +17,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
     if (path.includes("/admin/users")) return "users";
     if (path.includes("/admin/plans")) return "plans";
     if (path.includes("/admin/questions")) return "questions";
+    if (path.includes("/admin/labs")) return "labs";
     if (path.includes("/admin/settings")) return "settings";
     return "dashboard";
   };
@@ -72,6 +74,7 @@ function AdminLayout({ currentUser, onExitAdmin }) {
       case 'users': return '👥 Candidates Management';
       case 'plans': return '💳 Access Plans & Subscriptions';
       case 'questions': return '❓ Exam Question Bank';
+      case 'labs': return '🧪 Guided Labs Builder';
       case 'settings': return '⚙️ System Settings & SMTP';
       default: return 'Admin Portal';
     }
@@ -137,6 +140,15 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           >
             <span className="admin-nav-icon">❓</span>
             <span>Question Banks</span>
+          </button>
+
+          <button
+            type="button"
+            className={`admin-nav-item ${activeTab === 'labs' ? 'active' : ''}`}
+            onClick={() => switchTab('labs')}
+          >
+            <span className="admin-nav-icon">🧪</span>
+            <span>Guided Labs</span>
           </button>
 
           <div className="admin-nav-section-title">Configuration</div>
@@ -220,6 +232,8 @@ function AdminLayout({ currentUser, onExitAdmin }) {
           {activeTab === 'plans' && <AdminPlans />}
 
           {activeTab === 'questions' && <AdminQuestions />}
+
+          {activeTab === 'labs' && <AdminLabs />}
 
           {activeTab === 'settings' && <AdminSettings currentUser={currentUser} />}
         </div>

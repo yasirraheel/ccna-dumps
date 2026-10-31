@@ -30,5 +30,11 @@ export const adminFetch = (url, options = {}) => {
     ...getAdminHeaders(),
     ...(options.headers || {})
   };
+  // Let the browser set the multipart boundary for image uploads. Sending the
+  // JSON content type here prevents PHP from populating $_FILES.
+  if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
+    delete headers['Content-Type'];
+    delete headers['content-type'];
+  }
   return fetch(finalUrl, { ...options, headers });
 };

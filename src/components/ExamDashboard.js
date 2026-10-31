@@ -54,6 +54,7 @@ function ExamDashboard({
   onOpenAuth,
   onLogout,
   onOpenUpgrade,
+  labQuestions = LAB_QUESTIONS,
 }) {
   // Synchronously load cached user exam preferences to prevent default flash on refresh
   const getInitialPrefs = () => {
@@ -263,7 +264,7 @@ function ExamDashboard({
 
     switch (selectedBank) {
       case "bank_labs":
-        filtered = LAB_QUESTIONS;
+        filtered = labQuestions;
         bankTitle = "Labs";
         break;
       case "bank_a":
@@ -711,7 +712,7 @@ function ExamDashboard({
                   {EXAM_BANKS.map((bank) => {
                     const isLocked = !isPlanAllowedForBank(currentUser, bank.key, availablePlans);
                     const totalInBank = bank.key === "bank_labs"
-                      ? LAB_QUESTIONS.length
+                      ? labQuestions.length
                       : bank.key === "bank_dragdrop"
                       ? allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length
                       : (bank.key === "bank_all" ? totalQuestionsCount : bank.totalQuestions);

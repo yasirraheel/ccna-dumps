@@ -45,6 +45,39 @@ function LabSolutionSlice({ sourceImage, sourceWidth, sourceHeight, slice }) {
   );
 }
 
+function LabSolution({ task, fallbackImage, fallbackWidth, fallbackHeight }) {
+  const solutionImage = task?.solutionImage || fallbackImage;
+  const solutionWidth = task?.solutionWidth || fallbackWidth;
+  const solutionHeight = task?.solutionHeight || fallbackHeight;
+  const hasWrittenCommands = Boolean(task?.commandText?.trim());
+
+  if (!solutionImage && !hasWrittenCommands) return null;
+
+  return (
+    <div className="lab-solution-content">
+      {hasWrittenCommands && (
+        <pre className="lab-solution-command" aria-label="Written command solution">
+          {task.commandText}
+        </pre>
+      )}
+      {solutionImage && (
+        task.solutionSlice ? (
+          <LabSolutionSlice
+            sourceImage={solutionImage}
+            sourceWidth={solutionWidth}
+            sourceHeight={solutionHeight}
+            slice={task.solutionSlice}
+          />
+        ) : (
+          <div className="lab-solution-image-wrap">
+            <img src={solutionImage} alt="Revealed lab solution" />
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 function LabView({
   question,
   seqNumber,
@@ -322,11 +355,11 @@ function LabView({
                   {isRevealed && (
                     <div className="lab-solution-panel">
                       <div className="lab-solution-heading">Solution</div>
-                      <LabSolutionSlice
-                        sourceImage={task.solutionImage || question.sourceImage}
-                        sourceWidth={task.solutionWidth || sourceWidth}
-                        sourceHeight={task.solutionHeight || sourceHeight}
-                        slice={task.solutionSlice}
+                      <LabSolution
+                        task={task}
+                        fallbackImage={question.sourceImage}
+                        fallbackWidth={sourceWidth}
+                        fallbackHeight={sourceHeight}
                       />
                     </div>
                   )}
