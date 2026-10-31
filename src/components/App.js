@@ -2929,6 +2929,8 @@ export default function App() {
             candidateName={currentUser?.name || candidateName}
             activeSessionId={activeSessionId}
             onGoToQuestion={handleGoToQuestion}
+            isPaused={isPaused}
+            onTogglePause={() => dispatch({ type: "togglePauseExam" })}
             onExitToDashboard={() => {
               const now = Date.now();
               const sessionSnapshot = {

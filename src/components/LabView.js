@@ -55,6 +55,8 @@ function LabView({
   onGoToQuestion,
   onExitToDashboard,
   isNavSaving = false,
+  isPaused = false,
+  onTogglePause,
 }) {
   const tasks = Array.isArray(question?.tasks) ? question.tasks : [];
   const [revealedTasks, setRevealedTasks] = useState([]);
@@ -88,6 +90,7 @@ function LabView({
 
   const revealTask = (taskIndex) => {
     // Tasks must be opened in order so the lab behaves like a guided walkthrough.
+    if (isPaused) return;
     if (taskIndex > revealedTasks.length) return;
     if (revealedTasks.includes(taskIndex)) return;
     const next = [...revealedTasks, taskIndex];
@@ -96,6 +99,7 @@ function LabView({
   };
 
   const chooseRating = (nextRating) => {
+    if (isPaused) return;
     setRating(nextRating);
     persistProgress(revealedTasks, nextRating);
   };
@@ -116,8 +120,13 @@ function LabView({
   };
 
   return (
-    <div className="boson-exsim-view lab-exsim-view">
-      <div className="boson-top-bar lab-top-bar">
+    <div className={`boson-exsim-view lab-exsim-view ${isPaused ? "is-paused" : ""}`}>
+      <div className="boson-slim-transition-track" aria-hidden="true">
+        <div className="boson-slim-transition-bar" />
+        <div className="boson-slim-transition-glow" />
+      </div>
+
+      <div className="boson-top-bar">
         <div className="top-bar-left-actions">
           <button
             type="button"
@@ -138,21 +147,84 @@ function LabView({
         </div>
       </div>
 
-      <main className="lab-main-content">
-        <div className="lab-context-card">
-          <span className="lab-context-label">{bankLabel}</span>
-          <span className="lab-context-progress">{question?.labItemLabel || `ITEM ${seqNumber}`}</span>
+      <div className="boson-exam-info-card lab-exam-info-card">
+        <div className="boson-exam-context-row">
+          <div className="top-bar-bank-tag context-bank-tag" title={`Currently attempting: ${bankLabel}`}>
+            <span className="bank-tag-name">{bankLabel}</span>
+          </div>
+          <div className="context-actions">
+            {onTogglePause && (
+              <button
+                type="button"
+                className={`btn-boson-pause ${isPaused ? "is-paused" : ""}`}
+                onClick={onTogglePause}
+                title={isPaused ? "Resume Lab" : "Pause Lab"}
+              >
+                {isPaused ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    <span>Resume</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                    <span>Pause</span>
+                  </>
+                )}
+              </button>
+            )}
+            <div className="btn-top-notes-summary" aria-label="Lab notes (0)">
+              <span>💬 Notes (0)</span>
+            </div>
+          </div>
         </div>
 
-        <section className="lab-question-card" aria-labelledby="lab-item-title">
-          <div className="lab-item-heading-row">
-            <div>
-              <h1 id="lab-item-title">{question?.labItemLabel || `ITEM ${seqNumber}`}</h1>
-            </div>
-            <span className="lab-question-count">Lab {seqNumber} of {numQuestions}</span>
+        <div className="boson-main-header">
+          <div className="boson-title-bank-row">
+            <h1 className="boson-exam-title">Cisco 200-301 CCNA Exam Simulator</h1>
           </div>
+          <div className="boson-sub-header">
+            <div className="boson-sub-left">
+              <div className="boson-mobile-summary-row">
+                <span className="boson-q-count">Lab {seqNumber} of {numQuestions}</span>
+                <span className="boson-dot-sep">•</span>
+                <span className="boson-live-score">Guided practice</span>
+              </div>
+              <div className="boson-mobile-detail-row">
+                <span className="boson-qno-pill">{question?.labItemLabel || `ITEM ${seqNumber}`}</span>
+              </div>
+            </div>
+            <div className="boson-sub-right-actions">
+              <button
+                type="button"
+                className="btn-boson-source-toggle"
+                onClick={() => document.getElementById("lab-source-image")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+              >
+                <svg className="source-svg-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                <span>Original Source</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div className="lab-source-frame" style={{ aspectRatio: `${question?.sourceWidth || 1312} / ${question?.topologyCropHeight || 545}` }}>
+      <main className="boson-question-body lab-main-content">
+        <section className="lab-question-card" aria-label="Lab topology and tasks">
+          <div
+            id="lab-source-image"
+            className="lab-source-frame"
+            style={{ aspectRatio: `${question?.sourceWidth || 1312} / ${question?.topologyCropHeight || 545}` }}
+          >
             <img
               src={question?.sourceImage}
               alt="Lab topology and tasks"
