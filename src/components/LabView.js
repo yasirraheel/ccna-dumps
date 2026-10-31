@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import QuestionPaletteModal from "./QuestionPaletteModal";
 
 const LAB_PROGRESS_PREFIX = "ccna_lab_progress_";
 
@@ -92,12 +93,16 @@ function LabView({
   onTogglePause,
   isFlagged = false,
   onToggleFlag,
+  questions = [],
+  answers = [],
+  flaggedQuestions = [],
 }) {
   const tasks = Array.isArray(question?.tasks) ? question.tasks : [];
   const [revealedTasks, setRevealedTasks] = useState([]);
   const [rating, setRating] = useState(null);
   const [labNote, setLabNote] = useState("");
   const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
+  const [showReviewMatrix, setShowReviewMatrix] = useState(false);
 
   const progressStorageKey = useMemo(
     () => `${LAB_PROGRESS_PREFIX}${activeSessionId || "local"}_${question?.id || seqNumber}`,
@@ -250,6 +255,20 @@ function LabView({
             <div className="boson-sub-right-actions">
               <button
                 type="button"
+                className="btn-boson-action lab-quick-review-button"
+                onClick={() => setShowReviewMatrix(true)}
+                title="Open quick question review"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+                <span>Question Review</span>
+              </button>
+              <button
+                type="button"
                 className="btn-boson-source-toggle"
                 onClick={() => document.getElementById("lab-source-image")?.scrollIntoView({ behavior: "smooth", block: "center" })}
               >
@@ -392,6 +411,9 @@ function LabView({
 
           <div className="lab-footer-actions">
             <button type="button" className="btn-boson-nav" onClick={onExitToDashboard}>Save & Exit</button>
+            <button type="button" className="btn-boson-action lab-footer-review-button" onClick={() => setShowReviewMatrix(true)}>
+              Question Review
+            </button>
             <button
               type="button"
               className={`btn-boson-action btn-lab-next ${!canProceed || isNavSaving ? "disabled" : ""}`}
@@ -411,6 +433,22 @@ function LabView({
           </div>
         </section>
       </main>
+
+      {showReviewMatrix && (
+        <QuestionPaletteModal
+          numQuestions={numQuestions}
+          currentIndex={seqNumber - 1}
+          answers={answers}
+          questions={questions}
+          flaggedQuestions={flaggedQuestions}
+          comments={{}}
+          revealedQuestions={[]}
+          committedQuestions={[]}
+          isReviewMode={false}
+          onSelectQuestion={onGoToQuestion}
+          onClose={() => setShowReviewMatrix(false)}
+        />
+      )}
     </div>
   );
 }

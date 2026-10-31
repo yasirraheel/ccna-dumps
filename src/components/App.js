@@ -2963,6 +2963,9 @@ export default function App() {
             onTogglePause={() => dispatch({ type: "togglePauseExam" })}
             isFlagged={flaggedQuestions.includes(index)}
             onToggleFlag={handleToggleFlag}
+            questions={questions}
+            answers={answers}
+            flaggedQuestions={flaggedQuestions}
             onExitToDashboard={() => {
               const now = Date.now();
               const sessionSnapshot = {

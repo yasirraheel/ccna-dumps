@@ -273,6 +273,11 @@ function AdminLabs() {
                   <button type="button" className="btn-admin-secondary" onClick={() => topologyInputRef.current?.click()} disabled={uploading === 'lab_topology'}>
                     {uploading === 'lab_topology' ? 'Uploading…' : editor.topologyImage ? 'Replace topology' : 'Upload topology'}
                   </button>
+                  {editor.topologyImage && (
+                    <button type="button" className="admin-text-danger" onClick={() => updateEditor({ topologyImage: '' })}>
+                      Remove image
+                    </button>
+                  )}
                   <input ref={topologyInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleTopologyUpload} hidden />
                 </div>
               </section>
@@ -282,7 +287,6 @@ function AdminLabs() {
                   <div className="admin-section-heading">Tasks and solutions</div>
                   <p>Each task can include learner-facing instructions, typed CLI commands, and an original command screenshot.</p>
                 </div>
-                <button type="button" className="btn-admin-primary admin-add-task-button" onClick={addTask}>+ Add another task</button>
               </div>
 
               <div className="admin-lab-task-editor-list">
@@ -311,6 +315,11 @@ function AdminLabs() {
                         <div className="admin-field-label">Command screenshot (optional)</div>
                         {task.solutionImage && <img className="admin-task-screenshot-preview" src={task.solutionImage} alt={`Solution for ${task.label}`} />}
                         <div className="admin-lab-paste-hint">Click here, then press <kbd>Ctrl</kbd> + <kbd>V</kbd> to paste a screenshot</div>
+                        {task.solutionImage && (
+                          <button type="button" className="admin-text-danger admin-remove-image-button" onClick={() => updateTask(taskIndex, { solutionImage: '' })}>
+                            Remove screenshot
+                          </button>
+                        )}
                       </div>
                       <label className="btn-admin-secondary admin-upload-button">
                         {uploading === `lab_solution_${taskIndex}` ? 'Uploading…' : task.solutionImage ? 'Replace screenshot' : 'Attach screenshot'}
@@ -320,6 +329,9 @@ function AdminLabs() {
                   </section>
                 ))}
               </div>
+              <button type="button" className="btn-admin-primary admin-add-task-button admin-add-task-bottom" onClick={addTask}>
+                + Add another task
+              </button>
             </div>
 
             <div className="admin-modal-footer admin-lab-editor-footer">

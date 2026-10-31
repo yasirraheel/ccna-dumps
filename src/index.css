@@ -10830,10 +10830,19 @@ body {
 }
 
 .lab-footer-actions .btn-boson-nav,
-.lab-footer-actions .btn-lab-next {
+.lab-footer-actions .btn-lab-next,
+.lab-footer-actions .lab-footer-review-button {
   min-height: 4.2rem !important;
   padding: 1rem 2rem !important;
   font-size: 1.45rem !important;
+}
+
+.lab-footer-review-button,
+.lab-quick-review-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
 }
 
 @media (max-width: 900px) {
@@ -10888,7 +10897,8 @@ body {
 
   .lab-rating-actions,
   .lab-footer-actions .btn-boson-nav,
-  .lab-footer-actions .btn-lab-next {
+  .lab-footer-actions .btn-lab-next,
+  .lab-footer-actions .lab-footer-review-button {
     width: 100%;
   }
 

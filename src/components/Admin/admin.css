@@ -82,6 +82,8 @@
 .admin-task-screenshot-preview { width: min(340px, 100%); max-height: 150px; object-fit: contain; object-position: left center; display: block; margin-top: 7px; border-radius: 7px; border: 1px solid #475569; background: #090d16; }
 .admin-upload-button { display: inline-flex; align-items: center; cursor: pointer; }
 .admin-add-task-button { white-space: nowrap; }
+.admin-add-task-bottom { display: flex; margin: 16px auto 0; }
+.admin-remove-image-button { display: block; margin-top: 7px; padding: 0; }
 .admin-lab-editor-footer { margin-top: 4px; }
 
 @media (max-width: 680px) {
