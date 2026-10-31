@@ -10962,6 +10962,98 @@ body {
   object-fit: contain;
 }
 
+/* Lab identity is always visible from the live API, on desktop and mobile. */
+.lab-header-identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.lab-header-identity .lab-name-label {
+  color: #38bdf8;
+  font-size: 1.35rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lab-header-identity .lab-item-label {
+  flex: 0 0 auto;
+  margin-left: 0.25rem;
+}
+
+/* Keep the sticky topology below the fixed exam chrome and compact enough to
+   compare against task solutions without dominating the page. */
+.lab-study-layout {
+  grid-template-columns: minmax(250px, 0.72fr) minmax(0, 1.28fr) !important;
+}
+
+.lab-topology-column {
+  top: 8.5rem !important;
+  z-index: 2;
+  max-height: calc(100vh - 10.5rem) !important;
+  padding: 0.8rem !important;
+}
+
+.lab-source-frame {
+  max-width: 760px !important;
+  max-height: 360px !important;
+}
+
+.lab-source-frame img {
+  max-height: 360px !important;
+}
+
+.lab-source-parts {
+  max-width: 760px !important;
+}
+
+.lab-source-parts img {
+  max-height: 250px !important;
+}
+
+/* The task reference belongs directly below its task instructions. The two
+   optional text editors share a row on wide admin screens. */
+.admin-lab-task-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 760px) {
+  .lab-header-identity {
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .lab-header-identity .lab-name-label {
+    font-size: 1.08rem;
+  }
+
+  .lab-study-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lab-topology-column {
+    position: relative;
+    top: auto !important;
+    max-height: none !important;
+  }
+
+  .lab-source-frame,
+  .lab-source-frame img,
+  .lab-source-parts img {
+    max-height: 300px !important;
+  }
+
+  .admin-lab-task-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .lab-task-reveal-header h2 {
   color: #f1f5f9 !important;
   font-size: 1.7rem !important;
@@ -11169,6 +11261,96 @@ body {
   height: auto;
   max-height: 720px;
   object-fit: contain;
+}
+
+/* Final Lab presentation overrides: keep identity visible, keep topology
+   below the sticky exam bar, and keep the artwork compact. */
+.lab-header-identity {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.lab-header-identity .lab-name-label {
+  display: inline-block !important;
+  color: #38bdf8 !important;
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+
+.lab-header-identity .lab-item-label {
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  margin-left: 0.25rem;
+}
+
+.lab-study-layout {
+  grid-template-columns: minmax(250px, 0.72fr) minmax(0, 1.28fr) !important;
+}
+
+.lab-topology-column {
+  top: 8.5rem !important;
+  z-index: 2;
+  max-height: calc(100vh - 10.5rem) !important;
+  padding: 0.8rem !important;
+}
+
+.lab-source-frame {
+  max-width: 760px !important;
+  max-height: 360px !important;
+}
+
+.lab-source-frame img {
+  max-height: 360px !important;
+}
+
+.lab-source-parts {
+  max-width: 760px !important;
+}
+
+.lab-source-parts img {
+  max-height: 250px !important;
+}
+
+.admin-lab-task-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 760px) {
+  .lab-header-identity {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .lab-header-identity .lab-name-label {
+    font-size: 1.08rem !important;
+  }
+
+  .lab-study-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .lab-topology-column {
+    position: relative;
+    top: auto !important;
+    max-height: none !important;
+  }
+
+  .lab-source-frame,
+  .lab-source-frame img,
+  .lab-source-parts img {
+    max-height: 300px !important;
+  }
+
+  .admin-lab-task-details-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 

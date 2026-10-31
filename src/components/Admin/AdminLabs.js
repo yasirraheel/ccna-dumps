@@ -327,10 +327,6 @@ function AdminLabs() {
                       Task instructions
                       <textarea className="admin-textarea" rows="4" value={task.text} onChange={(event) => updateTask(taskIndex, { text: event.target.value })} placeholder="Write exactly what the learner must configure…" />
                     </label>
-                    <label className="admin-field-label">
-                      Task written content (optional)
-                      <textarea className="admin-textarea" rows="4" value={task.taskText || ''} onChange={(event) => updateTask(taskIndex, { taskText: event.target.value })} placeholder="Add extra task details, addressing tables, or reference notes…" />
-                    </label>
                     <div
                       className="admin-task-screenshot-row admin-lab-paste-zone admin-task-reference-upload"
                       tabIndex="0"
@@ -352,10 +348,16 @@ function AdminLabs() {
                         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => handleTaskReferenceUpload(taskIndex, event)} hidden />
                       </label>
                     </div>
-                    <label className="admin-field-label">
-                      Written commands (optional)
-                      <textarea className="admin-textarea admin-command-textarea" rows="6" value={task.commandText || ''} onChange={(event) => updateTask(taskIndex, { commandText: event.target.value })} placeholder="R1# configure terminal&#10;R1(config)# …" />
-                    </label>
+                    <div className="admin-lab-task-details-grid">
+                      <label className="admin-field-label">
+                        Task written content (optional)
+                        <textarea className="admin-textarea" rows="5" value={task.taskText || ''} onChange={(event) => updateTask(taskIndex, { taskText: event.target.value })} placeholder="Add extra task details, addressing tables, or reference notes…" />
+                      </label>
+                      <label className="admin-field-label">
+                        Written commands (optional)
+                        <textarea className="admin-textarea admin-command-textarea" rows="5" value={task.commandText || ''} onChange={(event) => updateTask(taskIndex, { commandText: event.target.value })} placeholder="R1# configure terminal&#10;R1(config)# …" />
+                      </label>
+                    </div>
                     <div
                       className="admin-task-screenshot-row admin-lab-paste-zone"
                       tabIndex="0"

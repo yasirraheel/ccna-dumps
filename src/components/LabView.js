@@ -248,15 +248,13 @@ function LabView({
           </div>
           <div className="boson-sub-header">
             <div className="boson-sub-left">
-              <div className="boson-mobile-summary-row">
+              <div className="lab-header-identity">
                 <span className="lab-name-label">{labName}</span>
                 <span className="boson-dot-sep">•</span>
                 <span className="boson-q-count">Lab {seqNumber} of {numQuestions}</span>
                 <span className="boson-dot-sep">•</span>
                 <span className="boson-live-score">Guided practice</span>
-              </div>
-              <div className="boson-mobile-detail-row">
-                <span className="boson-qno-pill">{labItemLabel}</span>
+                <span className="boson-qno-pill lab-item-label">{labItemLabel}</span>
               </div>
             </div>
             <div className="boson-sub-right-actions">

@@ -1175,6 +1175,34 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // A Lab session must always reflect the current database record. This
+  // refresh also replaces stale task commands/screenshots from an older saved
+  // session immediately after the session is resumed.
+  useEffect(() => {
+    if (status !== "active" || selectedBankKey !== "bank_labs") return undefined;
+    let cancelled = false;
+    fetch(`${API_BASE_URL}/labs?_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        const labs = Array.isArray(data?.labs) ? data.labs : [];
+        const normalized = labs.map((lab) => ({
+          ...lab,
+          sourceImage: lab.sourceImage || lab.topologyImage,
+          type: "lab",
+        }));
+        setLabQuestions(normalized);
+        // dataReceived merges the fresh records into the active question while
+        // preserving the learner's current index, rating, and progress.
+        dispatch({ type: "dataReceived", payload: normalized });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [status, selectedBankKey]);
+
   // Listen to live question update events across the application and cross-tab storage
   useEffect(() => {
     const handleQuestionUpdated = (e) => {
