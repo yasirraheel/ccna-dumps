@@ -8,7 +8,7 @@ export const EXAM_BANKS = [
   { key: 'bank_d', name: 'Exam Bank D (151-207)', totalQuestions: 57, defaultMax: 57 },
   { key: 'bank_dragdrop', name: 'Drag & Drop Special Bank', totalQuestions: 21, defaultMax: 21 },
   { key: 'bank_all', name: 'All Questions Bank', totalQuestions: 228, defaultMax: 228 },
-  { key: 'bank_labs', name: 'Labs', totalQuestions: 1, defaultMax: 1 },
+  { key: 'bank_labs', name: 'Labs', totalQuestions: 5, defaultMax: 5 },
 ];
 
 export const normalizePlan = (plan) => {

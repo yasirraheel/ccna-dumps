@@ -75,6 +75,103 @@ export const LAB_QUESTIONS = [
       },
     ],
   },
+  {
+    id: "lab-3",
+    type: "lab",
+    questionNo: "Lab #3",
+    labItemLabel: "ITEM 3 OF 27",
+    sourceImage: "/All%20LAbs/lab-3-supplied.png",
+    sourceWidth: 1247,
+    sourceHeight: 737,
+    sourceDisplayWidth: 860,
+    sourceDisplayHeight: 737,
+    tasks: [
+      {
+        id: "lab-3-task-1",
+        label: "Task 1",
+        text: "Configure SW1 and sw2 With VLANS using the naming on the topology.",
+        solutionSlice: { x: 858, y: 72, width: 389, height: 190 },
+      },
+      {
+        id: "lab-3-task-2",
+        label: "Task 2",
+        text: "Assign VLANS to the appropriate interfaces from the topology.",
+        solutionSlice: { x: 858, y: 248, width: 389, height: 175 },
+      },
+      {
+        id: "lab-3-task-3",
+        label: "Task 3",
+        text: "Ensure ports are set to voice and data as assigned on the topology.",
+        solutionSlice: { x: 858, y: 385, width: 389, height: 175 },
+      },
+      {
+        id: "lab-3-task-4",
+        label: "Task 4",
+        text: "Configure SW1 and sw2 for neighbor discovery using LLDP",
+        solutionSlice: { x: 858, y: 540, width: 389, height: 197 },
+      },
+    ],
+  },
+  {
+    id: "lab-4",
+    type: "lab",
+    questionNo: "Lab #4",
+    labItemLabel: "ITEM 4 OF 27",
+    sourceParts: [
+      { id: "lab-4-topology", src: "/All%20LAbs/lab-4-topology.png", alt: "Original Lab 4 topology" },
+      { id: "lab-4-guidelines", src: "/All%20LAbs/lab-4-guidelines.png", alt: "Original Lab 4 task guidelines" },
+    ],
+    tasks: [
+      {
+        id: "lab-4-task-1",
+        label: "Task 1",
+        text: "Configure R1 with the first usable host IP address in the 10.12.18.24/29 network.\nConfigure R2 with the last usable host IP address in the 10.12.18.24/29 network.",
+        solutionImage: "/All%20LAbs/lab-4-solution.png",
+        solutionWidth: 767,
+        solutionHeight: 597,
+        solutionSlice: { x: 0, y: 0, width: 767, height: 320 },
+      },
+      {
+        id: "lab-4-task-2",
+        label: "Task 2",
+        text: "Configure R1 with the first usable host IP address in the 2001:db8:12::C/126 network.\nConfigure R2 with the last usable host IP address in the 2001:db8:12::C/126 network.",
+        solutionImage: "/All%20LAbs/lab-4-solution.png",
+        solutionWidth: 767,
+        solutionHeight: 597,
+        solutionSlice: { x: 0, y: 250, width: 767, height: 347 },
+      },
+    ],
+  },
+  {
+    id: "lab-5",
+    type: "lab",
+    questionNo: "Lab #5",
+    labItemLabel: "ITEM 5 OF 27",
+    sourceParts: [
+      { id: "lab-5-topology", src: "/All%20LAbs/lab-5-topology.png", alt: "Original Lab 5 topology" },
+      { id: "lab-5-guidelines", src: "/All%20LAbs/lab-5-guidelines.png", alt: "Original Lab 5 task guidelines" },
+    ],
+    tasks: [
+      {
+        id: "lab-5-task-1",
+        label: "Task 1",
+        text: "Configure R1 with the first usable host IP address in the IPv4 network.\nConfigure R2 with the last usable host IP address in the IPv4 network.",
+        solutionImage: "/All%20LAbs/lab-5-solution.png",
+        solutionWidth: 693,
+        solutionHeight: 597,
+        solutionSlice: { x: 0, y: 0, width: 693, height: 320 },
+      },
+      {
+        id: "lab-5-task-2",
+        label: "Task 2",
+        text: "Configure R1 with the first usable host IP address in the IPv6 network.\nConfigure R2 with the last usable host IP address in the IPv6 network.",
+        solutionImage: "/All%20LAbs/lab-5-solution.png",
+        solutionWidth: 693,
+        solutionHeight: 597,
+        solutionSlice: { x: 0, y: 250, width: 693, height: 347 },
+      },
+    ],
+  },
 ];
 
 export default LAB_QUESTIONS;

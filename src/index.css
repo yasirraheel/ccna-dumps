@@ -10408,6 +10408,26 @@ body {
   box-shadow: none !important;
 }
 
+.lab-source-parts {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.5fr);
+  align-items: start;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0.8rem !important;
+  background: #0b0f17 !important;
+}
+
+.lab-source-parts img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: #ffffff;
+}
+
 .boson-exam-info-card .boson-exam-context-row .context-bank-tag {
   padding: 0.2rem 0;
   color: #38bdf8;
@@ -10849,6 +10869,10 @@ body {
   .lab-task-toggle {
     grid-template-columns: 2.2rem minmax(0, 1fr) auto !important;
     padding: 1.1rem 1.2rem !important;
+  }
+
+  .lab-source-parts {
+    grid-template-columns: 1fr;
   }
 
   .lab-task-copy strong,

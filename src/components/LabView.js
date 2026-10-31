@@ -255,17 +255,25 @@ function LabView({
 
       <main className="boson-question-body lab-main-content">
         <section className="lab-question-card" aria-label="Lab topology and tasks">
-          <div
-            id="lab-source-image"
-            className="lab-source-frame"
-            style={{ aspectRatio: `${sourceDisplayWidth} / ${sourceDisplayHeight}` }}
-          >
-            <img
-              src={question?.sourceImage}
-              alt="Lab topology and tasks"
-              style={{ width: `${(sourceWidth / sourceDisplayWidth) * 100}%`, maxWidth: "none" }}
-            />
-          </div>
+          {Array.isArray(question?.sourceParts) ? (
+            <div id="lab-source-image" className="lab-source-parts">
+              {question.sourceParts.map((part) => (
+                <img key={part.id || part.src} src={part.src} alt={part.alt || "Original lab resource"} />
+              ))}
+            </div>
+          ) : (
+            <div
+              id="lab-source-image"
+              className="lab-source-frame"
+              style={{ aspectRatio: `${sourceDisplayWidth} / ${sourceDisplayHeight}` }}
+            >
+              <img
+                src={question?.sourceImage}
+                alt="Lab topology and tasks"
+                style={{ width: `${(sourceWidth / sourceDisplayWidth) * 100}%`, maxWidth: "none" }}
+              />
+            </div>
+          )}
 
           {isNoteEditorOpen && (
             <div className="lab-note-editor">
@@ -315,9 +323,9 @@ function LabView({
                     <div className="lab-solution-panel">
                       <div className="lab-solution-heading">Solution</div>
                       <LabSolutionSlice
-                        sourceImage={question.sourceImage}
-                        sourceWidth={sourceWidth}
-                        sourceHeight={sourceHeight}
+                        sourceImage={task.solutionImage || question.sourceImage}
+                        sourceWidth={task.solutionWidth || sourceWidth}
+                        sourceHeight={task.solutionHeight || sourceHeight}
                         slice={task.solutionSlice}
                       />
                     </div>
