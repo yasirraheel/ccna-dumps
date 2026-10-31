@@ -279,6 +279,156 @@
   .admin-lab-editor-header { padding: 16px; }
 }
 
+/* Final readability pass for the guided-lab authoring screen. The app uses
+   a 10px root size, so these rem values intentionally land close to normal
+   16px frontend copy instead of the smaller admin defaults above. */
+.admin-lab-editor-page .admin-card-title {
+  font-size: 1.8rem;
+  line-height: 1.25;
+}
+
+.admin-lab-editor-page .admin-lab-modal-subtitle,
+.admin-lab-editor-page .admin-lab-description {
+  font-size: 1.25rem;
+  line-height: 1.55;
+}
+
+.admin-lab-editor-page .admin-field-label {
+  gap: 0.75rem;
+  color: #f1f5f9;
+  font-size: 1.5rem;
+  line-height: 1.35;
+}
+
+.admin-lab-editor-page .admin-input,
+.admin-lab-editor-page .admin-textarea {
+  min-height: 3.8rem;
+  padding: 1rem 1.15rem;
+  border-color: #64748b;
+  font-size: 1.55rem;
+  line-height: 1.55;
+}
+
+.admin-lab-editor-page .admin-textarea {
+  min-height: 10rem;
+}
+
+.admin-lab-editor-page .admin-command-textarea {
+  font-size: 1.4rem;
+}
+
+.admin-lab-editor-page .admin-section-heading {
+  font-size: 1.6rem;
+  line-height: 1.35;
+}
+
+.admin-lab-editor-page .admin-lab-upload-panel,
+.admin-lab-editor-page .admin-lab-tasks-heading {
+  border-width: 2px;
+}
+
+.admin-lab-editor-page .admin-lab-upload-panel p,
+.admin-lab-editor-page .admin-lab-tasks-heading p {
+  font-size: 1.25rem;
+  line-height: 1.55;
+}
+
+.admin-lab-editor-page .admin-lab-tasks-heading {
+  position: relative;
+  margin-top: 2.75rem;
+  padding: 1.5rem 1.75rem 1.55rem 2rem;
+  border-color: #38bdf8;
+  background: linear-gradient(90deg, rgba(14, 116, 144, 0.28), rgba(22, 32, 51, 0.96));
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.12), 0 12px 26px rgba(2, 6, 23, 0.22);
+}
+
+.admin-lab-editor-page .admin-lab-tasks-heading::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.55rem;
+  border-radius: 0.8rem 0 0 0.8rem;
+  background: #38bdf8;
+}
+
+.admin-lab-editor-page .admin-lab-task-editor-list {
+  gap: 2rem;
+  margin-top: 1.75rem;
+}
+
+.admin-lab-editor-page .admin-lab-task-editor {
+  position: relative;
+  margin-top: 0;
+  padding: 2rem;
+  border: 2px solid #475569;
+  border-left: 0.6rem solid #38bdf8;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #142238 0%, #101a2c 68%, #0d1728 100%);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.3);
+}
+
+.admin-lab-editor-page .admin-lab-task-editor-header {
+  margin: -2rem -2rem 1.75rem;
+  padding: 1.35rem 1.75rem;
+  border-bottom: 2px solid #475569;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.admin-lab-editor-page .admin-lab-task-index {
+  width: 3rem;
+  height: 3rem;
+  flex-basis: 3rem;
+  font-size: 1.45rem;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
+}
+
+.admin-lab-editor-page .admin-task-label-input {
+  min-height: 3.8rem;
+  font-size: 1.6rem;
+}
+
+.admin-lab-editor-page .admin-task-screenshot-row {
+  padding: 1.45rem 1.5rem;
+  border-width: 2px;
+  border-color: #475569;
+  background: #0b1220;
+}
+
+.admin-lab-editor-page .admin-task-reference-upload,
+.admin-lab-editor-page .admin-lab-task-details-grid {
+  border-top-width: 2px;
+}
+
+.admin-lab-editor-page .admin-lab-paste-hint {
+  font-size: 1.2rem;
+  line-height: 1.55;
+}
+
+.admin-lab-editor-page .admin-text-danger {
+  font-size: 1.25rem;
+}
+
+@media (max-width: 680px) {
+  .admin-lab-editor-page .admin-lab-task-editor {
+    padding: 1.35rem;
+    border-left-width: 0.45rem;
+  }
+
+  .admin-lab-editor-page .admin-lab-task-editor-header {
+    margin: -1.35rem -1.35rem 1.35rem;
+    padding: 1.1rem 1.2rem;
+  }
+
+  .admin-lab-editor-page .admin-field-label {
+    font-size: 1.35rem;
+  }
+
+  .admin-lab-editor-page .admin-input,
+  .admin-lab-editor-page .admin-textarea {
+    font-size: 1.4rem;
+  }
+}
+
 /* --------------------------------------------------------------------------
    ADMIN SIDEBAR
    -------------------------------------------------------------------------- */
@@ -1030,6 +1180,280 @@
   cursor: pointer;
 }
 
+/* --------------------------------------------------------------------------
+   ADMIN-WIDE READABILITY SCALE
+   The app root is 10px (62.5% of 16px), while the frontend uses rem units.
+   The admin panel uses px units but we reset the font-size on the container
+   so that all inherited font sizes render at a readable physical scale.
+   -------------------------------------------------------------------------- */
+.admin-portal-container {
+  font-size: 16px;
+  /* Ensure all children inherit a proper base font size */
+  --admin-font-base: 16px;
+}
+
+.admin-sidebar {
+  width: 280px;
+}
+
+.admin-sidebar-header {
+  padding: 24px 26px;
+}
+
+.admin-brand-block {
+  gap: 14px;
+}
+
+.admin-brand-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
+}
+
+.admin-brand-title {
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.admin-brand-subtitle {
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.admin-sidebar-nav {
+  padding: 20px 16px;
+  gap: 7px;
+}
+
+.admin-nav-section-title {
+  font-size: 12px;
+  padding: 16px 16px 8px;
+}
+
+.admin-nav-item {
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.admin-nav-icon {
+  width: 26px;
+  font-size: 21px;
+}
+
+.admin-sidebar-footer {
+  padding: 20px;
+  gap: 12px;
+}
+
+.admin-viewport {
+  margin-left: 280px;
+  width: calc(100% - 280px);
+}
+
+.admin-topbar {
+  height: 78px;
+  padding: 0 38px;
+}
+
+.admin-topbar-left,
+.admin-topbar-right {
+  gap: 20px;
+}
+
+.admin-page-title {
+  font-size: 22px;
+}
+
+.admin-server-badge {
+  gap: 10px;
+  padding: 9px 16px;
+  font-size: 14px;
+}
+
+.admin-pulse-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.admin-user-capsule {
+  gap: 12px;
+  padding: 5px 16px 5px 5px;
+}
+
+.admin-user-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.admin-user-name {
+  font-size: 16px;
+}
+
+.admin-content-area {
+  padding: 40px;
+}
+
+.admin-card {
+  border-radius: 14px;
+  margin-bottom: 30px;
+}
+
+.admin-card-header {
+  padding: 24px 30px;
+  gap: 20px;
+}
+
+.admin-card-title {
+  font-size: 20px;
+}
+
+.admin-table {
+  font-size: 16px;
+}
+
+.admin-table th {
+  padding: 16px 22px;
+  font-size: 13px;
+}
+
+.admin-table td {
+  padding: 18px 22px;
+}
+
+.admin-kpi-grid {
+  gap: 24px;
+  margin-bottom: 38px;
+}
+
+.admin-kpi-card {
+  padding: 26px;
+  border-radius: 14px;
+}
+
+.admin-kpi-label,
+.admin-kpi-sub {
+  font-size: 14px;
+}
+
+.admin-kpi-val {
+  font-size: 34px;
+}
+
+.admin-kpi-icon {
+  width: 52px;
+  height: 52px;
+  font-size: 26px;
+}
+
+.btn-admin-primary,
+.btn-admin-secondary,
+.btn-admin-back {
+  min-height: 48px;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.btn-admin-primary {
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.2);
+}
+
+.btn-table-action {
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.admin-search-input,
+.admin-select {
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.admin-search-input {
+  min-width: 260px;
+}
+
+.badge-pill {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.admin-plan-card {
+  border-radius: 14px;
+  padding: 30px;
+}
+
+.admin-plan-name {
+  font-size: 22px;
+}
+
+.admin-plan-cycle,
+.admin-plan-desc,
+.admin-plan-features li {
+  font-size: 15px;
+}
+
+.admin-plan-price {
+  font-size: 38px;
+}
+
+.admin-modal-title {
+  font-size: 21px;
+}
+
+@media (max-width: 900px) {
+  .admin-sidebar {
+    width: 260px;
+  }
+
+  .admin-viewport {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+  }
+
+  .admin-content-area {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 680px) {
+  .admin-topbar {
+    height: 68px;
+    padding: 0 18px;
+  }
+
+  .admin-content-area {
+    padding: 22px 16px;
+  }
+
+  .admin-card-header {
+    padding: 20px;
+  }
+
+  .admin-card-title {
+    font-size: 18px;
+  }
+
+  .btn-admin-primary,
+  .btn-admin-secondary,
+  .btn-admin-back {
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  .admin-table {
+    font-size: 15px;
+  }
+}
+
 .admin-modal-body {
   padding: 24px;
   display: flex;
@@ -1044,7 +1468,7 @@
 }
 
 .admin-form-label {
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
   color: #94a3b8;
 }
@@ -1055,7 +1479,9 @@
   color: #f8fafc;
   padding: 10px 14px;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 15px;
+  font-family: inherit;
+  min-height: 44px;
 }
 
 .admin-form-input:focus, .admin-form-textarea:focus {
@@ -1069,6 +1495,67 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   MODAL HEADER & TITLE — ensure these are never shrunk by the 62.5% root
+   -------------------------------------------------------------------------- */
+.admin-modal-header {
+  padding: 22px 26px;
+}
+
+.admin-modal-title {
+  font-size: 21px;
+}
+
+.admin-modal-close {
+  font-size: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   ADDITIONAL MISSING OVERRIDES — covers any text rendered inside admin
+   that relies on inherited font-size from the 10px html root
+   -------------------------------------------------------------------------- */
+
+/* Plan badge & description text */
+.admin-plan-badge {
+  font-size: 12px;
+}
+
+/* KPI sub-label */
+.admin-kpi-sub {
+  font-size: 14px;
+}
+
+/* Table action / badge pill readability (already set above but ensure) */
+.btn-table-action {
+  font-family: inherit;
+}
+
+/* Ensure any plain <p>, <span>, <label>, <li> inside admin inherit 16px */
+.admin-portal-container p,
+.admin-portal-container span,
+.admin-portal-container label,
+.admin-portal-container li,
+.admin-portal-container td,
+.admin-portal-container th,
+.admin-portal-container input,
+.admin-portal-container textarea,
+.admin-portal-container select,
+.admin-portal-container button {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Inputs & selects inside admin modals / forms that don't have explicit classes */
+.admin-portal-container input:not([class]),
+.admin-portal-container select:not([class]),
+.admin-portal-container textarea:not([class]) {
+  font-size: 15px;
+  color: #f8fafc;
+  background: #090d16;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 14px;
 }
 
 /* --------------------------------------------------------------------------
