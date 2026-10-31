@@ -322,7 +322,7 @@ function LabView({
               ) : (
                 <div
                   id="lab-source-image"
-                  className="lab-source-frame"
+                  className={`lab-source-frame ${question?.sourceDisplayHeight ? "lab-source-cropped" : "lab-source-complete"}`}
                   style={{ aspectRatio: `${sourceDisplayWidth} / ${sourceDisplayHeight}` }}
                 >
                   <img
