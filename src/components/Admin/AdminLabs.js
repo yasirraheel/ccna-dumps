@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { adminFetch } from '../../utils/adminApi';
-import { LAB_QUESTIONS } from '../../data/labQuestions';
 
 const newTask = (index = 0) => ({
   id: `lab-task-${Date.now()}-${index}`,
@@ -15,6 +14,7 @@ const blankLab = () => ({
   title: '',
   itemLabel: '',
   topologyImage: '',
+  sourceParts: [],
   tasks: [newTask(0)]
 });
 
@@ -42,13 +42,6 @@ function AdminLabs() {
   };
 
   useEffect(() => { loadLabs(); }, []);
-
-  const builtInLabs = LAB_QUESTIONS.map((lab) => ({
-    ...lab,
-    isBuiltIn: true,
-    topologyImage: lab.sourceImage || lab.sourceParts?.find((part) => /topology/i.test(`${part.id || ''} ${part.alt || ''}`))?.src || lab.sourceParts?.[0]?.src || ''
-  }));
-  const displayLabs = [...builtInLabs, ...labs];
 
   const updateEditor = (patch) => setEditor((previous) => ({ ...previous, ...patch }));
 
@@ -161,11 +154,18 @@ function AdminLabs() {
 
   const openEdit = (lab) => {
     setFeedback(null);
+    const topologyPart = (lab.sourceParts || []).find((part) => /topology/i.test(`${part?.id || ''} ${part?.alt || ''}`)) || lab.sourceParts?.[0];
     setEditor({
       id: lab.id || '',
       title: lab.title || '',
       itemLabel: lab.labItemLabel || lab.itemLabel || '',
-      topologyImage: lab.topologyImage || lab.sourceImage || '',
+      topologyImage: lab.topologyImage || lab.sourceImage || topologyPart?.src || '',
+      sourceParts: Array.isArray(lab.sourceParts) ? lab.sourceParts : [],
+      sourceWidth: lab.sourceWidth || '',
+      sourceHeight: lab.sourceHeight || '',
+      sourceDisplayWidth: lab.sourceDisplayWidth || '',
+      sourceDisplayHeight: lab.sourceDisplayHeight || '',
+      topologyCropHeight: lab.topologyCropHeight || '',
       tasks: Array.isArray(lab.tasks) && lab.tasks.length > 0
         ? lab.tasks.map((task, index) => ({ ...newTask(index), ...task }))
         : [newTask(0)]
@@ -235,31 +235,25 @@ function AdminLabs() {
 
         {loading ? (
           <div className="admin-empty-state">Loading labs…</div>
-        ) : displayLabs.length === 0 ? (
+        ) : labs.length === 0 ? (
           <div className="admin-empty-state">
-            <strong>No custom labs yet.</strong>
-            <span>The built-in supplied Labs remain available. Add a lab here when you are ready to publish another one.</span>
+            <strong>No labs yet.</strong>
+            <span>Create a guided lab here. Every lab in this list can be edited or removed.</span>
           </div>
         ) : (
           <div className="admin-lab-list">
-            {displayLabs.map((lab) => (
+            {labs.map((lab) => (
               <article key={lab.id} className="admin-lab-row">
                 <div className="admin-lab-thumb">
                   {lab.topologyImage ? <img src={lab.topologyImage} alt="" /> : lab.sourceParts?.[0]?.src ? <img src={lab.sourceParts[0].src} alt="" /> : <span>LAB</span>}
                 </div>
                 <div className="admin-lab-row-copy">
-                  <div className="admin-lab-row-title">{lab.title || lab.questionNo || lab.id} {lab.isBuiltIn && <span className="admin-lab-type-badge built-in">Built-in</span>}</div>
+                  <div className="admin-lab-row-title">{lab.title || lab.questionNo || lab.id}</div>
                   <div className="admin-lab-row-meta">{lab.labItemLabel} · {(lab.tasks || []).length} task{(lab.tasks || []).length === 1 ? '' : 's'}</div>
                 </div>
                 <div className="admin-lab-row-actions">
-                  {lab.isBuiltIn ? (
-                    <span className="admin-lab-readonly-label">Read-only source</span>
-                  ) : (
-                    <>
-                      <button type="button" className="btn-table-action" onClick={() => openEdit(lab)}>Edit</button>
-                      <button type="button" className="btn-table-action danger" onClick={() => deleteLab(lab)}>Delete</button>
-                    </>
-                  )}
+                  <button type="button" className="btn-table-action" onClick={() => openEdit(lab)}>Edit</button>
+                  <button type="button" className="btn-table-action danger" onClick={() => deleteLab(lab)}>Delete</button>
                 </div>
               </article>
             ))}

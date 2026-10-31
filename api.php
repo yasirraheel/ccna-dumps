@@ -97,10 +97,54 @@ try {
         item_label VARCHAR(120) NOT NULL,
         title VARCHAR(255) NOT NULL,
         topology_image TEXT NULL,
+        source_parts LONGTEXT NULL,
+        metadata LONGTEXT NULL,
         tasks LONGTEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    // Keep existing installations compatible with the richer Lab editor.
+    try { $pdo->exec("ALTER TABLE labs ADD COLUMN source_parts LONGTEXT NULL"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE labs ADD COLUMN metadata LONGTEXT NULL"); } catch (Exception $e) {}
+
+    // Seed the former supplied Labs into the database once. The seed file is
+    // deployment data, not a frontend fallback; after this migration admins
+    // can edit or delete every record normally.
+    $pdo->exec("CREATE TABLE IF NOT EXISTS lab_meta (
+        meta_key VARCHAR(100) PRIMARY KEY,
+        meta_value TEXT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    $seeded = $pdo->prepare("SELECT meta_key FROM lab_meta WHERE meta_key = 'initial_seeded' LIMIT 1");
+    $seeded->execute();
+    if (!$seeded->fetchColumn()) {
+        $seedPath = __DIR__ . '/labs-seed.json';
+        if (!is_file($seedPath)) $seedPath = __DIR__ . '/public/labs-seed.json';
+        $seedRows = is_file($seedPath) ? json_decode(file_get_contents($seedPath), true) : [];
+        if (is_array($seedRows)) {
+            $seedStmt = $pdo->prepare("INSERT INTO labs (id, item_label, title, topology_image, source_parts, metadata, tasks)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE item_label = VALUES(item_label), title = VALUES(title), topology_image = VALUES(topology_image), source_parts = VALUES(source_parts), metadata = VALUES(metadata), tasks = VALUES(tasks), updated_at = CURRENT_TIMESTAMP");
+            foreach ($seedRows as $seedLab) {
+                if (!is_array($seedLab)) continue;
+                $seedId = trim((string)($seedLab['id'] ?? ''));
+                if ($seedId === '') continue;
+                $seedItem = trim((string)($seedLab['labItemLabel'] ?? $seedLab['itemLabel'] ?? $seedLab['questionNo'] ?? $seedId));
+                $seedTitle = trim((string)($seedLab['title'] ?? $seedLab['name'] ?? $seedLab['questionNo'] ?? $seedItem));
+                $seedImage = trim((string)($seedLab['topologyImage'] ?? $seedLab['sourceImage'] ?? ''));
+                $seedParts = isset($seedLab['sourceParts']) && is_array($seedLab['sourceParts']) ? json_encode($seedLab['sourceParts'], JSON_UNESCAPED_UNICODE) : null;
+                $seedMeta = json_encode([
+                    'sourceWidth' => $seedLab['sourceWidth'] ?? null,
+                    'sourceHeight' => $seedLab['sourceHeight'] ?? null,
+                    'sourceDisplayWidth' => $seedLab['sourceDisplayWidth'] ?? null,
+                    'sourceDisplayHeight' => $seedLab['sourceDisplayHeight'] ?? null,
+                    'topologyCropHeight' => $seedLab['topologyCropHeight'] ?? null,
+                ], JSON_UNESCAPED_UNICODE);
+                $seedTasks = is_array($seedLab['tasks'] ?? null) ? json_encode($seedLab['tasks'], JSON_UNESCAPED_UNICODE) : '[]';
+                $seedStmt->execute([$seedId, $seedItem, $seedTitle, $seedImage, $seedParts, $seedMeta, $seedTasks]);
+            }
+        }
+        $pdo->prepare("INSERT INTO lab_meta (meta_key, meta_value) VALUES ('initial_seeded', ?)")->execute([date('c')]);
+    }
 
     $defaultFreePerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
@@ -818,6 +862,8 @@ if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET'
             exit;
         }
         $tasks = json_decode($row['tasks'] ?? '[]', true) ?: [];
+        $sourceParts = json_decode($row['source_parts'] ?? '[]', true) ?: [];
+        $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
         echo json_encode(["lab" => [
             "id" => $row['id'],
             "type" => "lab",
@@ -825,6 +871,13 @@ if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET'
             "labItemLabel" => $row['item_label'],
             "title" => $row['title'],
             "sourceImage" => $row['topology_image'],
+            "topologyImage" => $row['topology_image'],
+            "sourceParts" => $sourceParts,
+            "sourceWidth" => $metadata['sourceWidth'] ?? null,
+            "sourceHeight" => $metadata['sourceHeight'] ?? null,
+            "sourceDisplayWidth" => $metadata['sourceDisplayWidth'] ?? null,
+            "sourceDisplayHeight" => $metadata['sourceDisplayHeight'] ?? null,
+            "topologyCropHeight" => $metadata['topologyCropHeight'] ?? null,
             "tasks" => $tasks,
             "createdAt" => $row['created_at'],
             "updatedAt" => $row['updated_at']
@@ -834,6 +887,7 @@ if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET'
 
     $rows = $pdo->query("SELECT * FROM labs ORDER BY created_at ASC, id ASC")->fetchAll();
     $labs = array_map(function($row) {
+        $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
         return [
             "id" => $row['id'],
             "type" => "lab",
@@ -841,6 +895,13 @@ if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET'
             "labItemLabel" => $row['item_label'],
             "title" => $row['title'],
             "sourceImage" => $row['topology_image'],
+            "topologyImage" => $row['topology_image'],
+            "sourceParts" => json_decode($row['source_parts'] ?? '[]', true) ?: [],
+            "sourceWidth" => $metadata['sourceWidth'] ?? null,
+            "sourceHeight" => $metadata['sourceHeight'] ?? null,
+            "sourceDisplayWidth" => $metadata['sourceDisplayWidth'] ?? null,
+            "sourceDisplayHeight" => $metadata['sourceDisplayHeight'] ?? null,
+            "topologyCropHeight" => $metadata['topologyCropHeight'] ?? null,
             "tasks" => json_decode($row['tasks'] ?? '[]', true) ?: [],
             "createdAt" => $row['created_at'],
             "updatedAt" => $row['updated_at']
@@ -2324,6 +2385,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
     if (preg_match('#^/api/admin/labs$#', $basePath) && $method === 'GET') {
         $rows = $pdo->query("SELECT * FROM labs ORDER BY created_at ASC, id ASC")->fetchAll();
         $labs = array_map(function($row) {
+            $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
             return [
                 "id" => $row['id'],
                 "type" => "lab",
@@ -2332,6 +2394,12 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 "title" => $row['title'],
                 "topologyImage" => $row['topology_image'],
                 "sourceImage" => $row['topology_image'],
+                "sourceParts" => json_decode($row['source_parts'] ?? '[]', true) ?: [],
+                "sourceWidth" => $metadata['sourceWidth'] ?? null,
+                "sourceHeight" => $metadata['sourceHeight'] ?? null,
+                "sourceDisplayWidth" => $metadata['sourceDisplayWidth'] ?? null,
+                "sourceDisplayHeight" => $metadata['sourceDisplayHeight'] ?? null,
+                "topologyCropHeight" => $metadata['topologyCropHeight'] ?? null,
                 "tasks" => json_decode($row['tasks'] ?? '[]', true) ?: [],
                 "createdAt" => $row['created_at'],
                 "updatedAt" => $row['updated_at']
@@ -2346,6 +2414,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $title = trim((string)($body['title'] ?? ''));
         $itemLabel = trim((string)($body['itemLabel'] ?? $body['item_label'] ?? ''));
         $topologyImage = trim((string)($body['topologyImage'] ?? $body['topology_image'] ?? ''));
+        $sourceParts = is_array($body['sourceParts'] ?? null) ? $body['sourceParts'] : [];
         $tasks = $body['tasks'] ?? [];
 
         if (!$title || !$itemLabel || !is_array($tasks) || count($tasks) === 0) {
@@ -2372,6 +2441,9 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 "taskImage" => trim((string)($task['taskImage'] ?? $task['task_image'] ?? '')),
                 "commandText" => trim((string)($task['commandText'] ?? $task['command_text'] ?? '')),
                 "solutionImage" => trim((string)($task['solutionImage'] ?? $task['solution_image'] ?? '')),
+                "solutionSlice" => is_array($task['solutionSlice'] ?? null) ? $task['solutionSlice'] : null,
+                "solutionWidth" => $task['solutionWidth'] ?? null,
+                "solutionHeight" => $task['solutionHeight'] ?? null,
             ];
         }
         if (count($normalizedTasks) === 0) {
@@ -2381,9 +2453,13 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         }
 
         $id = $rawId !== '' ? preg_replace('/[^a-zA-Z0-9_-]/', '-', $rawId) : ('lab-custom-' . time());
-        $stmt = $pdo->prepare("INSERT INTO labs (id, item_label, title, topology_image, tasks) VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE item_label = VALUES(item_label), title = VALUES(title), topology_image = VALUES(topology_image), tasks = VALUES(tasks), updated_at = CURRENT_TIMESTAMP");
-        $stmt->execute([$id, $itemLabel, $title, $topologyImage, json_encode($normalizedTasks, JSON_UNESCAPED_UNICODE)]);
+        $metadata = [];
+        foreach (['sourceWidth', 'sourceHeight', 'sourceDisplayWidth', 'sourceDisplayHeight', 'topologyCropHeight'] as $metaKey) {
+            if (isset($body[$metaKey]) && $body[$metaKey] !== '') $metadata[$metaKey] = is_numeric($body[$metaKey]) ? (float)$body[$metaKey] : $body[$metaKey];
+        }
+        $stmt = $pdo->prepare("INSERT INTO labs (id, item_label, title, topology_image, source_parts, metadata, tasks) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE item_label = VALUES(item_label), title = VALUES(title), topology_image = VALUES(topology_image), source_parts = VALUES(source_parts), metadata = VALUES(metadata), tasks = VALUES(tasks), updated_at = CURRENT_TIMESTAMP");
+        $stmt->execute([$id, $itemLabel, $title, $topologyImage, json_encode($sourceParts, JSON_UNESCAPED_UNICODE), json_encode($metadata, JSON_UNESCAPED_UNICODE), json_encode($normalizedTasks, JSON_UNESCAPED_UNICODE)]);
 
         echo json_encode([
             "success" => true,
@@ -2396,6 +2472,12 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 "title" => $title,
                 "topologyImage" => $topologyImage,
                 "sourceImage" => $topologyImage,
+                "sourceParts" => $sourceParts,
+                "sourceWidth" => $metadata['sourceWidth'] ?? null,
+                "sourceHeight" => $metadata['sourceHeight'] ?? null,
+                "sourceDisplayWidth" => $metadata['sourceDisplayWidth'] ?? null,
+                "sourceDisplayHeight" => $metadata['sourceDisplayHeight'] ?? null,
+                "topologyCropHeight" => $metadata['topologyCropHeight'] ?? null,
                 "tasks" => $normalizedTasks
             ]
         ]);

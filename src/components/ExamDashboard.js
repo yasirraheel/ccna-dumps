@@ -20,7 +20,6 @@ import {
   mergeUniqueQuestions,
 } from "../utils/incorrectQuestionPool";
 import { cleanBankTitle } from "../utils/bankTitle";
-import { LAB_QUESTIONS } from "../data/labQuestions";
 
 const DEFAULT_STUDY_SETTINGS = {
   randomizeQuestions: false,
@@ -54,7 +53,7 @@ function ExamDashboard({
   onOpenAuth,
   onLogout,
   onOpenUpgrade,
-  labQuestions = LAB_QUESTIONS,
+  labQuestions = [],
 }) {
   // Synchronously load cached user exam preferences to prevent default flash on refresh
   const getInitialPrefs = () => {
