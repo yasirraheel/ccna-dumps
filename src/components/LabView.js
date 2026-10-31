@@ -162,6 +162,9 @@ function LabView({
   const sourceHeight = question?.sourceHeight || 1199;
   const sourceDisplayWidth = question?.sourceDisplayWidth || sourceWidth;
   const sourceDisplayHeight = question?.sourceDisplayHeight || question?.topologyCropHeight || sourceHeight;
+  const sourceParts = Array.isArray(question?.sourceParts) ? question.sourceParts : [];
+  const topologyParts = sourceParts.filter((part) => /topology/i.test(`${part.id || ""} ${part.alt || ""}`));
+  const taskReferenceParts = sourceParts.filter((part) => !/topology/i.test(`${part.id || ""} ${part.alt || ""}`));
 
   const handleNext = async () => {
     if (!canProceed || isNavSaving) return;
@@ -307,27 +310,41 @@ function LabView({
 
       <main className="boson-question-body lab-main-content">
         <section className="lab-question-card" aria-label="Lab topology and tasks">
-          {Array.isArray(question?.sourceParts) ? (
-            <div id="lab-source-image" className="lab-source-parts">
-              {question.sourceParts.map((part) => (
-                <img key={part.id || part.src} src={part.src} alt={part.alt || "Original lab resource"} />
-              ))}
-            </div>
-          ) : (
-            <div
-              id="lab-source-image"
-              className="lab-source-frame"
-              style={{ aspectRatio: `${sourceDisplayWidth} / ${sourceDisplayHeight}` }}
-            >
-              <img
-                src={question?.sourceImage}
-                alt="Lab topology and tasks"
-                style={{ width: `${(sourceWidth / sourceDisplayWidth) * 100}%`, maxWidth: "none" }}
-              />
-            </div>
-          )}
+          <div className="lab-study-layout">
+            <aside className="lab-topology-column" aria-label="Lab topology">
+              <div className="lab-topology-heading">Topology</div>
+              {sourceParts.length > 0 ? (
+                <div id="lab-source-image" className="lab-source-parts">
+                  {(topologyParts.length > 0 ? topologyParts : sourceParts).map((part) => (
+                    <img key={part.id || part.src} src={part.src} alt={part.alt || "Original lab resource"} />
+                  ))}
+                </div>
+              ) : (
+                <div
+                  id="lab-source-image"
+                  className="lab-source-frame"
+                  style={{ aspectRatio: `${sourceDisplayWidth} / ${sourceDisplayHeight}` }}
+                >
+                  <img
+                    src={question?.sourceImage}
+                    alt="Lab topology and tasks"
+                    style={{ width: `${(sourceWidth / sourceDisplayWidth) * 100}%`, maxWidth: "none" }}
+                  />
+                </div>
+              )}
+            </aside>
 
-          {isNoteEditorOpen && (
+            <div className="lab-tasks-column">
+
+              {taskReferenceParts.length > 0 && (
+                <div className="lab-task-reference" aria-label="Original task reference">
+                  {taskReferenceParts.map((part) => (
+                    <img key={part.id || part.src} src={part.src} alt={part.alt || "Original lab task reference"} />
+                  ))}
+                </div>
+              )}
+
+              {isNoteEditorOpen && (
             <div className="lab-note-editor">
               <textarea
                 value={labNote}
@@ -342,14 +359,14 @@ function LabView({
             </div>
           )}
 
-          <div className="lab-task-reveal-header">
+              <div className="lab-task-reveal-header">
             <div>
               <h2>Tasks</h2>
             </div>
             <span className="lab-task-progress">{Math.min(revealedTasks.length, tasks.length)} / {tasks.length} revealed</span>
           </div>
 
-          <div className="lab-task-list">
+              <div className="lab-task-list">
             {tasks.map((task, taskIndex) => {
               const isRevealed = revealedTasks.includes(taskIndex);
               const isAvailable = taskIndex <= revealedTasks.length;
@@ -387,7 +404,7 @@ function LabView({
             })}
           </div>
 
-          {allSolutionsRevealed && (
+              {allSolutionsRevealed && (
             <section className="lab-rating-card" aria-labelledby="lab-rating-heading">
               <div>
                 <span className="lab-rating-eyebrow">All solutions revealed</span>
@@ -409,7 +426,7 @@ function LabView({
             </section>
           )}
 
-          <div className="lab-footer-actions">
+              <div className="lab-footer-actions">
             <button type="button" className="btn-boson-nav" onClick={onExitToDashboard}>Save & Exit</button>
             <div className="lab-footer-right-actions">
               <button type="button" className="btn-boson-action lab-footer-review-button" onClick={() => setShowReviewMatrix(true)}>
@@ -431,6 +448,8 @@ function LabView({
                   ? "Next Lab →"
                   : "Finish Labs"}
               </button>
+            </div>
+              </div>
             </div>
           </div>
         </section>
