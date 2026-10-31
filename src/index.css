@@ -10699,6 +10699,13 @@ body {
   line-height: 1.35 !important;
 }
 
+.lab-name-label {
+  color: #38bdf8;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .lab-task-reveal-header p {
   display: none !important;
 }

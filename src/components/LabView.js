@@ -162,6 +162,8 @@ function LabView({
   const sourceHeight = question?.sourceHeight || 1199;
   const sourceDisplayWidth = question?.sourceDisplayWidth || sourceWidth;
   const sourceDisplayHeight = question?.sourceDisplayHeight || question?.topologyCropHeight || sourceHeight;
+  const labName = question?.title || question?.name || selectedBankName || "Labs";
+  const labItemLabel = question?.labItemLabel || question?.questionNo || `ITEM ${seqNumber}`;
   const sourceParts = Array.isArray(question?.sourceParts) ? question.sourceParts : [];
   const topologyParts = sourceParts.filter((part) => /topology/i.test(`${part.id || ""} ${part.alt || ""}`));
   const taskReferenceParts = sourceParts.filter((part) => !/topology/i.test(`${part.id || ""} ${part.alt || ""}`));
@@ -247,12 +249,14 @@ function LabView({
           <div className="boson-sub-header">
             <div className="boson-sub-left">
               <div className="boson-mobile-summary-row">
+                <span className="lab-name-label">{labName}</span>
+                <span className="boson-dot-sep">•</span>
                 <span className="boson-q-count">Lab {seqNumber} of {numQuestions}</span>
                 <span className="boson-dot-sep">•</span>
                 <span className="boson-live-score">Guided practice</span>
               </div>
               <div className="boson-mobile-detail-row">
-                <span className="boson-qno-pill">{question?.labItemLabel || `ITEM ${seqNumber}`}</span>
+                <span className="boson-qno-pill">{labItemLabel}</span>
               </div>
             </div>
             <div className="boson-sub-right-actions">
