@@ -13,6 +13,8 @@ const PASSING_PERCENTAGE = 82.5;
 /**
  * Matches an exam attempt record to one of the canonical bank keys:
  * 'bank_a' | 'bank_b' | 'bank_c' | 'bank_d' | 'bank_dragdrop' | 'bank_all' | 'bank_labs'
+ * 'bank_anki_nf' | 'bank_anki_na' | 'bank_anki_ipc' | 'bank_anki_ips' |
+ * 'bank_anki_sec' | 'bank_anki_auto' | 'bank_anki_all'
  */
 export function matchExamToBankKey(exam) {
   if (!exam) return null;
@@ -39,6 +41,18 @@ export function matchExamToBankKey(exam) {
     rawName.includes("dragdrop")
   ) {
     return "bank_dragdrop";
+  }
+
+  // 2b. Anki Flashcards banks (by name, for attempts without a stored bankKey)
+  if (rawName.includes("anki")) {
+    if (rawName.includes("network fundamentals")) return "bank_anki_nf";
+    if (rawName.includes("network access")) return "bank_anki_na";
+    if (rawName.includes("ip connectivity")) return "bank_anki_ipc";
+    if (rawName.includes("ip services")) return "bank_anki_ips";
+    if (rawName.includes("security fundamentals")) return "bank_anki_sec";
+    if (rawName.includes("automation")) return "bank_anki_auto";
+    if (rawName.includes("all domains")) return "bank_anki_all";
+    return "bank_anki_all";
   }
 
   // 3. Exam C (101-150) - Check before A to prevent 101-150 from triggering 1-50
@@ -96,6 +110,20 @@ export function matchExamToBankKey(exam) {
       (q) => q.type === "drag_drop" || q.dragDropData || q.isDragDrop
     );
     if (isAllDragDrop) return "bank_dragdrop";
+
+    // Anki Flashcards: match by questionNo prefix (Anki-NF-, Anki-NA-, ...)
+    const ankiNos = exam.questions
+      .map((q) => String(q.questionNo || q.question_no || "").toLowerCase())
+      .filter((n) => n.startsWith("anki-"));
+    if (ankiNos.length > 0) {
+      if (ankiNos.every((n) => n.startsWith("anki-nf-"))) return "bank_anki_nf";
+      if (ankiNos.every((n) => n.startsWith("anki-na-"))) return "bank_anki_na";
+      if (ankiNos.every((n) => n.startsWith("anki-ipc-"))) return "bank_anki_ipc";
+      if (ankiNos.every((n) => n.startsWith("anki-ips-"))) return "bank_anki_ips";
+      if (ankiNos.every((n) => n.startsWith("anki-sec-"))) return "bank_anki_sec";
+      if (ankiNos.every((n) => n.startsWith("anki-auto-"))) return "bank_anki_auto";
+      return "bank_anki_all";
+    }
 
     const ids = exam.questions.map((q) => Number(q.id)).filter((id) => !isNaN(id));
     if (ids.length > 0) {
