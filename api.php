@@ -23,6 +23,133 @@ header("Pragma: no-cache");
 header("Expires: 0");
 header("Surrogate-Control: no-store");
 
+function getLabNumberFromRow($row) {
+    $stored = $row['lab_number'] ?? null;
+    if ($stored !== null && $stored !== '' && is_numeric($stored) && (int)$stored > 0) {
+        return (int)$stored;
+    }
+
+    foreach ([$row['title'] ?? '', $row['item_label'] ?? ''] as $label) {
+        $label = trim((string)$label);
+        if (preg_match('/^\s*(\d+)\s*$/', $label, $match)) return (int)$match[1];
+        if (preg_match('/\b(?:lab|item)\s*(?:#|no\.?|number)?\s*[:#-]?\s*(\d+)\b/i', $label, $match)) {
+            return (int)$match[1];
+        }
+    }
+
+    return null;
+}
+
+function getLabDisplayLabel($labNumber, $fallback = '') {
+    if ($labNumber !== null && $labNumber !== '' && (int)$labNumber > 0) {
+        return 'Lab No ' . (int)$labNumber;
+    }
+    return trim((string)$fallback) ?: 'Lab No';
+}
+
+function retakeAnswerHasValue($answer) {
+    if ($answer === null || $answer === '') return false;
+    if (is_array($answer)) {
+        if (array_key_exists('confirmed', $answer) || array_key_exists('selections', $answer) || array_key_exists('matches', $answer)) {
+            return !empty($answer['confirmed']) || !empty($answer['selections']) || !empty($answer['matches']);
+        }
+        return count($answer) > 0;
+    }
+    return true;
+}
+
+function retakeQuestionKey($question) {
+    if (!is_array($question)) return '';
+    if (isset($question['id']) && $question['id'] !== '') return 'id:' . (string)$question['id'];
+    if (!empty($question['questionNo'])) return 'qno:' . strtolower(trim((string)$question['questionNo']));
+    if (!empty($question['question'])) return 'text:' . strtolower(trim((string)$question['question']));
+    return '';
+}
+
+function mergeRetakePayloadWithExistingAttempt(PDO $pdo, array $payload, $attemptId) {
+    $lookup = $pdo->prepare('SELECT * FROM exam_attempts WHERE id = ? LIMIT 1');
+    $lookup->execute([$attemptId]);
+    $existing = $lookup->fetch();
+    if (!$existing) return null;
+
+    $originalQuestions = json_decode($existing['questions'] ?? '[]', true);
+    $originalAnswers = json_decode($existing['answers'] ?? '[]', true);
+    $incomingQuestions = $payload['questions'] ?? [];
+    $incomingAnswers = $payload['answers'] ?? [];
+    if (!is_array($originalQuestions) || count($originalQuestions) === 0 || !is_array($incomingQuestions)) return null;
+    if (!is_array($originalAnswers)) $originalAnswers = [];
+
+    $mergedAnswers = $originalAnswers;
+    while (count($mergedAnswers) < count($originalQuestions)) $mergedAnswers[] = null;
+    $indexByKey = [];
+    foreach ($originalQuestions as $index => $question) {
+        $key = retakeQuestionKey($question);
+        if ($key !== '') $indexByKey[$key] = $index;
+    }
+
+    foreach ($incomingQuestions as $incomingIndex => $question) {
+        $key = retakeQuestionKey($question);
+        $targetIndex = $indexByKey[$key] ?? null;
+        $answer = $incomingAnswers[$incomingIndex] ?? null;
+        // Leaving a retake question blank must not erase the original answer.
+        if ($targetIndex !== null && retakeAnswerHasValue($answer)) {
+            $mergedAnswers[$targetIndex] = $answer;
+        }
+    }
+
+    $score = 0;
+    $maxScore = 0;
+    foreach ($originalQuestions as $index => $question) {
+        $points = (int)($question['points'] ?? 10);
+        if ($points <= 0) $points = 10;
+        $maxScore += $points;
+        $answer = $mergedAnswers[$index] ?? null;
+        if (!retakeAnswerHasValue($answer)) continue;
+
+        $rawCorrect = $question['correctOptions'] ?? ($question['correctOption'] ?? null);
+        $correct = is_array($rawCorrect) ? array_map('intval', $rawCorrect) : ($rawCorrect === null ? [] : [(int)$rawCorrect]);
+        $isCorrect = false;
+        if (($question['type'] ?? '') === 'drag_drop' || !empty($question['dragDropData'])) {
+            $isCorrect = is_array($answer) && !empty($answer['confirmed']) && !empty($answer['isCorrect']);
+        } elseif (count($correct) > 1) {
+            if (is_array($answer) && array_key_exists('selections', $answer)) {
+                $selected = $answer['selections'];
+            } elseif (is_array($answer)) {
+                $selected = $answer;
+            } else {
+                $selected = [$answer];
+            }
+            $selected = array_map('intval', $selected);
+            sort($selected);
+            $expected = $correct;
+            sort($expected);
+            $isCorrect = $selected === $expected;
+        } else {
+            if (is_array($answer) && array_key_exists('selections', $answer)) {
+                $selected = $answer['selections'][0] ?? null;
+            } elseif (is_array($answer)) {
+                $selected = $answer[0] ?? null;
+            } else {
+                $selected = $answer;
+            }
+            $isCorrect = $selected !== null && in_array((int)$selected, $correct, true);
+        }
+        if ($isCorrect) $score += $points;
+    }
+
+    $percentage = $maxScore > 0 ? round(($score / $maxScore) * 100, 2) : 0;
+    return [
+        'questions' => $originalQuestions,
+        'answers' => $mergedAnswers,
+        'score' => $score,
+        'maxScore' => $maxScore,
+        'percentage' => $percentage,
+        'passed' => $percentage >= 82.5,
+        'totalQuestions' => count($originalQuestions),
+        'timeSpentSeconds' => (int)($existing['time_spent_seconds'] ?? 0) + (int)($payload['timeSpentSeconds'] ?? 0),
+    ];
+}
+
 // Load .env
 $envPath = __DIR__ . '/.env';
 $env = [];
@@ -54,6 +181,8 @@ try {
     try { $pdo->exec("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user'"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN plan VARCHAR(50) DEFAULT 'free'"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN lab_progress LONGTEXT NULL"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN history_record_id VARCHAR(100) NULL"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE questions ADD COLUMN explanation LONGTEXT NULL"); } catch (Exception $e) {}
     try {
         $pdo->exec("UPDATE exam_attempts SET bank_name = REPLACE(REPLACE(bank_name, 'spoto-', ''), 'spoto', '') WHERE bank_name LIKE '%spoto%'");
@@ -94,6 +223,7 @@ try {
     // build new guided walkthroughs without changing the exam question schema.
     $pdo->exec("CREATE TABLE IF NOT EXISTS labs (
         id VARCHAR(100) PRIMARY KEY,
+        lab_number INT NULL,
         item_label VARCHAR(120) NOT NULL,
         title VARCHAR(255) NOT NULL,
         topology_image TEXT NULL,
@@ -104,6 +234,7 @@ try {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     // Keep existing installations compatible with the richer Lab editor.
+    try { $pdo->exec("ALTER TABLE labs ADD COLUMN lab_number INT NULL AFTER id"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE labs ADD COLUMN source_parts LONGTEXT NULL"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE labs ADD COLUMN metadata LONGTEXT NULL"); } catch (Exception $e) {}
 
@@ -113,6 +244,18 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS lab_meta (
         meta_key VARCHAR(100) PRIMARY KEY,
         meta_value TEXT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS lab_scratchpads (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        owner_key VARCHAR(320) NOT NULL,
+        user_id VARCHAR(100) NULL,
+        user_email VARCHAR(255) NULL,
+        candidate_name VARCHAR(255) NULL,
+        lab_key VARCHAR(100) NOT NULL,
+        notes_json LONGTEXT NOT NULL,
+        note_text LONGTEXT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_owner_lab (owner_key, lab_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     $seeded = $pdo->prepare("SELECT meta_key FROM lab_meta WHERE meta_key = 'initial_seeded' LIMIT 1");
     $seeded->execute();
@@ -145,6 +288,17 @@ try {
         }
         $pdo->prepare("INSERT INTO lab_meta (meta_key, meta_value) VALUES ('initial_seeded', ?)")->execute([date('c')]);
     }
+
+    // Backfill the new explicit number for older labs created before the
+    // number field existed, using their previous Lab/Item labels.
+    try {
+        $missingLabNumbers = $pdo->query("SELECT id, lab_number, title, item_label FROM labs WHERE lab_number IS NULL")->fetchAll();
+        $backfillLabNumber = $pdo->prepare("UPDATE labs SET lab_number = ? WHERE id = ?");
+        foreach ($missingLabNumbers as $missingLab) {
+            $inferredNumber = getLabNumberFromRow($missingLab);
+            if ($inferredNumber !== null) $backfillLabNumber->execute([$inferredNumber, $missingLab['id']]);
+        }
+    } catch (Exception $e) {}
 
     $defaultFreePerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
@@ -864,12 +1018,15 @@ if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET'
         $tasks = json_decode($row['tasks'] ?? '[]', true) ?: [];
         $sourceParts = json_decode($row['source_parts'] ?? '[]', true) ?: [];
         $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
+        $labNumber = getLabNumberFromRow($row);
+        $labLabel = getLabDisplayLabel($labNumber, $row['title'] ?: $row['item_label']);
         echo json_encode(["lab" => [
             "id" => $row['id'],
             "type" => "lab",
-            "questionNo" => $row['title'] ?: $row['item_label'],
-            "labItemLabel" => $row['item_label'],
-            "title" => $row['title'],
+            "labNumber" => $labNumber,
+            "questionNo" => $labLabel,
+            "labItemLabel" => "Complete the tasks below",
+            "title" => $labLabel,
             "sourceImage" => $row['topology_image'],
             "topologyImage" => $row['topology_image'],
             "sourceParts" => $sourceParts,
@@ -885,15 +1042,18 @@ if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET'
         exit;
     }
 
-    $rows = $pdo->query("SELECT * FROM labs ORDER BY created_at ASC, id ASC")->fetchAll();
+    $rows = $pdo->query("SELECT * FROM labs ORDER BY lab_number IS NULL ASC, lab_number ASC, created_at ASC, id ASC")->fetchAll();
     $labs = array_map(function($row) {
         $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
+        $labNumber = getLabNumberFromRow($row);
+        $labLabel = getLabDisplayLabel($labNumber, $row['title'] ?: $row['item_label']);
         return [
             "id" => $row['id'],
             "type" => "lab",
-            "questionNo" => $row['title'] ?: $row['item_label'],
-            "labItemLabel" => $row['item_label'],
-            "title" => $row['title'],
+            "labNumber" => $labNumber,
+            "questionNo" => $labLabel,
+            "labItemLabel" => "Complete the tasks below",
+            "title" => $labLabel,
             "sourceImage" => $row['topology_image'],
             "topologyImage" => $row['topology_image'],
             "sourceParts" => json_decode($row['source_parts'] ?? '[]', true) ?: [],
@@ -1071,23 +1231,25 @@ if (preg_match('#^/api/check-answer#', $basePath) && $method === 'POST') {
             $rJson = json_encode($sessionData['revealedQuestions'] ?? []);
             $cJson = json_encode($sessionData['committedQuestions'] ?? []);
             $setJson = json_encode($sessionData['settings'] ?? []);
+            $lpJson = json_encode($sessionData['labProgress'] ?? []);
+            $historyRecordId = $sessionData['historyRecordId'] ?? null;
             $upAt = time() * 1000;
 
             $sessUpsert = $pdo->prepare("
                 INSERT INTO saved_sessions 
-                (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, settings, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, settings, lab_progress, history_record_id, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                 user_id=VALUES(user_id), user_email=VALUES(user_email), candidate_name=VALUES(candidate_name),
                 bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode), q_index=VALUES(q_index),
                 points=VALUES(points), seconds_remaining=VALUES(seconds_remaining), time_spent_seconds=VALUES(time_spent_seconds),
                 answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
                 revealed_questions=VALUES(revealed_questions), committed_questions=VALUES(committed_questions),
-                settings=VALUES(settings), updated_at=VALUES(updated_at)
+                settings=VALUES(settings), lab_progress=VALUES(lab_progress), history_record_id=VALUES(history_record_id), updated_at=VALUES(updated_at)
             ");
             $sessUpsert->execute([
                 $sId, $uId, $uEmail, $cName, $bName, $eMode, $qIdx, $pts, $secRem, $tSpent,
-                $qJson, $aJson, $fJson, $rJson, $cJson, $setJson, $upAt
+                $qJson, $aJson, $fJson, $rJson, $cJson, $setJson, $lpJson, $historyRecordId, $upAt
             ]);
         }
 
@@ -1155,7 +1317,10 @@ if (preg_match('#^/api/history#', $basePath)) {
         $scoreParam = $b['score'] ?? 0;
         $totalQParam = $b['totalQuestions'] ?? 0;
 
-        if ($userIdParam || $userEmailParam) {
+        // A caller-provided id is authoritative. Retakes reuse the original
+        // history id, so do not redirect them through the time-based duplicate
+        // detector and accidentally update a different recent attempt.
+        if (($userIdParam || $userEmailParam) && empty($b['id'])) {
             $checkDup = $pdo->prepare("SELECT id FROM exam_attempts 
                 WHERE (" . ($userIdParam && $userEmailParam ? "user_id = ? OR user_email = ?" : ($userIdParam ? "user_id = ?" : "user_email = ?")) . ") 
                   AND bank_name = ? 
@@ -1200,12 +1365,24 @@ if (preg_match('#^/api/history#', $basePath)) {
             }
         }
 
+        // Retakes carry the original historyRecordId. Merge their answered
+        // subset into the existing full attempt before saving, so a retake
+        // can never replace an 80-question exam with a smaller failed exam.
+        if (!empty($b['historyRecordId']) && (string)$b['historyRecordId'] === (string)$id) {
+            $mergedRetake = mergeRetakePayloadWithExistingAttempt($pdo, $b, $id);
+            if (is_array($mergedRetake)) $b = array_merge($b, $mergedRetake);
+        }
+
         $stmt = $pdo->prepare("INSERT INTO exam_attempts 
             (id, user_id, user_email, candidate_name, bank_name, score, max_score, percentage, passed, total_questions, time_spent_seconds, exam_date, questions, answers, flagged_questions, revealed_questions, settings, exam_mode)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-            user_id=VALUES(user_id), user_email=VALUES(user_email), candidate_name=VALUES(candidate_name), score=VALUES(score),
-            percentage=VALUES(percentage), passed=VALUES(passed), answers=VALUES(answers), settings=VALUES(settings)");
+            user_id=VALUES(user_id), user_email=VALUES(user_email), candidate_name=VALUES(candidate_name),
+            bank_name=VALUES(bank_name), score=VALUES(score), max_score=VALUES(max_score),
+            percentage=VALUES(percentage), passed=VALUES(passed), total_questions=VALUES(total_questions),
+            time_spent_seconds=VALUES(time_spent_seconds), exam_date=VALUES(exam_date),
+            questions=VALUES(questions), answers=VALUES(answers), flagged_questions=VALUES(flagged_questions),
+            revealed_questions=VALUES(revealed_questions), settings=VALUES(settings), exam_mode=VALUES(exam_mode)");
         $rawAttemptQs = $b['questions'] ?? [];
         $cleanAttemptQuestions = [];
         if (is_array($rawAttemptQs)) {
@@ -1499,6 +1676,12 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         try {
             $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN committed_questions JSON NULL");
         } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN lab_progress LONGTEXT NULL");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN history_record_id VARCHAR(100) NULL");
+        } catch (Exception $e) {}
 
         $bankName = cleanBankName($s['selectedBankName'] ?? $s['bankName'] ?? 'CCNA Exam');
         
@@ -1678,8 +1861,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         $effectivePoints = $serverPoints;
 
         $stmt = $pdo->prepare("INSERT INTO saved_sessions 
-            (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, question_notes, settings, started_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, user_id, user_email, candidate_name, bank_name, exam_mode, q_index, points, seconds_remaining, time_spent_seconds, questions, answers, flagged_questions, revealed_questions, committed_questions, question_notes, settings, lab_progress, history_record_id, started_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
             user_id=VALUES(user_id), user_email=VALUES(user_email), bank_name=VALUES(bank_name), exam_mode=VALUES(exam_mode),
             q_index=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(q_index), saved_sessions.q_index),
@@ -1692,6 +1875,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             committed_questions=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(committed_questions), saved_sessions.committed_questions),
             question_notes=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(question_notes), saved_sessions.question_notes),
             settings=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(settings), saved_sessions.settings),
+            lab_progress=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(lab_progress), saved_sessions.lab_progress),
+            history_record_id=IF(VALUES(updated_at) >= saved_sessions.updated_at, VALUES(history_record_id), saved_sessions.history_record_id),
             started_at=COALESCE(saved_sessions.started_at, VALUES(started_at)),
             updated_at=GREATEST(saved_sessions.updated_at, VALUES(updated_at))");
 
@@ -1717,6 +1902,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             json_encode($s['committedQuestions'] ?? []),
             json_encode($s['questionNotes'] ?? []),
             json_encode($s['settings'] ?? []),
+            json_encode($s['labProgress'] ?? []),
+            $s['historyRecordId'] ?? null,
             $startedAt,
             $updatedAt
         ]);
@@ -1880,6 +2067,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                 'revealedQuestions' => json_decode($r['revealed_questions'] ?? '[]', true),
                 'committedQuestions' => json_decode($r['committed_questions'] ?? '[]', true) ?: [],
                 'questionNotes' => json_decode($r['question_notes'] ?? '{}', true),
+                'labProgress' => json_decode($r['lab_progress'] ?? '{}', true) ?: [],
+                'historyRecordId' => $r['history_record_id'] ?? null,
                 'settings' => $parsedSettings,
                 'startedAt' => $startedAt,
                 'savedAt' => $savedAt,
@@ -1897,6 +2086,95 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         echo json_encode(["success" => true, "message" => "Session deleted"]);
         exit;
     }
+}
+
+// 11.5 Persistent per-user guided-lab CLI and notes
+if (preg_match('#^/api/lab-scratchpads#', $basePath)) {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if (!$auth && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $auth = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+    }
+    $tokenUser = null;
+    if ($auth && preg_match('/Bearer\s+(.*)$/i', $auth, $m)) {
+        $tokenUser = verifyToken(trim($m[1]), $jwtSecret);
+    }
+
+    $b = is_array($body) ? $body : [];
+    $userId = trim((string)($b['userId'] ?? ($tokenUser['id'] ?? ($_GET['userId'] ?? ''))));
+    $userEmailValue = $b['userEmail'] ?? ($tokenUser['email'] ?? ($_GET['userEmail'] ?? ''));
+    $userEmail = strtolower(trim((string)$userEmailValue));
+    $candidateName = trim((string)($b['candidateName'] ?? ($tokenUser['name'] ?? 'Candidate')));
+    $labKey = trim((string)($b['labKey'] ?? ($_GET['labKey'] ?? '')));
+
+    if ($userId === '' && $userEmail === '') {
+        http_response_code(401);
+        echo json_encode(["error" => "User identity required to manage lab notes."]);
+        exit;
+    }
+    if ($labKey === '') {
+        http_response_code(400);
+        echo json_encode(["error" => "Lab identifier required."]);
+        exit;
+    }
+
+    $ownerKey = $userId !== '' ? 'id:' . $userId : 'email:' . $userEmail;
+
+    if ($method === 'GET') {
+        $stmt = $pdo->prepare("SELECT notes_json, note_text FROM lab_scratchpads WHERE owner_key = ? AND lab_key = ? LIMIT 1");
+        $stmt->execute([$ownerKey, $labKey]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            echo json_encode(["found" => false, "notes" => [], "note" => ""]);
+            exit;
+        }
+        $decoded = json_decode($row['notes_json'] ?? '[]', true);
+        echo json_encode([
+            "found" => true,
+            "notes" => is_array($decoded) ? $decoded : [],
+            "note" => (string)($row['note_text'] ?? '')
+        ]);
+        exit;
+    }
+
+    if ($method === 'POST') {
+        $notes = is_array($b['notes'] ?? null) ? $b['notes'] : [];
+        $noteText = trim((string)($b['note'] ?? $b['noteText'] ?? ''));
+        if (count($notes) === 0 && $noteText === '') {
+            $stmt = $pdo->prepare("DELETE FROM lab_scratchpads WHERE owner_key = ? AND lab_key = ?");
+            $stmt->execute([$ownerKey, $labKey]);
+            echo json_encode(["success" => true, "deleted" => true]);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO lab_scratchpads (owner_key, user_id, user_email, candidate_name, lab_key, notes_json, note_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            user_id = VALUES(user_id), user_email = VALUES(user_email), candidate_name = VALUES(candidate_name),
+            notes_json = VALUES(notes_json), note_text = VALUES(note_text), updated_at = CURRENT_TIMESTAMP");
+        $stmt->execute([
+            $ownerKey,
+            $userId !== '' ? $userId : null,
+            $userEmail !== '' ? $userEmail : null,
+            $candidateName !== '' ? $candidateName : 'Candidate',
+            $labKey,
+            json_encode($notes, JSON_UNESCAPED_UNICODE),
+            $noteText
+        ]);
+        echo json_encode(["success" => true, "labKey" => $labKey, "count" => count($notes)]);
+        exit;
+    }
+
+    if ($method === 'DELETE') {
+        $stmt = $pdo->prepare("DELETE FROM lab_scratchpads WHERE owner_key = ? AND lab_key = ?");
+        $stmt->execute([$ownerKey, $labKey]);
+        echo json_encode(["success" => true, "deleted" => true]);
+        exit;
+    }
+
+    http_response_code(405);
+    echo json_encode(["error" => "Method not allowed"]);
+    exit;
 }
 
 // 12. Notes API (Strict Per-User Privacy Isolation)
@@ -2383,15 +2661,18 @@ if (preg_match('#^/api/admin/#', $basePath)) {
     // the admin portal. Tasks may contain both typed commands and an uploaded
     // command screenshot.
     if (preg_match('#^/api/admin/labs$#', $basePath) && $method === 'GET') {
-        $rows = $pdo->query("SELECT * FROM labs ORDER BY created_at ASC, id ASC")->fetchAll();
+        $rows = $pdo->query("SELECT * FROM labs ORDER BY lab_number IS NULL ASC, lab_number ASC, created_at ASC, id ASC")->fetchAll();
         $labs = array_map(function($row) {
             $metadata = json_decode($row['metadata'] ?? '{}', true) ?: [];
+            $labNumber = getLabNumberFromRow($row);
+            $labLabel = getLabDisplayLabel($labNumber, $row['title'] ?: $row['item_label']);
             return [
                 "id" => $row['id'],
                 "type" => "lab",
-                "questionNo" => $row['title'] ?: $row['item_label'],
-                "labItemLabel" => $row['item_label'],
-                "title" => $row['title'],
+                "labNumber" => $labNumber,
+                "questionNo" => $labLabel,
+                "labItemLabel" => "Complete the tasks below",
+                "title" => $labLabel,
                 "topologyImage" => $row['topology_image'],
                 "sourceImage" => $row['topology_image'],
                 "sourceParts" => json_decode($row['source_parts'] ?? '[]', true) ?: [],
@@ -2411,15 +2692,17 @@ if (preg_match('#^/api/admin/#', $basePath)) {
 
     if (preg_match('#^/api/admin/labs$#', $basePath) && $method === 'POST') {
         $rawId = trim((string)($body['id'] ?? ''));
-        $title = trim((string)($body['title'] ?? ''));
-        $itemLabel = trim((string)($body['itemLabel'] ?? $body['item_label'] ?? ''));
+        $rawLabNumber = trim((string)($body['labNumber'] ?? $body['lab_number'] ?? ''));
+        $labNumber = $rawLabNumber !== '' && ctype_digit($rawLabNumber) && (int)$rawLabNumber > 0 ? (int)$rawLabNumber : null;
+        $title = getLabDisplayLabel($labNumber);
+        $itemLabel = "Complete the tasks below";
         $topologyImage = trim((string)($body['topologyImage'] ?? $body['topology_image'] ?? ''));
         $sourceParts = is_array($body['sourceParts'] ?? null) ? $body['sourceParts'] : [];
         $tasks = $body['tasks'] ?? [];
 
-        if (!$title || !$itemLabel || !is_array($tasks) || count($tasks) === 0) {
+        if ($labNumber === null || !is_array($tasks) || count($tasks) === 0) {
             http_response_code(400);
-            echo json_encode(["error" => "Lab title, item label, and at least one task are required."]);
+            echo json_encode(["error" => "A valid Lab No and at least one task are required."]);
             exit;
         }
         if (!$topologyImage) {
@@ -2432,15 +2715,22 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         foreach ($tasks as $index => $task) {
             if (!is_array($task)) continue;
             $taskText = trim((string)($task['text'] ?? ''));
-            if ($taskText === '') continue;
+            $taskImagesRaw = $task['taskImages'] ?? $task['task_images'] ?? null;
+            $taskImages = is_array($taskImagesRaw) ? $taskImagesRaw : [$taskImagesRaw ?? ($task['taskImage'] ?? $task['task_image'] ?? '')];
+            $taskImages = array_values(array_filter(array_map(function($image) { return trim((string)$image); }, $taskImages)));
+            $solutionImagesRaw = $task['solutionImages'] ?? $task['solution_images'] ?? null;
+            $solutionImages = is_array($solutionImagesRaw) ? $solutionImagesRaw : [$solutionImagesRaw ?? ($task['solutionImage'] ?? $task['solution_image'] ?? '')];
+            $solutionImages = array_values(array_filter(array_map(function($image) { return trim((string)$image); }, $solutionImages)));
             $normalizedTasks[] = [
                 "id" => trim((string)($task['id'] ?? ('lab-task-' . ($index + 1)))) ?: ('lab-task-' . ($index + 1)),
                 "label" => trim((string)($task['label'] ?? ('Task ' . ($index + 1)))) ?: ('Task ' . ($index + 1)),
                 "text" => $taskText,
                 "taskText" => trim((string)($task['taskText'] ?? $task['task_text'] ?? '')),
-                "taskImage" => trim((string)($task['taskImage'] ?? $task['task_image'] ?? '')),
+                "taskImage" => $taskImages[0] ?? '',
+                "taskImages" => $taskImages,
                 "commandText" => trim((string)($task['commandText'] ?? $task['command_text'] ?? '')),
-                "solutionImage" => trim((string)($task['solutionImage'] ?? $task['solution_image'] ?? '')),
+                "solutionImage" => $solutionImages[0] ?? '',
+                "solutionImages" => $solutionImages,
                 "solutionSlice" => is_array($task['solutionSlice'] ?? null) ? $task['solutionSlice'] : null,
                 "solutionWidth" => $task['solutionWidth'] ?? null,
                 "solutionHeight" => $task['solutionHeight'] ?? null,
@@ -2448,7 +2738,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         }
         if (count($normalizedTasks) === 0) {
             http_response_code(400);
-            echo json_encode(["error" => "Add task instructions before saving the lab."]);
+            echo json_encode(["error" => "At least one valid task is required before saving the lab."]);
             exit;
         }
 
@@ -2457,9 +2747,9 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         foreach (['sourceWidth', 'sourceHeight', 'sourceDisplayWidth', 'sourceDisplayHeight', 'topologyCropHeight'] as $metaKey) {
             if (isset($body[$metaKey]) && $body[$metaKey] !== '') $metadata[$metaKey] = is_numeric($body[$metaKey]) ? (float)$body[$metaKey] : $body[$metaKey];
         }
-        $stmt = $pdo->prepare("INSERT INTO labs (id, item_label, title, topology_image, source_parts, metadata, tasks) VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE item_label = VALUES(item_label), title = VALUES(title), topology_image = VALUES(topology_image), source_parts = VALUES(source_parts), metadata = VALUES(metadata), tasks = VALUES(tasks), updated_at = CURRENT_TIMESTAMP");
-        $stmt->execute([$id, $itemLabel, $title, $topologyImage, json_encode($sourceParts, JSON_UNESCAPED_UNICODE), json_encode($metadata, JSON_UNESCAPED_UNICODE), json_encode($normalizedTasks, JSON_UNESCAPED_UNICODE)]);
+        $stmt = $pdo->prepare("INSERT INTO labs (id, lab_number, item_label, title, topology_image, source_parts, metadata, tasks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE lab_number = VALUES(lab_number), item_label = VALUES(item_label), title = VALUES(title), topology_image = VALUES(topology_image), source_parts = VALUES(source_parts), metadata = VALUES(metadata), tasks = VALUES(tasks), updated_at = CURRENT_TIMESTAMP");
+        $stmt->execute([$id, $labNumber, $itemLabel, $title, $topologyImage, json_encode($sourceParts, JSON_UNESCAPED_UNICODE), json_encode($metadata, JSON_UNESCAPED_UNICODE), json_encode($normalizedTasks, JSON_UNESCAPED_UNICODE)]);
 
         echo json_encode([
             "success" => true,
@@ -2467,7 +2757,8 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             "lab" => [
                 "id" => $id,
                 "type" => "lab",
-                "questionNo" => $title,
+                "labNumber" => $labNumber,
+                "questionNo" => getLabDisplayLabel($labNumber),
                 "labItemLabel" => $itemLabel,
                 "title" => $title,
                 "topologyImage" => $topologyImage,
@@ -2639,6 +2930,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $pdo->prepare("DELETE FROM exam_attempts WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM saved_sessions WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM candidate_notes WHERE user_id = ?")->execute([$userId]);
+        $pdo->prepare("DELETE FROM lab_scratchpads WHERE user_id = ?")->execute([$userId]);
         $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$userId]);
 
         echo json_encode(["success" => true, "message" => "User deleted successfully."]);

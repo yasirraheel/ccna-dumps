@@ -18,3 +18,13 @@
   # All other routes fallback to React index.html for SPA routing
   RewriteRule ^ index.html [L]
 </IfModule>
+
+# The HTML entry point must not be cached between deployments. Hashed JS/CSS
+# assets remain cacheable, while every new build gets picked up immediately.
+<IfModule mod_headers.c>
+  <FilesMatch "^index\.html$">
+    Header always set Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    Header always set Pragma "no-cache"
+    Header always set Expires "0"
+  </FilesMatch>
+</IfModule>

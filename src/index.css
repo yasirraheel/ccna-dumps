@@ -383,6 +383,9 @@ body {
 .lab-rating-button.rating-hard.selected { background: #fbbf24; border-color: #fbbf24; }
 .lab-rating-button.rating-easy:hover,
 .lab-rating-button.rating-easy.selected { background: #4ade80; border-color: #4ade80; }
+.lab-rating-button.rating-solved:hover,
+.lab-rating-button.rating-solved.selected { background: #4ade80; border-color: #4ade80; }
+.lab-rating-button.rating-cli-note:hover { background: #f59e0b; border-color: #f59e0b; }
 
 .lab-footer-actions {
   align-items: center;
@@ -11402,5 +11405,268 @@ body {
 
 
 
+
+/* ==========================================================================\n+   FINAL COMPACT TWO-ROW STICKY EXAM HEADER\n+   The exam controls remain visible while the question content scrolls.\n+   ========================================================================== */
+.boson-exsim-view > .boson-top-bar {
+  position: relative !important;
+  margin-bottom: 0.35rem !important;
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+  box-shadow: none !important;
+}
+
+.boson-exsim-view > .boson-exam-info-card {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 140;
+  width: auto;
+  margin: 0 -3rem 1.15rem;
+  padding: 0.75rem 2.4rem 0.8rem;
+  background: rgba(26, 31, 40, 0.97);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.boson-exsim-view .boson-exam-context-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  width: 100%;
+  min-height: 2.9rem;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.exam-header-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.exam-header-identity .context-bank-tag {
+  flex: 0 1 auto;
+  max-width: 42%;
+  min-width: 0;
+  margin: 0;
+}
+
+.exam-header-identity .context-bank-tag .bank-tag-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exam-header-identity .boson-exam-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-green);
+  font-size: clamp(1.35rem, 1.7vw, 1.8rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boson-exsim-view .context-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.boson-exsim-view .exam-timer-pill {
+  min-height: 2.35rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.boson-exsim-view .btn-boson-pause,
+.boson-exsim-view .btn-top-notes-summary {
+  min-height: 2.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 1.05rem;
+  border-radius: 0.55rem;
+}
+
+.boson-exsim-view .boson-main-header {
+  display: block;
+  margin: 0.65rem 0 0;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 0;
+}
+
+.boson-exsim-view .boson-sub-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.boson-exsim-view .boson-sub-left {
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.boson-exsim-view .boson-sub-right-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.boson-exsim-view .boson-sub-right-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.boson-exsim-view .boson-sub-right-actions > button,
+.boson-exsim-view .boson-sub-right-actions > .header-font-controls {
+  flex: 0 0 auto;
+}
+
+.boson-exsim-view .boson-sub-right-actions > button {
+  min-height: 2.4rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .boson-exsim-view > .boson-exam-info-card {
+    margin-left: -2rem;
+    margin-right: -2rem;
+    padding-left: 1.8rem;
+    padding-right: 1.8rem;
+  }
+
+  .exam-header-identity {
+    gap: 0.55rem;
+  }
+
+  .exam-header-identity .context-bank-tag {
+    max-width: 36%;
+  }
+
+  .boson-exsim-view .boson-sub-header {
+    gap: 0.65rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .boson-exsim-view > .boson-exam-info-card {
+    margin-left: -1.2rem;
+    margin-right: -1.2rem;
+    padding: 0.6rem 1rem 0.7rem;
+  }
+
+  .boson-exsim-view .boson-exam-context-row {
+    gap: 0.6rem;
+  }
+
+  .exam-header-identity .context-bank-tag {
+    display: none;
+  }
+
+  .exam-header-identity .boson-exam-title {
+    font-size: 1.22rem;
+  }
+
+  .boson-exsim-view .context-actions {
+    gap: 0.35rem;
+  }
+
+  .boson-exsim-view .context-actions .exam-timer-pill,
+  .boson-exsim-view .context-actions .btn-boson-pause,
+  .boson-exsim-view .context-actions .btn-top-notes-summary {
+    min-height: 2.15rem;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .boson-exsim-view .boson-sub-header {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  }
+
+  .boson-exsim-view .boson-sub-left {
+    font-size: 1.05rem;
+  }
+
+  .boson-exsim-view .boson-sub-right-actions > button {
+    min-height: 2.15rem;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 460px) {
+  .boson-exsim-view .context-actions .btn-boson-pause span,
+  .boson-exsim-view .context-actions .btn-top-notes-summary span {
+    font-size: 0;
+  }
+
+  .boson-exsim-view .context-actions .btn-boson-pause span::after {
+    content: "⏯";
+    font-size: 1rem;
+  }
+
+  .boson-exsim-view .context-actions .btn-top-notes-summary span::after {
+    content: "💬";
+    font-size: 1rem;
+  }
+
+  .boson-exsim-view .context-actions .btn-boson-pause,
+  .boson-exsim-view .context-actions .btn-top-notes-summary {
+    width: 2.2rem;
+    justify-content: center;
+  }
+}
+
+.boson-exsim-view .exam-header-back {
+  flex: 0 0 auto;
+  min-height: 2.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.boson-exsim-view .exam-header-avatar {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 680px) {
+  .boson-exsim-view .exam-header-back {
+    min-height: 2.15rem;
+    padding: 0.25rem 0.45rem;
+    font-size: 0.9rem;
+  }
+
+  .boson-exsim-view .exam-header-avatar {
+    display: none;
+  }
+}
 
 

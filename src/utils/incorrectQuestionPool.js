@@ -1,20 +1,51 @@
 import { getExamQuestionStats } from "./examScoring";
 
+function normalizeQuestionText(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\bchoose\s+(one|two|all)\s+answers?\b/gi, " ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function normalizeOptionSet(options) {
+  return (Array.isArray(options) ? options : [])
+    .map((option) => normalizeQuestionText(option))
+    .filter(Boolean)
+    .sort()
+    .join("|");
+}
+
+function containsWholeWord(text, word) {
+  const normalizedText = normalizeQuestionText(text);
+  const normalizedWord = normalizeQuestionText(word);
+  if (!normalizedText || !normalizedWord) return false;
+
+  const escapedWord = normalizedWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^| )${escapedWord}(?: |$)`).test(normalizedText);
+}
+
 export function getQuestionKey(question, fallbackIndex) {
-  const prompt = String(question?.question || "").trim();
-  const options = Array.isArray(question?.options) ? question.options.join("|") : "";
+  const prompt = normalizeQuestionText(question?.question);
+  const options = normalizeOptionSet(question?.options);
 
   // Content is the stable identity across banks. Some copies of the same
   // source question have different database IDs, so IDs alone cannot prevent
   // duplicates when filters are combined.
   if (prompt) {
-    // Prompt identity remains stable even when answer randomization changes
-    // option order between exam attempts.
-    return `prompt:${prompt.toLowerCase().replace(/\s+/g, " ")}`;
+    // Prompt identity remains stable across harmless punctuation, HTML,
+    // whitespace, and answer-instruction differences. This prevents the same
+    // question from returning twice when multiple keywords match it.
+    return `prompt:${prompt}`;
   }
 
   if (options) {
-    return `options:${options.toLowerCase().replace(/\s+/g, " ")}`;
+    // Sort normalized options so answer-order differences do not create a
+    // second copy of the same question.
+    return `options:${options}`;
   }
 
   if (question?.id !== undefined && question.id !== null) {
@@ -113,8 +144,8 @@ export function getKeywordQuestions(allQuestions = [], query = "") {
   const groups = String(query || "")
     .toLowerCase()
     .split(/[,;\n]+/)
-    .map((group) => group.trim().split(/\s+/).filter(Boolean))
-    .filter((group) => group.length > 0);
+    .map((group) => normalizeQuestionText(group))
+    .filter(Boolean);
   if (groups.length === 0) return [];
 
   const seen = new Set();
@@ -128,7 +159,9 @@ export function getKeywordQuestions(allQuestions = [], query = "") {
       .join(" ")
       .toLowerCase();
     const key = getQuestionKey(question, index);
-    const matches = groups.some((terms) => terms.every((term) => haystack.includes(term)));
+    const matches = groups.some((group) =>
+      group.split(" ").filter(Boolean).every((term) => containsWholeWord(haystack, term))
+    );
     if (!matches || seen.has(key)) return false;
     seen.add(key);
     return true;

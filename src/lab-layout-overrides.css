@@ -1,0 +1,1576 @@
+/* Learner lab layout: the identity sits on the same header line as the task
+   title, while the topology artwork keeps its own scrollable surface. */
+.lab-topology-column {
+  position: sticky !important;
+  top: 8.5rem !important;
+  max-height: calc(100vh - 10.5rem) !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.lab-topology-heading {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: baseline !important;
+  gap: 0.55rem !important;
+  min-height: 2.5rem;
+  margin: 0 0 1rem !important;
+  padding: 0 0.25rem !important;
+  white-space: nowrap;
+  font-size: 1.8rem !important;
+  line-height: 1.2 !important;
+}
+
+.lab-topology-heading .lab-section-caption {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.lab-topology-heading strong,
+.lab-task-heading-copy h2 {
+  margin: 0 !important;
+  font-size: 2rem !important;
+  line-height: 1.2 !important;
+}
+
+.lab-topology-heading .lab-section-subtitle {
+  font-size: 1.7rem;
+  line-height: 1.2;
+}
+
+.lab-topology-image-container {
+  max-height: calc(100vh - 14rem);
+  overflow: auto;
+  padding: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  background: rgba(11, 15, 23, 0.72);
+}
+
+.lab-topology-image-container .lab-source-frame,
+.lab-topology-image-container .lab-source-parts {
+  margin-inline: auto;
+}
+
+.lab-task-reveal-header {
+  min-height: 2.5rem;
+  margin-top: 0 !important;
+}
+
+.lab-task-card {
+  overflow: visible !important;
+}
+
+.lab-task-sticky-content {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 3;
+  padding-bottom: 0.35rem;
+  background: #172b2a;
+}
+
+.lab-task-sticky-content .lab-task-image-wrap {
+  max-height: 15rem;
+  overflow: auto;
+}
+
+.lab-task-sticky-content .lab-task-image-wrap img {
+  max-height: 15rem;
+  object-fit: contain;
+  object-position: top center;
+}
+
+.lab-solution-scroll {
+  max-height: min(68vh, 46rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.lab-solution-scroll .lab-solution-panel {
+  margin-bottom: 0 !important;
+}
+
+.lab-solution-scroll .lab-contiguous-image-strip img {
+  height: auto;
+  max-height: none !important;
+}
+
+.lab-navigation-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  color: #f8fafc;
+  background: rgba(2, 6, 23, 0.72);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.lab-navigation-spinner {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 3px solid rgba(125, 211, 252, 0.28);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: lab-navigation-spin 0.75s linear infinite;
+}
+
+@keyframes lab-navigation-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Fullscreen lab workspace: topology and tasks stay in the left pane while
+   all revealed solutions use the full-height, independently scrollable pane. */
+.lab-fullscreen-layout {
+  display: grid;
+  grid-template-columns: minmax(22rem, 47%) minmax(0, 1fr);
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+}
+
+.lab-fullscreen-note-dock {
+  position: absolute;
+  right: 4.5rem;
+  bottom: 0.8rem;
+  z-index: 45;
+  display: flex;
+  max-width: calc(100% - 1rem);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.lab-fullscreen-note-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(250, 204, 21, 0.75);
+  border-radius: 0.55rem;
+  color: #fef3c7;
+  background: rgba(120, 53, 15, 0.94);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.lab-fullscreen-note-chip {
+  width: 8rem;
+  min-width: 5.5rem;
+  max-width: 14rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(250, 204, 21, 0.75);
+  border-radius: 0.55rem;
+  color: #fef3c7;
+  background: rgba(120, 53, 15, 0.94);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  outline: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.lab-fullscreen-note-chip:focus,
+.lab-fullscreen-note-chip:hover {
+  border-color: #facc15;
+  background: rgba(161, 98, 7, 0.98);
+}
+
+.lab-fullscreen-note-chip:focus {
+  cursor: text;
+}
+
+.lab-fullscreen-note-toggle:hover,
+.lab-fullscreen-note-toggle:focus-visible,
+.lab-fullscreen-note-toggle.has-note {
+  border-color: #facc15;
+  background: rgba(161, 98, 7, 0.98);
+}
+
+.lab-fullscreen-scratch-note {
+  position: absolute;
+  z-index: 60;
+  display: flex;
+  width: min(42rem, calc(100% - 1rem));
+  min-height: 30rem;
+  min-width: 28rem;
+  max-width: calc(100% - 1rem);
+  max-height: calc(100% - 1rem);
+  flex-direction: column;
+  overflow: hidden;
+  resize: both;
+  border: 1px solid rgba(250, 204, 21, 0.8);
+  border-radius: 0.65rem;
+  background: #fef3c7;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.48);
+  color: #422006;
+}
+
+.lab-fullscreen-scratch-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(146, 64, 14, 0.22);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.lab-fullscreen-scratch-note-header:active {
+  cursor: grabbing;
+}
+
+.lab-fullscreen-scratch-note-drag-handle {
+  flex: 0 0 auto;
+  color: #92400e;
+  cursor: grab;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  user-select: none;
+}
+
+.lab-fullscreen-scratch-note-drag-handle:active {
+  cursor: grabbing;
+}
+
+.lab-fullscreen-scratch-note-title-input {
+  width: 13rem;
+  max-width: 42%;
+  min-width: 6rem;
+  flex: 0 1 13rem;
+  padding: 0.15rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 0.3rem;
+  outline: 0;
+  color: #422006;
+  background: transparent;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lab-fullscreen-scratch-note-title-input:hover,
+.lab-fullscreen-scratch-note-title-input:focus {
+  border-color: rgba(146, 64, 14, 0.42);
+  background: rgba(255, 247, 237, 0.58);
+}
+
+.lab-fullscreen-scratch-note-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lab-fullscreen-scratch-note-header .lab-fullscreen-note-mode-toggle {
+  width: auto;
+  height: auto;
+  min-height: 1.7rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid rgba(146, 64, 14, 0.42);
+  border-radius: 0.35rem;
+  color: #78350f;
+  background: rgba(255, 247, 237, 0.55);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.lab-fullscreen-scratch-note-header .lab-fullscreen-note-mode-toggle:hover,
+.lab-fullscreen-scratch-note-header .lab-fullscreen-note-mode-toggle:focus-visible {
+  background: rgba(255, 247, 237, 0.9);
+}
+
+.lab-fullscreen-scratch-note-header button {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0.35rem;
+  color: #78350f;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.lab-fullscreen-scratch-note-header button:hover,
+.lab-fullscreen-scratch-note-header button:focus-visible {
+  background: rgba(146, 64, 14, 0.14);
+}
+
+.lab-fullscreen-scratch-note textarea {
+  flex: 1 1 auto;
+  min-height: 13rem;
+  padding: 1rem;
+  border: 0;
+  outline: 0;
+  resize: none;
+  color: #422006;
+  background: transparent;
+  font: inherit;
+  font-size: 1.45rem;
+  line-height: 1.55;
+}
+
+.lab-fullscreen-ios-terminal {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  padding: 0.75rem;
+  color: #d1fae5;
+  background: #07111a;
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.lab-fullscreen-ios-output {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lab-fullscreen-ios-entry {
+  margin-bottom: 0.45rem;
+}
+
+.lab-fullscreen-ios-command-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.lab-fullscreen-ios-command-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lab-fullscreen-ios-line-editor {
+  min-width: 8rem;
+  flex: 1 1 auto;
+  padding: 0 0.25rem;
+  border: 1px solid rgba(74, 222, 128, 0.7);
+  border-radius: 0.2rem;
+  outline: 0;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.95);
+  font: inherit;
+}
+
+.lab-fullscreen-ios-line-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.2rem;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.lab-fullscreen-ios-command-line:hover .lab-fullscreen-ios-line-actions,
+.lab-fullscreen-ios-command-line:focus-within .lab-fullscreen-ios-line-actions {
+  opacity: 1;
+}
+
+.lab-fullscreen-ios-line-actions button {
+  padding: 0.08rem 0.3rem;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 0.2rem;
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.95);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72em;
+  line-height: 1.2;
+}
+
+.lab-fullscreen-ios-line-actions button:hover,
+.lab-fullscreen-ios-line-actions button:focus-visible {
+  border-color: #4ade80;
+  color: #ffffff;
+  background: rgba(22, 101, 52, 0.95);
+}
+
+.lab-fullscreen-ios-prompt {
+  color: #4ade80;
+  font-weight: 800;
+}
+
+.lab-fullscreen-ios-output-line {
+  color: #cbd5e1;
+}
+
+.lab-fullscreen-ios-input-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.lab-fullscreen-ios-input-row input {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #f8fafc;
+  background: transparent;
+  font: inherit;
+  font-size: inherit;
+}
+
+.lab-fullscreen-ios-font-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.lab-fullscreen-ios-font-controls button {
+  min-width: 2rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.lab-fullscreen-ios-font-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.lab-fullscreen-ios-font-controls > span:not(.lab-fullscreen-ios-help) {
+  min-width: 3.1rem;
+  color: #78350f;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-fullscreen-ios-help {
+  margin-left: 0.25rem;
+  white-space: nowrap;
+}
+
+.lab-fullscreen-scratch-note-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid rgba(146, 64, 14, 0.22);
+  color: #92400e;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.lab-fullscreen-scratch-note-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.lab-fullscreen-scratch-note-footer button {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #92400e;
+  border-radius: 0.4rem;
+  color: #fff7ed;
+  background: #92400e;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.lab-fullscreen-scratch-note-footer button:hover,
+.lab-fullscreen-scratch-note-footer button:focus-visible {
+  background: #7c2d12;
+}
+
+.lab-fullscreen-scratch-note-footer .lab-fullscreen-scratch-note-delete {
+  border-color: #b45309;
+  color: #78350f;
+  background: transparent;
+}
+
+.lab-fullscreen-scratch-note-footer .lab-fullscreen-scratch-note-delete:hover,
+.lab-fullscreen-scratch-note-footer .lab-fullscreen-scratch-note-delete:focus-visible {
+  color: #fff7ed;
+  background: #b45309;
+}
+
+/* One browser-like workspace for every CLI and text note. */
+.lab-scratch-workspace {
+  position: fixed;
+  z-index: 3000;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: min(58rem, calc(100vw - 2rem));
+  height: min(42rem, calc(100vh - 2rem));
+  min-height: 24rem;
+  transform: translate(-50%, -50%);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(250, 204, 21, 0.8);
+  border-radius: 0.75rem;
+  background: #fef3c7;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62), 0 0 0 100vmax rgba(2, 6, 23, 0.36);
+  color: #422006;
+}
+
+.lab-scratch-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid rgba(146, 64, 14, 0.25);
+}
+
+.lab-scratch-workspace-eyebrow {
+  display: block;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lab-scratch-workspace-header h2 {
+  margin: 0.1rem 0 0;
+  color: #422006;
+  font-size: 1.35rem;
+}
+
+.lab-scratch-workspace-header-actions,
+.lab-scratch-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.lab-scratch-workspace-header-actions button,
+.lab-scratch-mode-button,
+.lab-scratch-footer-actions button {
+  min-height: 2rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(146, 64, 14, 0.55);
+  border-radius: 0.4rem;
+  color: #78350f;
+  background: rgba(255, 247, 237, 0.7);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.lab-scratch-workspace-header-actions button:hover,
+.lab-scratch-workspace-header-actions button:focus-visible,
+.lab-scratch-mode-button:hover,
+.lab-scratch-mode-button:focus-visible,
+.lab-scratch-footer-actions button:hover,
+.lab-scratch-footer-actions button:focus-visible {
+  color: #fff7ed;
+  background: #92400e;
+}
+
+.lab-scratch-workspace-header-actions .lab-scratch-workspace-close {
+  width: 2rem;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.lab-scratch-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  min-height: 3.25rem;
+  padding: 0.45rem 0.65rem 0;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(146, 64, 14, 0.28);
+  background: rgba(255, 247, 237, 0.65);
+}
+
+.lab-scratch-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 7rem;
+  max-width: 13rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(146, 64, 14, 0.35);
+  border-bottom: 0;
+  border-radius: 0.45rem 0.45rem 0 0;
+  color: #92400e;
+  background: rgba(254, 243, 199, 0.72);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lab-scratch-tab span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lab-scratch-tab.is-active {
+  color: #422006;
+  background: #fef3c7;
+  box-shadow: 0 -2px 0 #92400e inset;
+}
+
+.lab-scratch-tab-kind {
+  color: #b45309;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+}
+
+.lab-scratch-tabs-empty {
+  align-self: center;
+  padding: 0.4rem 0.25rem;
+  color: #92400e;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.lab-scratch-active-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  background: #fef3c7;
+}
+
+.lab-scratch-active-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(146, 64, 14, 0.18);
+}
+
+.lab-scratch-title-input {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(146, 64, 14, 0.38);
+  border-radius: 0.35rem;
+  outline: 0;
+  color: #422006;
+  background: rgba(255, 247, 237, 0.7);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.lab-scratch-title-input:focus {
+  border-color: #92400e;
+  background: #fff7ed;
+}
+
+.lab-scratch-terminal {
+  min-height: 0;
+  padding: 0.85rem;
+}
+
+.lab-scratch-textarea {
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 1rem;
+  border: 0;
+  outline: 0;
+  resize: none;
+  color: #422006;
+  background: #fff7ed;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1.55;
+}
+
+.lab-scratch-workspace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid rgba(146, 64, 14, 0.24);
+  color: #92400e;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.lab-scratch-footer-actions .lab-fullscreen-scratch-note-delete {
+  color: #78350f;
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  .lab-scratch-workspace {
+    width: calc(100vw - 1rem);
+    height: calc(100vh - 1rem);
+    min-height: 20rem;
+  }
+
+  .lab-scratch-workspace-header,
+  .lab-scratch-active-header,
+  .lab-scratch-workspace-footer {
+    flex-wrap: wrap;
+  }
+
+  .lab-scratch-workspace-header-actions {
+    width: 100%;
+  }
+
+  .lab-scratch-workspace-header-actions button:not(.lab-scratch-workspace-close) {
+    flex: 1 1 0;
+  }
+
+  .lab-scratch-workspace-header-actions .lab-scratch-workspace-close {
+    margin-left: auto;
+  }
+}
+
+.lab-fullscreen-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  display: grid;
+  width: 2.8rem;
+  height: 4.2rem;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  border-radius: 0.8rem;
+  color: #e0f2fe;
+  background: rgba(15, 23, 42, 0.86);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  font-size: 2.4rem;
+  line-height: 1;
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.lab-fullscreen-nav:hover:not(:disabled),
+.lab-fullscreen-nav:focus-visible:not(:disabled) {
+  border-color: #38bdf8;
+  background: rgba(14, 116, 144, 0.9);
+}
+
+.lab-fullscreen-nav:disabled {
+  cursor: not-allowed;
+  opacity: 0.22;
+}
+
+.lab-fullscreen-nav-prev {
+  left: -0.2rem;
+}
+
+.lab-fullscreen-nav-next {
+  right: -0.2rem;
+}
+
+.lab-fullscreen-left,
+.lab-fullscreen-right {
+  min-width: 0;
+  min-height: 0;
+}
+
+.lab-fullscreen-left {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0.65rem;
+  padding-right: 0.5rem;
+}
+
+.lab-fullscreen-task-section,
+.lab-fullscreen-topology-section {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.lab-fullscreen-task-section {
+  overflow: hidden;
+}
+
+.lab-fullscreen-topology-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0 0 0.7rem;
+  padding-left: 3.1rem;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.lab-fullscreen-topology-heading .lab-section-caption {
+  font-size: 1.1rem;
+}
+
+.lab-fullscreen-topology-heading strong {
+  color: #22c55e;
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.lab-fullscreen-topology-heading .lab-section-subtitle {
+  font-size: 1.25rem;
+}
+
+.lab-topology-zoom-controls,
+.lab-solution-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.lab-topology-zoom-controls button,
+.lab-solution-visibility-button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(125, 211, 252, 0.58);
+  border-radius: 0.45rem;
+  color: #e0f2fe;
+  background: rgba(15, 23, 42, 0.86);
+  cursor: pointer;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lab-topology-zoom-controls button:hover:not(:disabled),
+.lab-topology-zoom-controls button:focus-visible,
+.lab-solution-visibility-button:hover,
+.lab-solution-visibility-button:focus-visible {
+  border-color: #38bdf8;
+  background: rgba(14, 116, 144, 0.95);
+}
+
+.lab-topology-zoom-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.lab-topology-zoom-controls span {
+  min-width: 3.2rem;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.lab-fullscreen-topology-image {
+  flex: 1 1 0;
+  max-height: none;
+  overflow: hidden;
+  min-height: 0;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: #0b0f17;
+  touch-action: none;
+  user-select: none;
+}
+
+.lab-fullscreen-topology-image.is-zoomed {
+  cursor: grab;
+}
+
+.lab-fullscreen-topology-image.is-dragging {
+  cursor: grabbing;
+}
+
+.lab-fullscreen-topology-image .lab-source-parts,
+.lab-fullscreen-topology-image .lab-source-frame,
+.lab-fullscreen-topology-image .lab-image-loader,
+.lab-fullscreen-topology-image .lab-image-loader > img {
+  pointer-events: none;
+}
+
+.lab-fullscreen-topology-image .lab-image-visibility-button {
+  pointer-events: auto;
+}
+
+.lab-fullscreen-topology-image .lab-fullscreen-complete-topology,
+.lab-fullscreen-topology-image .lab-source-frame {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+  aspect-ratio: auto !important;
+  overflow: visible;
+}
+
+.lab-fullscreen-topology-image img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none;
+  object-fit: contain;
+  object-position: center;
+  margin-inline: auto;
+}
+
+.lab-fullscreen-topology-image .lab-source-parts {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.lab-fullscreen-topology-image .lab-source-parts img {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+  object-fit: contain;
+  border: 0;
+  border-radius: 0;
+}
+
+.lab-fullscreen-reference-images {
+  display: grid;
+  gap: 0;
+  margin-top: 0.75rem;
+}
+
+.lab-fullscreen-reference-images img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.lab-fullscreen-task-heading,
+.lab-fullscreen-solution-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1rem 0 0.65rem;
+  padding-left: 3.1rem;
+  color: #38bdf8;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lab-fullscreen-task-heading strong,
+.lab-fullscreen-solution-heading strong {
+  color: #cbd5e1;
+  font-size: 1.1rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.lab-fullscreen-task-list {
+  display: grid;
+  flex: 1 1 0;
+  gap: 0.7rem;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 1rem;
+}
+
+.lab-fullscreen-task {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.lab-fullscreen-task.is-revealed {
+  border-color: rgba(34, 197, 94, 0.65);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.lab-fullscreen-task.is-locked {
+  opacity: 0.58;
+}
+
+.lab-fullscreen-task .lab-task-toggle {
+  padding: 0.8rem 1rem;
+}
+
+.lab-fullscreen-task .lab-task-prompt {
+  padding: 0 1rem 0.8rem;
+  font-size: 1.05rem;
+}
+
+.lab-fullscreen-task .lab-task-written-content,
+.lab-fullscreen-task .lab-task-image-wrap {
+  margin-left: 0.75rem;
+  margin-right: 0.75rem;
+}
+
+.lab-fullscreen-task .lab-task-image-wrap {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  margin-bottom: 0.6rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.lab-fullscreen-task .lab-task-image-wrap .lab-image-loader {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.lab-fullscreen-task .lab-task-image-wrap img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.lab-fullscreen-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.lab-fullscreen-solution-heading {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding-right: 3.7rem;
+  box-sizing: border-box;
+}
+
+.lab-solution-heading-actions {
+  margin-left: auto;
+}
+
+.lab-solution-heading-actions .lab-solution-visibility-button {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.lab-solution-visibility-button svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.lab-fullscreen-solution-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0.5rem 1rem 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.lab-fullscreen-solution-scroll.solutions-are-blurred .lab-solution-image-wrap img,
+.lab-fullscreen-solution-scroll.solutions-are-blurred .lab-solution-slice img {
+  filter: blur(16px) !important;
+}
+
+.lab-fullscreen-solution-card {
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  border-radius: 0.8rem;
+  background: #0b1220;
+}
+
+.lab-fullscreen-solution-card h3 {
+  margin: 0 0 0.7rem;
+  color: #4ade80;
+  font-size: 1.1rem;
+}
+
+.lab-fullscreen-solution-card .lab-solution-content,
+.lab-fullscreen-solution-card .lab-solution-image-wrap {
+  max-width: none;
+}
+
+.lab-fullscreen-solution-empty {
+  display: grid;
+  min-height: 12rem;
+  place-items: center;
+  padding: 2rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.8rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.lab-exsim-view:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #0b0f17;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.lab-exsim-view:fullscreen .boson-slim-transition-track,
+.lab-exsim-view:fullscreen .boson-top-bar,
+.lab-exsim-view:fullscreen .boson-main-header {
+  display: none;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  height: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  pointer-events: none;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card .boson-exam-context-row {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card .context-bank-tag,
+.lab-exsim-view:fullscreen .lab-exam-info-card .context-actions > :not(.lab-fullscreen-button):not(.btn-boson-note-toggle) {
+  display: none !important;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card .context-actions {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.75rem;
+  z-index: 21;
+  pointer-events: none;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card .lab-fullscreen-button {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  height: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0;
+  pointer-events: auto;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card .lab-fullscreen-button span {
+  display: none;
+}
+
+.lab-exsim-view:fullscreen .lab-exam-info-card .btn-boson-note-toggle {
+  display: none !important;
+}
+
+.lab-exsim-view:fullscreen .lab-main-content {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.4rem 0.75rem !important;
+}
+
+.lab-exsim-view:fullscreen .lab-question-card {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.45rem !important;
+}
+
+@media (max-width: 900px) {
+  .lab-fullscreen-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .lab-fullscreen-nav {
+    top: 0.75rem;
+    transform: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    font-size: 2rem;
+  }
+
+  .lab-fullscreen-nav-prev {
+    left: 0.25rem;
+  }
+
+  .lab-fullscreen-nav-next {
+    right: 0.25rem;
+  }
+
+  .lab-fullscreen-left,
+  .lab-fullscreen-right {
+    overflow: visible;
+  }
+
+  .lab-fullscreen-task-section,
+  .lab-fullscreen-topology-section {
+    flex: none;
+  }
+
+  .lab-fullscreen-topology-image {
+    flex-basis: auto;
+    max-height: none;
+  }
+
+  .lab-fullscreen-topology-image img {
+    height: auto;
+    max-height: none;
+  }
+
+  .lab-fullscreen-task-list {
+    overflow: visible;
+  }
+
+  .lab-exsim-view:fullscreen {
+    overflow-y: auto;
+  }
+
+  .lab-exsim-view:fullscreen .lab-main-content,
+  .lab-exsim-view:fullscreen .lab-question-card {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.lab-task-heading-copy {
+  align-items: baseline !important;
+}
+
+/* Multiple screenshots for one task form one continuous image strip. */
+.lab-contiguous-image-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0 !important;
+  padding: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.lab-contiguous-image-strip img {
+  display: block;
+  width: 100%;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.lab-contiguous-image-strip .lab-solution-slice {
+  max-height: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.lab-task-zoom-viewer {
+  position: relative;
+  width: 100%;
+  height: min(360px, 48vh);
+  min-height: 12rem;
+  overflow: hidden;
+  background: #0b0f17;
+  touch-action: none;
+  user-select: none;
+}
+
+.lab-task-zoom-viewer.is-zoomed {
+  cursor: grab;
+}
+
+.lab-task-zoom-viewer.is-dragging {
+  cursor: grabbing;
+}
+
+.lab-task-zoom-canvas {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.lab-task-zoom-canvas .lab-image-loader {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.lab-task-zoom-canvas .lab-image-loader > img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.lab-task-zoom-canvas .lab-image-visibility-button {
+  pointer-events: auto;
+}
+
+.lab-task-zoom-controls {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem;
+  border: 1px solid rgba(125, 211, 252, 0.55);
+  border-radius: 0.45rem;
+  color: #e0f2fe;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.lab-task-zoom-controls button {
+  min-width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid rgba(125, 211, 252, 0.5);
+  border-radius: 0.3rem;
+  color: inherit;
+  background: rgba(30, 41, 59, 0.95);
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lab-task-zoom-controls button:hover:not(:disabled),
+.lab-task-zoom-controls button:focus-visible {
+  border-color: #38bdf8;
+  background: rgba(14, 116, 144, 0.95);
+}
+
+.lab-task-zoom-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.lab-task-zoom-controls span {
+  min-width: 3.2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-task-reference .lab-task-zoom-viewer {
+  border-radius: 0.55rem;
+}
+
+.lab-fullscreen-reference-images .lab-task-zoom-viewer {
+  height: min(32vh, 22rem);
+}
+
+.lab-fullscreen-task .lab-task-image-wrap .lab-task-zoom-viewer {
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 12rem;
+}
+
+.lab-image-loader {
+  position: relative;
+  width: 100%;
+  min-height: 4rem;
+}
+
+/* Fullscreen topology must fit inside its frame without using the image's
+   natural width to crop the top or sides. */
+.lab-fullscreen-topology-image .lab-image-loader {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lab-fullscreen-topology-image .lab-image-loader > img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  object-position: center;
+}
+
+.lab-image-loader > img.is-blurred {
+  filter: blur(16px);
+}
+
+.lab-image-visibility-button {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 4;
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(125, 211, 252, 0.68);
+  border-radius: 0.55rem;
+  color: #e0f2fe;
+  background: rgba(15, 23, 42, 0.9);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
+  cursor: pointer;
+}
+
+.lab-image-visibility-button:hover,
+.lab-image-visibility-button:focus-visible {
+  border-color: #38bdf8;
+  color: #ffffff;
+  background: rgba(14, 116, 144, 0.95);
+}
+
+.lab-image-visibility-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.lab-image-loader > img {
+  position: relative;
+  z-index: 1;
+  transition: opacity 0.18s ease;
+}
+
+.lab-image-loader.is-loading > img {
+  opacity: 0;
+}
+
+.lab-image-loading-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: #bae6fd;
+  background: rgba(11, 15, 23, 0.82);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.lab-image-spinner {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 3px solid rgba(125, 211, 252, 0.28);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: lab-image-spin 0.75s linear infinite;
+}
+
+.lab-image-error {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  min-height: 4rem;
+  place-items: center;
+  color: #fecaca;
+  background: rgba(69, 10, 10, 0.78);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+@keyframes lab-image-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 760px) {
+  .lab-topology-column {
+    position: relative !important;
+    top: auto !important;
+    max-height: none !important;
+  }
+
+  .lab-topology-heading {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .lab-topology-image-container {
+    max-height: none;
+  }
+
+  .lab-task-sticky-content {
+    position: static;
+  }
+
+  .lab-solution-scroll {
+    max-height: 60vh;
+  }
+}

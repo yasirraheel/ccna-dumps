@@ -59,6 +59,76 @@ export function sanitizeRecordPayload(record) {
   };
 }
 
+function hasRecordedAnswer(value) {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") {
+    return Boolean(
+      value.confirmed ||
+      (Array.isArray(value.selections) && value.selections.length > 0) ||
+      (value.matches && Object.keys(value.matches).length > 0)
+    );
+  }
+  return true;
+}
+
+function getQuestionIdentity(question) {
+  if (!question || typeof question !== "object") return "";
+  if (question.id !== undefined && question.id !== null) return `id:${question.id}`;
+  if (question.questionNo) return `qno:${String(question.questionNo).trim().toLowerCase()}`;
+  if (question.question) return `text:${String(question.question).trim().toLowerCase()}`;
+  return "";
+}
+
+function mergeRetakeIntoOriginal(originalRecord, retakeRecord) {
+  if (
+    !originalRecord ||
+    !Array.isArray(originalRecord.questions) ||
+    originalRecord.questions.length === 0 ||
+    !Array.isArray(retakeRecord?.questions)
+  ) {
+    return retakeRecord;
+  }
+
+  const originalQuestions = originalRecord.questions.map((question) => ({ ...question }));
+  const mergedAnswers = Array.isArray(originalRecord.answers)
+    ? [...originalRecord.answers]
+    : new Array(originalQuestions.length).fill(null);
+  const originalIndexByIdentity = new Map();
+
+  originalQuestions.forEach((question, index) => {
+    const identity = getQuestionIdentity(question);
+    if (identity) originalIndexByIdentity.set(identity, index);
+  });
+
+  (retakeRecord.questions || []).forEach((question, retakeIndex) => {
+    const originalIndex = originalIndexByIdentity.get(getQuestionIdentity(question));
+    const retakeAnswer = retakeRecord.answers?.[retakeIndex];
+    if (originalIndex === undefined || !hasRecordedAnswer(retakeAnswer)) return;
+    mergedAnswers[originalIndex] = retakeAnswer;
+  });
+
+  const mergedScore = calculateTotalPoints(originalQuestions, mergedAnswers);
+  const mergedMaxScore = originalQuestions.reduce((sum, question) => sum + (question.points || 10), 0);
+  const mergedPercentage = Number(((mergedScore / (mergedMaxScore || 1)) * 100).toFixed(2));
+
+  return {
+    ...retakeRecord,
+    id: originalRecord.id || retakeRecord.id,
+    historyRecordId: originalRecord.id || retakeRecord.historyRecordId || null,
+    bankName: originalRecord.bankName || retakeRecord.bankName,
+    bankKey: originalRecord.bankKey || retakeRecord.bankKey,
+    questions: originalQuestions,
+    answers: mergedAnswers,
+    score: mergedScore,
+    maxScore: mergedMaxScore,
+    percentage: mergedPercentage,
+    passed: mergedPercentage >= 82.5,
+    totalQuestions: originalQuestions.length,
+    timeSpentSeconds: (originalRecord.timeSpentSeconds || 0) + (retakeRecord.timeSpentSeconds || 0),
+  };
+}
+
 export async function syncActiveSessionToServer(sessionData) {
   if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
     return { success: true };
@@ -108,37 +178,11 @@ export async function syncActiveSessionToServer(sessionData) {
   }
 }
 
-const ACTIVE_SESSION_STORAGE_KEY = "ccna_active_session";
-
-export function readLocalActiveSession() {
-  try {
-    const raw = localStorage.getItem(ACTIVE_SESSION_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function clearLocalActiveSession() {
-  try {
-    localStorage.removeItem(ACTIVE_SESSION_STORAGE_KEY);
-  } catch {}
-}
-
-// Keep a small client-side recovery copy as well as the authoritative server copy.
-// This lets a browser refresh restore the current question while the server request is
-// still starting or temporarily unavailable.
+// Compatibility wrapper retained for existing reducer call sites. Exam/session data is
+// written to the server only; localStorage is not used as a recovery source.
 export function syncActiveSessionToLocalStorage(sessionData) {
   if (!sessionData || !sessionData.id || sessionData.isReviewMode || isExamFinishedId(sessionData.id)) {
     return;
-  }
-  try {
-    localStorage.setItem(
-      ACTIVE_SESSION_STORAGE_KEY,
-      JSON.stringify(sanitizeSessionPayload(sessionData))
-    );
-  } catch (error) {
-    console.warn("Could not cache the active exam session locally:", error);
   }
   syncActiveSessionToServer(sessionData).catch(() => {});
 }
@@ -167,10 +211,13 @@ function getInitialExamState() {
     selectedBankName: "Full CCNA Exam",
     selectedBankKey: "bank_all",
     activeSessionId: null,
+    historyRecordId: null,
     startedAt: null,
     revealedQuestions: [],
     committedQuestions: [],
+    labProgress: {},
     isReviewMode: false,
+    isRetakeMode: false,
     isPaused: false,
   };
 }
@@ -294,7 +341,15 @@ function reducer(state, action) {
       };
 
     case "startExam": {
-      const { questions, examMode, settings, bankName, bankKey } = action.payload;
+      const {
+        questions,
+        examMode,
+        settings,
+        bankName,
+        bankKey,
+        historyRecordId = null,
+        isRetakeMode = false,
+      } = action.payload;
       const finalQuestions = applyQuestionOverrides(questions);
       const initialAnswers = new Array(finalQuestions.length).fill(null);
 
@@ -324,10 +379,13 @@ function reducer(state, action) {
         points: 0,
         secondsRemaining: timerSeconds,
         activeSessionId: newSessionId,
+        historyRecordId,
         startedAt: startTime,
         revealedQuestions: [],
         committedQuestions: [],
+        labProgress: {},
         isReviewMode: false,
+        isRetakeMode: Boolean(isRetakeMode),
         isPaused: false,
       };
     }
@@ -345,9 +403,12 @@ function reducer(state, action) {
         selectedBankName,
         selectedBankKey,
         activeSessionId,
+        historyRecordId,
         revealedQuestions,
         committedQuestions,
+        labProgress,
         isReviewMode,
+        isRetakeMode,
         startedAt,
       } = action.payload;
 
@@ -409,10 +470,13 @@ function reducer(state, action) {
         }),
         status: "active",
         activeSessionId: finalSessionId,
+          historyRecordId: historyRecordId || null,
         startedAt: initialStartTime,
         revealedQuestions: revealedQuestions || [],
         committedQuestions: resumedCommitted,
+        labProgress: labProgress || {},
         isReviewMode: Boolean(isReviewMode),
+        isRetakeMode: Boolean(isRetakeMode),
         isPaused: false,
       };
     }
@@ -455,6 +519,18 @@ function reducer(state, action) {
         revealedQuestions: newRevealed,
         committedQuestions: newCommitted,
         points: updatedPoints,
+      };
+    }
+
+    case "updateLabProgress": {
+      const { questionKey, progress } = action.payload || {};
+      if (questionKey === undefined || questionKey === null) return state;
+      return {
+        ...state,
+        labProgress: {
+          ...(state.labProgress || {}),
+          [String(questionKey)]: progress || {},
+        },
       };
     }
 
@@ -945,10 +1021,13 @@ export default function App() {
       selectedBankName,
       selectedBankKey,
       activeSessionId,
+      historyRecordId,
       startedAt,
       revealedQuestions,
       committedQuestions = [],
+      labProgress = {},
       isReviewMode,
+      isRetakeMode,
       isPaused,
     },
     dispatch,
@@ -1008,6 +1087,7 @@ export default function App() {
         const now = Date.now();
         const sessionSnapshot = {
           id: activeSessionId || `session_${startedAt || now}`,
+          historyRecordId,
           userId: currentUser?.id || null,
           userEmail: currentUser?.email || null,
           candidateName: candidateNameVal,
@@ -1026,6 +1106,7 @@ export default function App() {
           flaggedQuestions,
           revealedQuestions: revealedQuestions || [],
           committedQuestions: committedQuestions || [],
+          labProgress,
           startedAt: startedAt || now,
           savedAt: now,
           updatedAt: now,
@@ -1138,6 +1219,7 @@ export default function App() {
     try {
       localStorage.removeItem("ccna_active_running_session");
       localStorage.removeItem("ccna_active_running_session_id");
+      localStorage.removeItem("ccna_active_session");
       localStorage.removeItem("ccna_question_overrides");
       localStorage.removeItem("ccna_saved_sessions_list");
     } catch {}
@@ -1318,6 +1400,7 @@ export default function App() {
             flaggedQuestions,
             revealedQuestions,
             committedQuestions,
+            labProgress,
             startedAt,
             savedAt: Date.now(),
             updatedAt: Date.now(),
@@ -1333,7 +1416,7 @@ export default function App() {
     } finally {
       setIsRetryingConnection(false);
     }
-  }, [status, activeSessionId, currentUser, candidateName, questions, index, answer, answers, points, secondsRemaining, examMode, settings, selectedBankName, selectedBankKey, flaggedQuestions, revealedQuestions, committedQuestions, startedAt]);
+  }, [status, activeSessionId, currentUser, candidateName, questions, index, answer, answers, points, secondsRemaining, examMode, settings, selectedBankName, selectedBankKey, flaggedQuestions, revealedQuestions, committedQuestions, labProgress, startedAt]);
 
   useEffect(() => {
     const handleOnline = () => handleRetryConnection();
@@ -1346,6 +1429,30 @@ export default function App() {
       window.removeEventListener("offline", handleOffline);
     };
   }, [handleRetryConnection]);
+
+  // Protect active exams when the candidate leaves the tab or minimizes the
+  // browser. Returning to the page intentionally keeps the exam paused so the
+  // candidate must explicitly choose Resume.
+  useEffect(() => {
+    const pauseWhenPageIsHidden = () => {
+      if (
+        document.hidden &&
+        status === "active" &&
+        !isPaused &&
+        !isReviewMode
+      ) {
+        dispatch({ type: "pauseExam" });
+      }
+    };
+
+    document.addEventListener("visibilitychange", pauseWhenPageIsHidden);
+    window.addEventListener("pagehide", pauseWhenPageIsHidden);
+
+    return () => {
+      document.removeEventListener("visibilitychange", pauseWhenPageIsHidden);
+      window.removeEventListener("pagehide", pauseWhenPageIsHidden);
+    };
+  }, [status, isPaused, isReviewMode]);
 
   // Periodic heartbeat every 20 seconds during active exam
   useEffect(() => {
@@ -1421,6 +1528,7 @@ export default function App() {
   const [flaggedQuestions, setFlaggedQuestions] = useState([]);
   const hasSavedRef = useRef(false);
   const lastFinishedRecordRef = useRef(null);
+  const latestRetakeOriginalRecordRef = useRef(null);
   const candidateNameVal = currentUser?.name || candidateName;
 
   useEffect(() => {
@@ -1448,6 +1556,7 @@ export default function App() {
         const now = Date.now();
         const sessionSnapshot = {
           id: activeSessionId || `session_${startedAt || now}`,
+          historyRecordId,
           userId: currentUser?.id || null,
           userEmail: currentUser?.email || null,
           candidateName: candidateNameVal,
@@ -1490,6 +1599,7 @@ export default function App() {
     status,
     isReviewMode,
     activeSessionId,
+    historyRecordId,
     startedAt,
     currentUser,
     candidateNameVal,
@@ -1817,6 +1927,7 @@ export default function App() {
 
       const currentSessionObj = {
         id: activeSessionId || `session_${initialStartTime}`,
+        historyRecordId,
         userId: currentUser?.id || null,
         userEmail: currentUser?.email || null,
         status: "active",
@@ -1835,6 +1946,8 @@ export default function App() {
         flaggedQuestions,
         candidateName: currentUser?.name || candidateName,
         revealedQuestions: revealedQuestions || [],
+        labProgress,
+        isRetakeMode: Boolean(isRetakeMode),
         startedAt: initialStartTime,
         savedAt: Date.now(),
         updatedAt: Date.now(),
@@ -1882,9 +1995,12 @@ export default function App() {
     candidateName,
     currentUser,
     activeSessionId,
+    historyRecordId,
     startedAt,
     revealedQuestions,
+    labProgress,
     isReviewMode,
+    isRetakeMode,
     isPaused,
   ]);
 
@@ -1918,10 +2034,11 @@ export default function App() {
           ? Math.max(0, (settings?.timerMinutes ? settings.timerMinutes * 60 : 7200) - secondsRemaining)
           : 0);
 
-      const completedRecord = {
-        id: activeSessionId || `exam_${now}`,
+      const draftCompletedRecord = {
+        id: historyRecordId || activeSessionId || `exam_${now}`,
         sessionId: activeSessionId,
         activeSessionId: activeSessionId,
+        historyRecordId: historyRecordId || null,
         userId: currentUser?.id || null,
         userEmail: currentUser?.email || null,
         candidateName: currentUser?.name || candidateName || "Candidate",
@@ -1942,6 +2059,18 @@ export default function App() {
         settings: { ...settings },
         examMode,
       };
+
+      // A retake is a correction pass over the original exam, not a new
+      // smaller exam. Merge the newly answered subset back into the original
+      // question/answer arrays before calculating the saved result.
+      const originalRecord = historyRecordId
+        ? (latestRetakeOriginalRecordRef.current &&
+          String(latestRetakeOriginalRecordRef.current.id) === String(historyRecordId)
+          ? latestRetakeOriginalRecordRef.current
+          : pastExams.find((record) => String(record.id) === String(historyRecordId)))
+        : null;
+      const completedRecord = mergeRetakeIntoOriginal(originalRecord, draftCompletedRecord);
+      latestRetakeOriginalRecordRef.current = null;
 
       lastFinishedRecordRef.current = completedRecord;
 
@@ -1991,6 +2120,7 @@ export default function App() {
     selectedBankName,
     selectedBankKey,
     activeSessionId,
+    historyRecordId,
     answers,
     flaggedQuestions,
     revealedQuestions,
@@ -1998,6 +2128,7 @@ export default function App() {
     examMode,
     isReviewMode,
     startedAt,
+    pastExams,
   ]);
 
   // 4. Candidate name persistence
@@ -2182,7 +2313,11 @@ export default function App() {
           bankName: session.selectedBankName || session.bankName || "Resumed CCNA Exam",
         }),
         activeSessionId: session.id,
+        historyRecordId: session.historyRecordId || null,
         revealedQuestions: session.revealedQuestions || [],
+        committedQuestions: session.committedQuestions || [],
+        labProgress: session.labProgress || {},
+        isRetakeMode: Boolean(session.isRetakeMode || session.historyRecordId),
         startedAt: initialStartTime,
       },
     });
@@ -2223,6 +2358,7 @@ export default function App() {
     const now = Date.now();
     const sessionSnapshot = {
       id: activeSessionId || `session_${startedAt || now}`,
+      historyRecordId,
       userId: currentUser?.id || null,
       userEmail: currentUser?.email || null,
       candidateName: currentUser?.name || candidateName,
@@ -2241,6 +2377,7 @@ export default function App() {
       flaggedQuestions,
       revealedQuestions: revealedQuestions || [],
       committedQuestions: newCommitted,
+      labProgress,
       startedAt: startedAt || now,
       savedAt: now,
       updatedAt: now,
@@ -2308,6 +2445,7 @@ export default function App() {
     const now = Date.now();
     const sessionData = {
       id: activeSessionId || `session_${startedAt || now}`,
+      historyRecordId,
       userId: currentUser?.id || null,
       userEmail: currentUser?.email || null,
       candidateName: currentUser?.name || candidateName,
@@ -2326,6 +2464,7 @@ export default function App() {
       flaggedQuestions,
       revealedQuestions: newRevealed,
       committedQuestions: newCommitted,
+      labProgress,
       startedAt: startedAt || now,
       savedAt: now,
       updatedAt: now,
@@ -2464,18 +2603,6 @@ export default function App() {
           return;
         }
 
-        const localSession = readLocalActiveSession();
-        const sameSession = !urlSessionId || localSession?.id === urlSessionId;
-        const sameUser = (!userObj.id || !localSession?.userId || String(localSession.userId) === String(userObj.id)) &&
-          (!userObj.email || !localSession?.userEmail || String(localSession.userEmail).toLowerCase() === String(userObj.email).toLowerCase());
-        const hasUnansweredQuestions = localSession?.questions?.length > 0 &&
-          (localSession.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length < localSession.questions.length;
-
-        if (localSession && sameSession && sameUser && hasUnansweredQuestions && !isExamFinishedId(localSession.id)) {
-          handleResumeSession(localSession);
-          return;
-        }
-
         handleNavigate("dashboard");
         dispatch({ type: "sessionNotFound" });
         if (urlSessionId) {
@@ -2490,18 +2617,6 @@ export default function App() {
       })
       .catch((err) => {
         console.warn("Could not resume session from server:", err);
-        const localSession = readLocalActiveSession();
-        const sameSession = !urlSessionId || localSession?.id === urlSessionId;
-        const sameUser = (!userObj.id || !localSession?.userId || String(localSession.userId) === String(userObj.id)) &&
-          (!userObj.email || !localSession?.userEmail || String(localSession.userEmail).toLowerCase() === String(userObj.email).toLowerCase());
-        const hasUnansweredQuestions = localSession?.questions?.length > 0 &&
-          (localSession.answers || []).filter((a) => a !== null && a !== undefined && a !== "").length < localSession.questions.length;
-
-        if (localSession && sameSession && sameUser && hasUnansweredQuestions && !isExamFinishedId(localSession.id)) {
-          handleResumeSession(localSession);
-          return;
-        }
-
         handleNavigate("dashboard");
         dispatch({ type: "sessionNotFound" });
       });
@@ -2610,19 +2725,80 @@ export default function App() {
     handleNavigate("exam");
   };
 
-  const handleRetakeAllQuestions = (examRecord) => {
+  const fetchFreshHistoryRecord = async (examRecord) => {
+    const recordId = examRecord?.id || examRecord?.historyRecordId || examRecord?.sessionId;
+    if (!recordId) {
+      setAlertDialog({
+        isOpen: true,
+        title: "Exam Record Not Found",
+        message: "This retake must be opened from a completed exam saved on the server.",
+        confirmText: "OK",
+        cancelText: null,
+        type: "danger",
+      });
+      return null;
+    }
+
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
+    })();
+    const userId = currentUser?.id || storedUser?.id || "";
+    const userEmail = currentUser?.email || storedUser?.email || "";
+    const params = new URLSearchParams({ _t: String(Date.now()) });
+    if (userId) params.set("userId", String(userId));
+    if (userEmail) params.set("userEmail", String(userEmail));
+    const token = localStorage.getItem("ccna_auth_token") || "";
+    const headers = {
+      Accept: "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/history?${params.toString()}`, {
+        headers,
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`History request failed (${response.status})`);
+      const data = await response.json();
+      const freshRecord = (data?.history || []).find((record) =>
+        String(record?.id) === String(recordId) ||
+        String(record?.sessionId || "") === String(recordId)
+      );
+      if (!freshRecord) throw new Error("The completed exam was not returned by the server.");
+      setPastExams((previous) => [
+        freshRecord,
+        ...previous.filter((record) => String(record?.id) !== String(freshRecord.id)),
+      ]);
+      latestRetakeOriginalRecordRef.current = freshRecord;
+      return freshRecord;
+    } catch (error) {
+      setAlertDialog({
+        isOpen: true,
+        title: "Could Not Load Retake",
+        message: "The latest exam result could not be loaded from the server. Nothing was opened from browser storage. Please try again when your connection is available.",
+        confirmText: "OK",
+        cancelText: null,
+        type: "danger",
+      });
+      console.warn("Fresh server history load failed before retake:", error);
+      return null;
+    }
+  };
+
+  const handleRetakeAllQuestions = async (examRecord) => {
     if (!requireAuth()) return;
-    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const sourceRecord = await fetchFreshHistoryRecord(examRecord);
+    if (!sourceRecord) return;
+    const rawList = sourceRecord.questions;
     let qList = enrichQuestionsList(rawList);
-    const bank = examRecord?.bankName || selectedBankName;
-    const mode = examRecord?.examMode || examMode;
-    const stngs = examRecord?.settings || settings;
+    const bank = sourceRecord.bankName || selectedBankName;
+    const mode = sourceRecord.examMode || examMode;
+    const stngs = sourceRecord.settings || settings;
 
     if (stngs?.randomizeQuestions) {
       qList = aggressiveShuffle(qList);
-    }
-    if (stngs?.randomizeAnswers) {
-      qList = qList.map(randomizeQuestionOptions);
     }
 
     setFlaggedQuestions([]);
@@ -2632,17 +2808,21 @@ export default function App() {
         questions: qList,
         examMode: mode,
         settings: stngs,
-        bankName: `${bank} (Retake)`,
+        bankName: bank,
+        historyRecordId: sourceRecord.id || sourceRecord.sessionId || null,
+        isRetakeMode: true,
       },
     });
     handleNavigate("exam");
   };
 
-  const handleRetakeFlaggedOnly = (examRecord) => {
+  const handleRetakeFlaggedOnly = async (examRecord) => {
     if (!requireAuth()) return;
-    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const sourceRecord = await fetchFreshHistoryRecord(examRecord);
+    if (!sourceRecord) return;
+    const rawList = sourceRecord.questions;
     const baseList = enrichQuestionsList(rawList);
-    const flags = examRecord?.flaggedQuestions || flaggedQuestions || [];
+    const flags = sourceRecord.flaggedQuestions || [];
     let flaggedList = baseList.filter((_, idx) => flags.includes(idx));
 
     if (flaggedList.length === 0) {
@@ -2657,19 +2837,15 @@ export default function App() {
       return;
     }
 
-    const bank = (examRecord?.bankName || selectedBankName)
+    const bank = (sourceRecord.bankName || selectedBankName)
       .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged)[^)]*\)/gi, "")
       .trim();
-    const mode = examRecord?.examMode || examMode;
-    const stngs = examRecord?.settings || settings;
+    const mode = sourceRecord.examMode || examMode;
+    const stngs = sourceRecord.settings || settings;
 
     if (stngs?.randomizeQuestions) {
       flaggedList = aggressiveShuffle(flaggedList);
     }
-    if (stngs?.randomizeAnswers) {
-      flaggedList = flaggedList.map(randomizeQuestionOptions);
-    }
-
     setFlaggedQuestions([]);
     dispatch({
       type: "startExam",
@@ -2677,17 +2853,21 @@ export default function App() {
         questions: flaggedList,
         examMode: mode,
         settings: stngs,
-        bankName: `${bank} (Flagged Only - ${flaggedList.length} Qs)`,
+        bankName: bank,
+        historyRecordId: sourceRecord.id || sourceRecord.sessionId || null,
+        isRetakeMode: true,
       },
     });
     handleNavigate("exam");
   };
 
-  const handleRetakeIncorrectOnly = (examRecord) => {
+  const handleRetakeIncorrectOnly = async (examRecord) => {
     if (!requireAuth()) return;
-    const rawList = examRecord?.questions?.length ? examRecord.questions : questions;
+    const sourceRecord = await fetchFreshHistoryRecord(examRecord);
+    if (!sourceRecord) return;
+    const rawList = sourceRecord.questions;
     const baseList = enrichQuestionsList(rawList);
-    const ansList = examRecord?.answers?.length ? examRecord.answers : answers;
+    const ansList = sourceRecord.answers || [];
     const stats = getExamQuestionStats(baseList, ansList);
     let incorrectList = baseList.filter((_, idx) => stats.nonCorrectIndices.includes(idx));
 
@@ -2701,28 +2881,25 @@ export default function App() {
       return;
     }
 
-    const bank = (examRecord?.bankName || selectedBankName)
+    const bank = (sourceRecord.bankName || selectedBankName)
       .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged)[^)]*\)/gi, "")
       .trim();
-    const mode = examRecord?.examMode || examMode;
-    const stngs = examRecord?.settings || settings;
+    const mode = sourceRecord.examMode || examMode;
+    const stngs = sourceRecord.settings || settings;
 
     if (stngs?.randomizeQuestions) {
       incorrectList = aggressiveShuffle(incorrectList);
     }
-    if (stngs?.randomizeAnswers) {
-      incorrectList = incorrectList.map(randomizeQuestionOptions);
-    }
-
     setFlaggedQuestions([]);
-    const titleLabel = stats.unanswered > 0 ? "Incorrect & Missed" : "Incorrect Only";
     dispatch({
       type: "startExam",
       payload: {
         questions: incorrectList,
         examMode: mode,
         settings: stngs,
-        bankName: `${bank} (${titleLabel} - ${incorrectList.length} Qs)`,
+        bankName: bank,
+        historyRecordId: sourceRecord.id || sourceRecord.sessionId || null,
+        isRetakeMode: true,
       },
     });
     handleNavigate("exam");
@@ -2976,6 +3153,8 @@ export default function App() {
             numQuestions={numQuestions}
             selectedBankName={selectedBankName}
             candidateName={currentUser?.name || candidateName}
+            userId={currentUser?.id || null}
+            userEmail={currentUser?.email || ""}
             activeSessionId={activeSessionId}
             onGoToQuestion={handleGoToQuestion}
             isPaused={isPaused}
@@ -2985,10 +3164,17 @@ export default function App() {
             questions={questions}
             answers={answers}
             flaggedQuestions={flaggedQuestions}
+            labProgress={labProgress?.[String(questions[index]?.id || index + 1)] || null}
+            labProgressByQuestion={labProgress}
+            onLabProgressChange={(progress) => dispatch({
+              type: "updateLabProgress",
+              payload: { questionKey: questions[index]?.id || index + 1, progress },
+            })}
             onExitToDashboard={() => {
               const now = Date.now();
               const sessionSnapshot = {
                 id: activeSessionId || `session_${startedAt || now}`,
+                historyRecordId,
                 userId: currentUser?.id || null,
                 userEmail: currentUser?.email || null,
                 candidateName: currentUser?.name || candidateName,
@@ -3007,6 +3193,7 @@ export default function App() {
                 flaggedQuestions,
                 revealedQuestions: revealedQuestions || [],
                 committedQuestions: committedQuestions || [],
+                labProgress,
                 startedAt: startedAt || now,
                 savedAt: now,
                 updatedAt: now,
@@ -3060,6 +3247,7 @@ export default function App() {
             revealedQuestions={revealedQuestions}
             committedQuestions={committedQuestions}
             isReviewMode={isReviewMode}
+            isRetakeMode={isRetakeMode}
             isAdmin={isAdminUser}
             isPaused={isPaused}
             onTogglePause={() => dispatch({ type: "togglePauseExam" })}
@@ -3080,6 +3268,7 @@ export default function App() {
               const now = Date.now();
               const sessionSnapshot = {
                 id: activeSessionId || `session_${startedAt || now}`,
+                historyRecordId,
                 userId: currentUser?.id || null,
                 userEmail: currentUser?.email || null,
                 candidateName: currentUser?.name || candidateName,
@@ -3098,6 +3287,7 @@ export default function App() {
                 flaggedQuestions,
                 revealedQuestions: revealedQuestions || [],
                 committedQuestions: committedQuestions || [],
+                labProgress,
                 startedAt: startedAt || now,
                 savedAt: now,
                 updatedAt: now,

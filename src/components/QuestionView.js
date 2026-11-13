@@ -120,6 +120,7 @@ function QuestionView({
   revealedQuestions = [],
   committedQuestions = [],
   isReviewMode = false,
+  isRetakeMode = false,
   onToggleFlag,
   onGoToQuestion,
   onFinishExam,
@@ -1116,32 +1117,6 @@ function QuestionView({
         <div className="boson-slim-transition-glow"></div>
       </div>
 
-      {/* PRIMARY NAVIGATION: keep this row intentionally minimal on every screen. */}
-      <div className="boson-top-bar">
-        <div className="top-bar-left-actions">
-          <button
-            type="button"
-            className="btn-boson-back"
-            onClick={handleExitClick}
-            title="Return to Exam Bank"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span>Exam</span>
-          </button>
-        </div>
-
-        <div className="top-bar-right-group">
-          <div
-            className="boson-user-avatar"
-            title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
-          >
-            <span>{candidateInitials}</span>
-          </div>
-        </div>
-      </div>
-
       {isBusyNavigating && (
         <div className="question-nav-loading-overlay" role="status" aria-live="polite">
           <span className="question-nav-spinner" aria-hidden="true"></span>
@@ -1150,83 +1125,101 @@ function QuestionView({
       )}
 
       <div className="boson-exam-info-card">
-        {/* SECONDARY EXAM CONTROLS: bank context, timer, pause, and notes. */}
+        {/* COMPACT STICKY EXAM HEADER: identity/controls on row one. */}
         <div className="boson-exam-context-row">
-        {activeBankTitle && (
-          <div className="top-bar-bank-tag context-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
-            <span className="bank-tag-name">{activeBankTitle}</span>
-          </div>
-        )}
-
-        <div className="context-actions">
-          {timerDisplay && (
-            <div
-              className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""} ${isPaused || Boolean(serverConnectionError) ? "timer-paused" : ""}`}
-              onClick={!isReviewMode && !serverConnectionError && onTogglePause ? onTogglePause : undefined}
-              title={
-                serverConnectionError
-                  ? "Timer paused due to network disconnection"
-                  : !isReviewMode && onTogglePause
-                  ? isPaused
-                    ? "Exam Paused (Click to resume)"
-                    : "Exam Running (Click to pause)"
-                  : undefined
-              }
-              style={{ cursor: !isReviewMode && !serverConnectionError && onTogglePause ? "pointer" : "default" }}
-              role={!isReviewMode && !serverConnectionError && onTogglePause ? "button" : undefined}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
-              <span>{serverConnectionError ? "⏸️ PAUSED (OFFLINE)" : isPaused ? "⏸️ PAUSED" : timerDisplay}</span>
-            </div>
-          )}
-
-          {!isReviewMode && onTogglePause && (
-            <button
-              type="button"
-              className={`btn-boson-pause ${isPaused ? "is-paused" : ""}`}
-              onClick={onTogglePause}
-              title={isPaused ? "Resume Exam" : "Pause Exam (Freeze timer & blur question)"}
-            >
-              {isPaused ? (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                  <span>Resume</span>
-                </>
-              ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" rx="1" />
-                    <rect x="14" y="4" width="4" height="16" rx="1" />
-                  </svg>
-                  <span>Pause</span>
-                </>
-              )}
-            </button>
-          )}
-
           <button
             type="button"
-            className={`btn-top-notes-summary ${currentBankNotesCount > 0 ? "has-notes" : ""}`}
-            onClick={() => setIsAllNotesModalOpen(true)}
-            title="View question notes in this exam bank"
+            className="btn-boson-back exam-header-back"
+            onClick={handleExitClick}
+            title="Return to Exam Bank"
           >
-            <span>💬 Notes ({currentBankNotesCount})</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            <span>Exam</span>
           </button>
-        </div>
+
+          <div className="exam-header-identity">
+            {activeBankTitle && (
+              <div className="top-bar-bank-tag context-bank-tag" title={`Currently attempting: ${activeBankTitle}`}>
+                <span className="bank-tag-name">{activeBankTitle}</span>
+              </div>
+            )}
+            <h1 className="boson-exam-title">
+              Cisco 200-301 CCNA Exam Simulator
+            </h1>
+          </div>
+
+          <div className="context-actions">
+            {timerDisplay && (
+              <div
+                className={`exam-timer-pill ${timerIsLow ? "timer-low" : ""} ${isPaused || Boolean(serverConnectionError) ? "timer-paused" : ""}`}
+                onClick={!isReviewMode && !serverConnectionError && onTogglePause ? onTogglePause : undefined}
+                title={
+                  serverConnectionError
+                    ? "Timer paused due to network disconnection"
+                    : !isReviewMode && onTogglePause
+                    ? isPaused
+                      ? "Exam Paused (Click to resume)"
+                      : "Exam Running (Click to pause)"
+                    : undefined
+                }
+                style={{ cursor: !isReviewMode && !serverConnectionError && onTogglePause ? "pointer" : "default" }}
+                role={!isReviewMode && !serverConnectionError && onTogglePause ? "button" : undefined}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>{serverConnectionError ? "⏸️ PAUSED (OFFLINE)" : isPaused ? "⏸️ PAUSED" : timerDisplay}</span>
+              </div>
+            )}
+
+            {!isReviewMode && onTogglePause && (
+              <button
+                type="button"
+                className={`btn-boson-pause ${isPaused ? "is-paused" : ""}`}
+                onClick={onTogglePause}
+                title={isPaused ? "Resume Exam" : "Pause Exam (Freeze timer & blur question)"}
+              >
+                {isPaused ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    <span>Resume</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                    <span>Pause</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            <button
+              type="button"
+              className={`btn-top-notes-summary ${currentBankNotesCount > 0 ? "has-notes" : ""}`}
+              onClick={() => setIsAllNotesModalOpen(true)}
+              title="View question notes in this exam bank"
+            >
+              <span>💬 Notes ({currentBankNotesCount})</span>
+            </button>
+          </div>
+
+          <div
+            className="boson-user-avatar exam-header-avatar"
+            title={candidateName ? `Candidate: ${candidateName}` : "CCNA Candidate"}
+          >
+            <span>{candidateInitials}</span>
+          </div>
         </div>
 
-        {/* MAIN TITLE HEADER */}
+        {/* SECOND HEADER ROW: question progress and question-level actions. */}
         <div className="boson-main-header">
-        <div className="boson-title-bank-row">
-          <h1 className="boson-exam-title">
-            Cisco 200-301 CCNA Exam Simulator
-          </h1>
-        </div>
-
         <div className="boson-sub-header">
           <div className="boson-sub-left">
             <div className="boson-mobile-summary-row">
@@ -2070,7 +2063,7 @@ function QuestionView({
         </div>
 
         <div className="toolbar-right">
-          {!isReviewMode && examMode !== "simulation" && settings?.includeShowAnswerBtn !== false && (
+          {!isReviewMode && (isRetakeMode || (examMode !== "simulation" && settings?.includeShowAnswerBtn !== false)) && (
             <button
               type="button"
               className={`btn-boson-action btn-show-answer ${isRevealed || (isCommitted && settings?.showAnswersInline !== false) || Boolean(serverConnectionError) ? "disabled" : ""}`}

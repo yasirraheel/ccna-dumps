@@ -60,10 +60,13 @@
 .admin-lab-editor-header { align-items: flex-start; }
 .admin-lab-modal-subtitle { margin: 4px 0 0; color: #94a3b8; font-size: 14px; }
 .admin-lab-editor-body { padding: 24px; }
-.admin-lab-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.admin-lab-form-grid { display: grid; grid-template-columns: minmax(220px, 360px); gap: 14px; }
 .admin-field-label { display: grid; gap: 7px; color: #cbd5e1; font-size: 15px; font-weight: 700; }
 .admin-input, .admin-textarea { width: 100%; box-sizing: border-box; color: #f8fafc; background: #0b1220; border: 1px solid #334155; border-radius: 8px; font: inherit; font-weight: 500; padding: 10px 11px; outline: none; }
 .admin-input:focus, .admin-textarea:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, .12); }
+.admin-lab-number-input::-webkit-inner-spin-button,
+.admin-lab-number-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.admin-lab-number-input { appearance: textfield; }
 .admin-textarea { resize: vertical; line-height: 1.45; }
 .admin-command-textarea { color: #86efac; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .admin-section-heading { color: #f8fafc; font-size: 18px; font-weight: 800; }
@@ -84,6 +87,8 @@
 .admin-task-screenshot-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
 .admin-task-reference-upload { border-top: 1px solid rgba(56, 189, 248, .18); padding-top: 14px; }
 .admin-task-screenshot-preview { width: min(340px, 100%); max-height: 150px; object-fit: contain; object-position: left center; display: block; margin-top: 7px; border-radius: 7px; border: 1px solid #475569; background: #090d16; }
+.admin-task-screenshot-preview-list { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.admin-task-screenshot-preview-item { display: grid; gap: 0.3rem; }
 .admin-upload-button { display: inline-flex; align-items: center; cursor: pointer; }
 .admin-add-task-button { white-space: nowrap; }
 .admin-add-task-bottom { display: flex; margin: 16px auto 0; }
@@ -112,6 +117,7 @@
 }
 
 .admin-lab-form-grid {
+  grid-template-columns: minmax(220px, 360px);
   gap: 1.25rem;
   padding: 1.35rem;
   border: 1px solid #334155;
@@ -236,6 +242,10 @@
   border-color: #64748b;
 }
 
+.admin-task-screenshot-preview-list .admin-task-screenshot-preview {
+  margin-top: 0;
+}
+
 .admin-lab-task-details-grid {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
@@ -283,20 +293,20 @@
    a 10px root size, so these rem values intentionally land close to normal
    16px frontend copy instead of the smaller admin defaults above. */
 .admin-lab-editor-page .admin-card-title {
-  font-size: 29px;
+  font-size: 28px;
   line-height: 1.25;
 }
 
 .admin-lab-editor-page .admin-lab-modal-subtitle,
 .admin-lab-editor-page .admin-lab-description {
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.55;
 }
 
 .admin-lab-editor-page .admin-field-label {
   gap: 0.75rem;
   color: #f1f5f9;
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1.35;
 }
 
@@ -305,7 +315,7 @@
   min-height: 3.8rem;
   padding: 1rem 1.15rem;
   border-color: #64748b;
-  font-size: 25px;
+  font-size: 18px;
   line-height: 1.55;
 }
 
@@ -314,11 +324,11 @@
 }
 
 .admin-lab-editor-page .admin-command-textarea {
-  font-size: 22px;
+  font-size: 17px;
 }
 
 .admin-lab-editor-page .admin-section-heading {
-  font-size: 26px;
+  font-size: 20px;
   line-height: 1.35;
 }
 
@@ -329,7 +339,7 @@
 
 .admin-lab-editor-page .admin-lab-upload-panel p,
 .admin-lab-editor-page .admin-lab-tasks-heading p {
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1.55;
 }
 
@@ -378,13 +388,13 @@
   width: 3rem;
   height: 3rem;
   flex-basis: 3rem;
-  font-size: 23px;
+  font-size: 19px;
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
 }
 
 .admin-lab-editor-page .admin-task-label-input {
   min-height: 3.8rem;
-  font-size: 26px;
+  font-size: 18px;
 }
 
 .admin-lab-editor-page .admin-task-screenshot-row {
@@ -400,12 +410,12 @@
 }
 
 .admin-lab-editor-page .admin-lab-paste-hint {
-  font-size: 19px;
+  font-size: 15px;
   line-height: 1.55;
 }
 
 .admin-lab-editor-page .admin-text-danger {
-  font-size: 20px;
+  font-size: 16px;
 }
 
 @media (max-width: 680px) {
@@ -420,12 +430,12 @@
   }
 
   .admin-lab-editor-page .admin-field-label {
-    font-size: 22px;
+    font-size: 16px;
   }
 
   .admin-lab-editor-page .admin-input,
   .admin-lab-editor-page .admin-textarea {
-    font-size: 22px;
+    font-size: 16px;
   }
 }
 
