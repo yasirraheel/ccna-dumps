@@ -258,6 +258,20 @@ function ExamDashboard({
 
     const sortedAll = [...nonDD, ...dd];
 
+    // Anki Flashcards banks: questions with question_no 'Anki-<CODE>-<num>'.
+    // Numbers 1001+ sort after the original Question #1-207, so the
+    // original banks (A/B/C/D, drag-drop, all-228) are untouched.
+    const isAnki = (q) =>
+      typeof q?.questionNo === "string" &&
+      q.questionNo.toLowerCase().startsWith("anki-");
+    const ankiAll = nonDD.filter(isAnki);
+    const ankiByDomain = (code) =>
+      ankiAll.filter((q) =>
+        (q.questionNo || "").toLowerCase().startsWith(`anki-${code.toLowerCase()}-`)
+      );
+    // Original exam only (no Anki): bank_all stays exactly 228 questions.
+    const originalAll = sortedAll.filter((q) => !isAnki(q));
+
     let filtered = sortedAll;
     let bankTitle = "Full Question Bank";
 
@@ -286,7 +300,38 @@ function ExamDashboard({
         filtered = dd;
         bankTitle = "Drag & Drop Special Bank";
         break;
+      case "bank_anki_nf":
+        filtered = ankiByDomain("NF");
+        bankTitle = "Anki: Network Fundamentals";
+        break;
+      case "bank_anki_na":
+        filtered = ankiByDomain("NA");
+        bankTitle = "Anki: Network Access";
+        break;
+      case "bank_anki_ipc":
+        filtered = ankiByDomain("IPC");
+        bankTitle = "Anki: IP Connectivity";
+        break;
+      case "bank_anki_ips":
+        filtered = ankiByDomain("IPS");
+        bankTitle = "Anki: IP Services";
+        break;
+      case "bank_anki_sec":
+        filtered = ankiByDomain("SEC");
+        bankTitle = "Anki: Security Fundamentals";
+        break;
+      case "bank_anki_auto":
+        filtered = ankiByDomain("AUTO");
+        bankTitle = "Anki: Automation and Programmability";
+        break;
+      case "bank_anki_all":
+        filtered = ankiAll;
+        bankTitle = "Anki: All Domains Combined";
+        break;
       case "bank_all":
+        filtered = originalAll;
+        bankTitle = "All Available Questions";
+        break;
       default:
         filtered = sortedAll;
         bankTitle = "All Available Questions";
@@ -710,11 +755,15 @@ function ExamDashboard({
                 <div className="bank-options-list">
                   {EXAM_BANKS.map((bank) => {
                     const isLocked = !isPlanAllowedForBank(currentUser, bank.key, availablePlans);
+                    // bank_all shows the original 228-question exam only (no Anki).
+                    // Anki banks use their own totalQuestions from EXAM_BANKS.
                     const totalInBank = bank.key === "bank_labs"
                       ? labQuestions.length
                       : bank.key === "bank_dragdrop"
                       ? allQuestions.filter((q) => q.type === "drag_drop" || q.questionType === "drag_drop" || Boolean(q.dragDropData) || q.isDragDrop).length
-                      : (bank.key === "bank_all" ? totalQuestionsCount : bank.totalQuestions);
+                      : (bank.key === "bank_all"
+                          ? allQuestions.filter((q) => !(typeof q?.questionNo === "string" && q.questionNo.toLowerCase().startsWith("anki-"))).length
+                          : bank.totalQuestions);
                     const allowedCount = getBankAllowedQuestionCount(currentUser, bank.key, totalInBank, availablePlans);
 
                     let metaText = `${totalInBank} Qs`;

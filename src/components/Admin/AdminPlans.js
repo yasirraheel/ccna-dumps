@@ -10,6 +10,13 @@ const DEFAULT_BANK_PERMS = {
   bank_d: { enabled: false, max_questions: 0 },
   bank_dragdrop: { enabled: false, max_questions: 0 },
   bank_all: { enabled: false, max_questions: 0 },
+  bank_anki_nf: { enabled: false, max_questions: 0 },
+  bank_anki_na: { enabled: false, max_questions: 0 },
+  bank_anki_ipc: { enabled: false, max_questions: 0 },
+  bank_anki_ips: { enabled: false, max_questions: 0 },
+  bank_anki_sec: { enabled: false, max_questions: 0 },
+  bank_anki_auto: { enabled: false, max_questions: 0 },
+  bank_anki_all: { enabled: false, max_questions: 0 },
   allow_simulation: false
 };
 

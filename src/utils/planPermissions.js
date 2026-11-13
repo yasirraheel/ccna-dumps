@@ -9,6 +9,14 @@ export const EXAM_BANKS = [
   { key: 'bank_dragdrop', name: 'Drag & Drop Special Bank', totalQuestions: 21, defaultMax: 21 },
   { key: 'bank_all', name: 'All Questions Bank', totalQuestions: 228, defaultMax: 228 },
   { key: 'bank_labs', name: 'Labs', totalQuestions: 5, defaultMax: 5 },
+  // Anki Flashcards banks (separate from the original 228-question exam)
+  { key: 'bank_anki_nf', name: 'Anki: Network Fundamentals', totalQuestions: 581, defaultMax: 581 },
+  { key: 'bank_anki_na', name: 'Anki: Network Access', totalQuestions: 589, defaultMax: 589 },
+  { key: 'bank_anki_ipc', name: 'Anki: IP Connectivity', totalQuestions: 280, defaultMax: 280 },
+  { key: 'bank_anki_ips', name: 'Anki: IP Services', totalQuestions: 399, defaultMax: 399 },
+  { key: 'bank_anki_sec', name: 'Anki: Security Fundamentals', totalQuestions: 126, defaultMax: 126 },
+  { key: 'bank_anki_auto', name: 'Anki: Automation and Programmability', totalQuestions: 132, defaultMax: 132 },
+  { key: 'bank_anki_all', name: 'Anki: All Domains Combined', totalQuestions: 2107, defaultMax: 2107 },
 ];
 
 export const normalizePlan = (plan) => {

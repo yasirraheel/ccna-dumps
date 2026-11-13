@@ -91,6 +91,13 @@ function AdminQuestions() {
     else if (bankFilter === 'bank_c') list = nonDD.slice(100, 150);
     else if (bankFilter === 'bank_d') list = nonDD.slice(150, 207);
     else if (bankFilter === 'drag_drop') list = dd;
+    else if (bankFilter === 'bank_anki_nf') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-nf-'));
+    else if (bankFilter === 'bank_anki_na') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-na-'));
+    else if (bankFilter === 'bank_anki_ipc') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-ipc-'));
+    else if (bankFilter === 'bank_anki_ips') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-ips-'));
+    else if (bankFilter === 'bank_anki_sec') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-sec-'));
+    else if (bankFilter === 'bank_anki_auto') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-auto-'));
+    else if (bankFilter === 'bank_anki_all') list = nonDD.filter(q => (q.questionNo || '').toLowerCase().startsWith('anki-'));
 
     if (search.trim()) {
       const qLower = search.toLowerCase();
@@ -137,6 +144,13 @@ function AdminQuestions() {
               <option value="bank_c">Exam C (Q 101-150)</option>
               <option value="bank_d">Exam D (Q 151-207)</option>
               <option value="drag_drop">Drag & Drop Interactive</option>
+              <option value="bank_anki_nf">Anki: Network Fundamentals</option>
+              <option value="bank_anki_na">Anki: Network Access</option>
+              <option value="bank_anki_ipc">Anki: IP Connectivity</option>
+              <option value="bank_anki_ips">Anki: IP Services</option>
+              <option value="bank_anki_sec">Anki: Security Fundamentals</option>
+              <option value="bank_anki_auto">Anki: Automation and Programmability</option>
+              <option value="bank_anki_all">Anki: All Domains Combined</option>
             </select>
           </div>
         </div>
