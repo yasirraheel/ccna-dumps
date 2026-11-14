@@ -18,6 +18,7 @@ import {
   getAllBanksMarkedQuestions,
   getKeywordQuestions,
   mergeUniqueQuestions,
+  removeExcludedQuestions,
 } from "../utils/incorrectQuestionPool";
 import { cleanBankTitle } from "../utils/bankTitle";
 
@@ -85,7 +86,7 @@ function ExamDashboard({
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCustomBuilderOpen, setIsCustomBuilderOpen] = useState(false);
-  const [customSources, setCustomSources] = useState({ incorrect: true, marked: false, keyword: "" });
+  const [customSources, setCustomSources] = useState({ incorrect: true, marked: false, keyword: "", excludeKeyword: "" });
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -546,13 +547,21 @@ function ExamDashboard({
     () => getKeywordQuestions(allQuestions, customSources.keyword),
     [allQuestions, customSources.keyword]
   );
+  const customExcludedQuestions = React.useMemo(
+    () => getKeywordQuestions(allQuestions, customSources.excludeKeyword),
+    [allQuestions, customSources.excludeKeyword]
+  );
   const customSelectedQuestions = React.useMemo(
-    () => mergeUniqueQuestions(
-      customSources.incorrect ? customIncorrectQuestions : [],
-      customSources.marked ? customMarkedQuestions : [],
-      customSources.keyword.trim() ? customKeywordQuestions : []
-    ),
-    [customSources, customIncorrectQuestions, customMarkedQuestions, customKeywordQuestions]
+    () =>
+      removeExcludedQuestions(
+        mergeUniqueQuestions(
+          customSources.incorrect ? customIncorrectQuestions : [],
+          customSources.marked ? customMarkedQuestions : [],
+          customSources.keyword.trim() ? customKeywordQuestions : []
+        ),
+        customSources.excludeKeyword.trim() ? customExcludedQuestions : []
+      ),
+    [customSources, customIncorrectQuestions, customMarkedQuestions, customKeywordQuestions, customExcludedQuestions]
   );
 
   const openCustomBuilder = () => {
@@ -560,7 +569,7 @@ function ExamDashboard({
       onOpenAuth?.("login");
       return;
     }
-    setCustomSources({ incorrect: true, marked: false, keyword: "" });
+    setCustomSources({ incorrect: true, marked: false, keyword: "", excludeKeyword: "" });
     setIsCustomBuilderOpen(true);
   };
 
@@ -1279,6 +1288,23 @@ function ExamDashboard({
                     onChange={(event) => setCustomSources((prev) => ({ ...prev, keyword: event.target.value }))}
                     placeholder="e.g. OSPF, DHCP, subnet mask"
                     aria-label="Search all questions by keyword"
+                  />
+                </div>
+
+                <div className={`custom-source-option custom-source-keyword ${customSources.excludeKeyword.trim() ? "active" : ""}`}>
+                  <span className="custom-source-icon custom-source-icon-exclude">✕</span>
+                  <span className="custom-source-copy">
+                    <strong>Exclude by keyword</strong>
+                    <small>Use commas for multiple: OSPF, BGP, IPv6, matched questions are removed</small>
+                  </span>
+                  <span className="custom-source-count">{customSources.excludeKeyword.trim() ? customExcludedQuestions.length : "—"}</span>
+                  <input
+                    className="custom-keyword-input"
+                    type="search"
+                    value={customSources.excludeKeyword}
+                    onChange={(event) => setCustomSources((prev) => ({ ...prev, excludeKeyword: event.target.value }))}
+                    placeholder="e.g. OSPF, BGP, subnet mask"
+                    aria-label="Exclude questions by keyword"
                   />
                 </div>
               </div>

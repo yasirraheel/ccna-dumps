@@ -181,3 +181,20 @@ export function mergeUniqueQuestions(...lists) {
   });
   return merged;
 }
+
+/**
+ * Removes every question present in the excluded list. Identity is the same
+ * content-based key used for dedup, so a question is removed even when it
+ * came from a different bank copy than the excluded match.
+ */
+export function removeExcludedQuestions(questions = [], excluded = []) {
+  if (!Array.isArray(excluded) || excluded.length === 0) {
+    return Array.isArray(questions) ? questions : [];
+  }
+  const excludedKeys = new Set(
+    excluded.map((question, index) => getQuestionKey(question, index))
+  );
+  return (Array.isArray(questions) ? questions : []).filter(
+    (question, index) => !excludedKeys.has(getQuestionKey(question, index))
+  );
+}
