@@ -18,6 +18,7 @@ function FinishScreen({
   onRetakeAll,
   onRetakeFlagged,
   onRetakeIncorrect,
+  onRetakeMissed,
   onClose,
   backButtonLabel,
 }) {
@@ -54,7 +55,6 @@ function FinishScreen({
   const correctCount = stats.correct;
   const incorrectCount = stats.incorrect; // answered, but wrong
   const unansweredCount = stats.unanswered; // skipped / missed
-  const nonCorrectCount = stats.nonCorrectIndices.length; // total non-correct
   const flaggedCount = flaggedQuestions ? flaggedQuestions.length : 0;
 
   return (
@@ -210,27 +210,42 @@ function FinishScreen({
 
                 <button
                   type="button"
-                  className={`retake-dropdown-item ${nonCorrectCount === 0 ? "disabled" : ""}`}
-                  disabled={nonCorrectCount === 0}
+                  className={`retake-dropdown-item ${incorrectCount === 0 ? "disabled" : ""}`}
+                  disabled={incorrectCount === 0}
                   onClick={() => {
-                    if (nonCorrectCount === 0) return;
+                    if (incorrectCount === 0) return;
                     setIsRetakeMenuOpen(false);
                     if (onRetakeIncorrect) onRetakeIncorrect();
                   }}
                 >
                   <span className="item-icon">✕</span>
                   <div className="item-text-wrap">
-                    <strong>
-                      {unansweredCount > 0
-                        ? `Retake Incorrect & Missed (${nonCorrectCount})`
-                        : `Retake Incorrect Only (${incorrectCount})`}
-                    </strong>
+                    <strong>{`Retake Incorrect Only (${incorrectCount})`}</strong>
                     <span className="item-sub">
-                      {nonCorrectCount > 0
-                        ? unansweredCount > 0
-                          ? `${incorrectCount} incorrect, ${unansweredCount} missed`
-                          : `${incorrectCount} answered incorrectly`
-                        : "All answers correct!"}
+                      {incorrectCount > 0
+                        ? `${incorrectCount} answered incorrectly`
+                        : "No incorrect answers!"}
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`retake-dropdown-item retake-missed ${unansweredCount === 0 ? "disabled" : ""}`}
+                  disabled={unansweredCount === 0}
+                  onClick={() => {
+                    if (unansweredCount === 0) return;
+                    setIsRetakeMenuOpen(false);
+                    if (onRetakeMissed) onRetakeMissed();
+                  }}
+                >
+                  <span className="item-icon">○</span>
+                  <div className="item-text-wrap">
+                    <strong>{`Retake Missed Only (${unansweredCount})`}</strong>
+                    <span className="item-sub">
+                      {unansweredCount > 0
+                        ? `${unansweredCount} missed (unanswered)`
+                        : "No missed questions!"}
                     </span>
                   </div>
                 </button>

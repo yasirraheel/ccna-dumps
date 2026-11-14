@@ -536,7 +536,7 @@ function reducer(state, action) {
 
     case "revealAnswerWithServerData": {
       const qIdx = action.payload?.index !== undefined ? action.payload.index : state.index;
-      const { correctOption, explanation } = action.payload || {};
+      const { correctOption, explanation, isCorrect } = action.payload || {};
 
       const newRevealed = state.revealedQuestions.includes(qIdx)
         ? state.revealedQuestions
@@ -559,6 +559,9 @@ function reducer(state, action) {
           ...curQ,
           ...(!hasExistingCorrect && correctOption !== undefined ? { correctOption, correctOptions: correctOption } : {}),
           ...(explanation ? { explanation } : {}),
+          // Server's check-answer verdict is authoritative (graded by option
+          // text); keep it on the question so the review banner uses it.
+          ...(typeof isCorrect === "boolean" ? { serverIsCorrect: isCorrect } : {}),
         };
       }
 
@@ -1807,7 +1810,11 @@ export default function App() {
         .catch(() => {});
     }
 
-    Promise.allSettled([pQuestions, pHistory, pSessions, pPlans, pUser]).finally(() => {
+    // Clear the loading screen as soon as the questions arrive (the only data
+    // the dashboard needs to render). History/sessions/plans/user keep loading
+    // in the background and update the dashboard when they land, instead of
+    // blocking the whole page on a black loading screen until all 5 finish.
+    pQuestions.finally(() => {
       setTimeout(() => {
         setIsDashboardLoading(false);
       }, 300);
@@ -2094,14 +2101,42 @@ export default function App() {
         setSavedSessions((prev) => prev.filter((s) => s.id !== activeSessionId));
       }
 
-      // MySQL backend sync: Save full attempt record linked to user
+      // MySQL backend sync: Save full attempt record linked to user.
+      // The server assigns the authoritative integer id (exam_attempts.id
+      // is AUTO_INCREMENT). Adopt it locally so the record id matches the
+      // server row. Otherwise the local record keeps a string session id
+      // while the server row has an integer id, and a later retake cannot
+      // find/update the same session, so history shows a duplicate (new)
+      // session instead of updating the original one.
       fetch(`${API_BASE_URL}/history`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sanitizeRecordPayload(completedRecord)),
-      }).catch((err) => {
-        console.warn("Could not record completed exam to server history:", err);
-      });
+      })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const data = await res.json().catch(() => null);
+          const serverId = data?.examId;
+          if (serverId === undefined || serverId === null) return;
+          if (String(serverId) === String(completedRecord.id)) return;
+          if (lastFinishedRecordRef.current) {
+            lastFinishedRecordRef.current = {
+              ...lastFinishedRecordRef.current,
+              id: serverId,
+            };
+          }
+          setPastExams((prev) =>
+            prev.map((record) =>
+              String(record?.id) === String(completedRecord.id) &&
+              String(record?.sessionId || "") === String(completedRecord.sessionId || "")
+                ? { ...record, id: serverId }
+                : record
+            )
+          );
+        })
+        .catch((err) => {
+          console.warn("Could not record completed exam to server history:", err);
+        });
 
       // Also clean active session from MySQL if present
       if (activeSessionId) {
@@ -2417,7 +2452,15 @@ export default function App() {
     }
 
     const q = questions[qIdx];
-    const userAns = answers[qIdx];
+    // Use the live selection: if the answers array has not yet caught up
+    // (stale closure), fall back to the current state.answer for the
+    // question being revealed, so a recorded click is never sent as null.
+    const userAns =
+      answers[qIdx] !== null && answers[qIdx] !== undefined
+        ? answers[qIdx]
+        : qIdx === index && answer !== null && answer !== undefined
+        ? answer
+        : null;
     const targetQNo = q?.questionNo || `Question #${qIdx + 1}`;
     const targetQId = q?.id;
 
@@ -2861,7 +2904,7 @@ export default function App() {
     handleNavigate("exam");
   };
 
-  const handleRetakeIncorrectOnly = async (examRecord) => {
+  const handleRetakeNonCorrect = async (examRecord, scope) => {
     if (!requireAuth()) return;
     const sourceRecord = await fetchFreshHistoryRecord(examRecord);
     if (!sourceRecord) return;
@@ -2869,13 +2912,18 @@ export default function App() {
     const baseList = enrichQuestionsList(rawList);
     const ansList = sourceRecord.answers || [];
     const stats = getExamQuestionStats(baseList, ansList);
-    let incorrectList = baseList.filter((_, idx) => stats.nonCorrectIndices.includes(idx));
+    // Wrong (answered incorrectly) and missed (unanswered) are separate retakes.
+    const indices = scope === "missed" ? stats.unansweredIndices : stats.incorrectIndices;
+    let retakeList = baseList.filter((_, idx) => indices.includes(idx));
 
-    if (incorrectList.length === 0) {
+    if (retakeList.length === 0) {
       setAlertDialog({
         isOpen: true,
-        title: "Perfect Score! 🌟",
-        message: "Congratulations! You answered all questions correctly in this exam session.",
+        title: scope === "missed" ? "No Missed Questions! 🌟" : "Perfect Score! 🌟",
+        message:
+          scope === "missed"
+            ? "You answered every question in this exam session, nothing was missed."
+            : "Congratulations! You answered all questions correctly in this exam session.",
         type: "success",
       });
       return;
@@ -2888,13 +2936,13 @@ export default function App() {
     const stngs = sourceRecord.settings || settings;
 
     if (stngs?.randomizeQuestions) {
-      incorrectList = aggressiveShuffle(incorrectList);
+      retakeList = aggressiveShuffle(retakeList);
     }
     setFlaggedQuestions([]);
     dispatch({
       type: "startExam",
       payload: {
-        questions: incorrectList,
+        questions: retakeList,
         examMode: mode,
         settings: stngs,
         bankName: bank,
@@ -2904,6 +2952,10 @@ export default function App() {
     });
     handleNavigate("exam");
   };
+
+  const handleRetakeIncorrectOnly = async (examRecord) => handleRetakeNonCorrect(examRecord, "incorrect");
+
+  const handleRetakeMissedOnly = async (examRecord) => handleRetakeNonCorrect(examRecord, "missed");
 
   const handleStartCustomExam = ({
     questions: selectedQuestions = [],
@@ -3104,6 +3156,7 @@ export default function App() {
               onRetakeAll={handleRetakeAllQuestions}
               onRetakeFlagged={handleRetakeFlaggedOnly}
               onRetakeIncorrect={handleRetakeIncorrectOnly}
+              onRetakeMissed={handleRetakeMissedOnly}
               onStartCustomExam={handleStartCustomExam}
               currentUser={effectiveUser}
               onOpenAuth={handleOpenAuth}
@@ -3137,6 +3190,7 @@ export default function App() {
             onRetakeAll={handleRetakeAllQuestions}
             onRetakeFlagged={handleRetakeFlaggedOnly}
             onRetakeIncorrect={handleRetakeIncorrectOnly}
+            onRetakeMissed={handleRetakeMissedOnly}
             onDeleteRecord={handleDeleteHistoryRecord}
             currentUser={effectiveUser}
             onOpenAuth={handleOpenAuth}
@@ -3159,6 +3213,9 @@ export default function App() {
             onGoToQuestion={handleGoToQuestion}
             isPaused={isPaused}
             onTogglePause={() => dispatch({ type: "togglePauseExam" })}
+            examMode={examMode}
+            secondsRemaining={secondsRemaining}
+            settings={settings}
             isFlagged={flaggedQuestions.includes(index)}
             onToggleFlag={handleToggleFlag}
             questions={questions}
@@ -3354,6 +3411,7 @@ export default function App() {
             onRetakeAll={() => handleRetakeAllQuestions(lastFinishedRecordRef.current || null)}
             onRetakeFlagged={() => handleRetakeFlaggedOnly(lastFinishedRecordRef.current || null)}
             onRetakeIncorrect={() => handleRetakeIncorrectOnly(lastFinishedRecordRef.current || null)}
+            onRetakeMissed={() => handleRetakeMissedOnly(lastFinishedRecordRef.current || null)}
           />
         )}
 

@@ -49,6 +49,7 @@ function ExamDashboard({
   onRetakeAll,
   onRetakeFlagged,
   onRetakeIncorrect,
+  onRetakeMissed,
   onStartCustomExam,
   currentUser,
   onOpenAuth,
@@ -1027,7 +1028,6 @@ function ExamDashboard({
                   : 0;
                 const hasQuestions = exam.questions && exam.questions.length > 0;
                 const examStats = hasQuestions ? getExamQuestionStats(exam.questions, exam.answers) : null;
-                const nonCorrectCount = examStats ? examStats.nonCorrectIndices.length : 0;
                 const incorrectCount = examStats ? examStats.incorrect : 0;
                 const unansweredCount = examStats ? examStats.unanswered : 0;
 
@@ -1184,27 +1184,47 @@ function ExamDashboard({
                             {onRetakeIncorrect && (
                               <button
                                 type="button"
-                                className={`card-dropdown-item item-retake-incorrect ${nonCorrectCount === 0 ? "disabled" : ""}`}
-                                disabled={nonCorrectCount === 0}
+                                className={`card-dropdown-item item-retake-incorrect ${incorrectCount === 0 ? "disabled" : ""}`}
+                                disabled={incorrectCount === 0}
                                 title={
-                                  nonCorrectCount > 0
-                                    ? unansweredCount > 0
-                                      ? `${incorrectCount} incorrect, ${unansweredCount} missed`
-                                      : `${incorrectCount} answered incorrectly`
-                                    : "All answers correct!"
+                                  incorrectCount > 0
+                                    ? `${incorrectCount} answered incorrectly`
+                                    : "No incorrect answers!"
                                 }
                                 onClick={() => {
-                                  if (nonCorrectCount === 0) return;
+                                  if (incorrectCount === 0) return;
                                   setOpenActionMenuId(null);
                                   onRetakeIncorrect(exam);
                                 }}
                               >
                                 <span className="dropdown-item-icon">✕</span>
-                                <span className="dropdown-item-label">
-                                  {unansweredCount > 0 ? "Retake Incorrect & Missed" : "Retake Incorrect Only"}
-                                </span>
+                                <span className="dropdown-item-label">Retake Incorrect Only</span>
                                 <span className="dropdown-item-badge badge-incorrect">
-                                  {nonCorrectCount}&nbsp;Qs
+                                  {incorrectCount}&nbsp;Qs
+                                </span>
+                              </button>
+                            )}
+
+                            {onRetakeMissed && (
+                              <button
+                                type="button"
+                                className={`card-dropdown-item item-retake-missed ${unansweredCount === 0 ? "disabled" : ""}`}
+                                disabled={unansweredCount === 0}
+                                title={
+                                  unansweredCount > 0
+                                    ? `${unansweredCount} missed (unanswered)`
+                                    : "No missed questions!"
+                                }
+                                onClick={() => {
+                                  if (unansweredCount === 0) return;
+                                  setOpenActionMenuId(null);
+                                  onRetakeMissed(exam);
+                                }}
+                              >
+                                <span className="dropdown-item-icon">○</span>
+                                <span className="dropdown-item-label">Retake Missed Only</span>
+                                <span className="dropdown-item-badge badge-missed">
+                                  {unansweredCount}&nbsp;Qs
                                 </span>
                               </button>
                             )}
@@ -1393,6 +1413,11 @@ function ExamDashboard({
                 const target = selectedReportExam;
                 setSelectedReportExam(null);
                 if (onRetakeIncorrect) onRetakeIncorrect(target);
+              }}
+              onRetakeMissed={() => {
+                const target = selectedReportExam;
+                setSelectedReportExam(null);
+                if (onRetakeMissed) onRetakeMissed(target);
               }}
               onClose={() => setSelectedReportExam(null)}
               backButtonLabel="← Back to Dashboard"
