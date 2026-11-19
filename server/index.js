@@ -645,6 +645,7 @@ function formatQuestionRow(r) {
     points: Number(r.points) || 10,
     cliSnippet: r.cli_snippet,
     exhibitImage: r.exhibit_image || null,
+    exhibitImageNew: r.exhibit_image_new || null,
     originalSourceImage: r.original_source_image || null,
     explanation: r.explanation || null,
   };
@@ -910,7 +911,7 @@ app.post('/api/history', async (req, res) => {
 
 async function getMasterQuestionsLookup(pool) {
   const [masterRows] = await pool.query(
-    'SELECT id, question_no, type, question, options, correct_option, points, exhibit_image, original_source_image, cli_snippet, drag_drop_data, explanation FROM questions'
+    'SELECT id, question_no, type, question, options, correct_option, points, exhibit_image, exhibit_image_new, original_source_image, cli_snippet, drag_drop_data, explanation FROM questions'
   );
   const masterById = new Map();
   const masterByQno = new Map();
@@ -957,6 +958,7 @@ function mergeMasterQuestion(qItem, masterById, masterByQno) {
       explanation: m.explanation,
       cliSnippet: m.cli_snippet,
       exhibitImage: m.exhibit_image || null,
+      exhibitImageNew: m.exhibit_image_new || qItem.exhibitImageNew || null,
       originalSourceImage: m.original_source_image || qItem.originalSourceImage || null,
     };
   }
@@ -1985,6 +1987,7 @@ app.put('/api/admin/questions/:id', adminAuthMiddleware, async (req, res) => {
     const points = Number(body.points) || 10;
     const cliSnippet = body.cliSnippet !== undefined ? body.cliSnippet : null;
     const exhibitImage = body.exhibitImage !== undefined ? body.exhibitImage : null;
+    const exhibitImageNew = body.exhibitImageNew !== undefined ? body.exhibitImageNew : null;
     const originalSourceImage = body.originalSourceImage !== undefined ? body.originalSourceImage : null;
     const dragDropData = body.dragDropData ? JSON.stringify(body.dragDropData) : null;
     const type = body.type || (dragDropData ? 'drag_drop' : 'multiple_choice');
@@ -2003,6 +2006,7 @@ app.put('/api/admin/questions/:id', adminAuthMiddleware, async (req, res) => {
        points = ?,
        cli_snippet = ?,
        exhibit_image = ?,
+       exhibit_image_new = COALESCE(?, exhibit_image_new),
        original_source_image = ?,
        drag_drop_data = ?,
        type = COALESCE(NULLIF(?, ''), type),
@@ -2016,6 +2020,7 @@ app.put('/api/admin/questions/:id', adminAuthMiddleware, async (req, res) => {
         points,
         cliSnippet,
         exhibitImage,
+        exhibitImageNew,
         originalSourceImage,
         dragDropData,
         type,
@@ -2041,6 +2046,7 @@ app.put('/api/admin/questions/:id', adminAuthMiddleware, async (req, res) => {
             if (explanation !== null) sq.explanation = explanation;
             if (cliSnippet !== null) sq.cliSnippet = cliSnippet;
             if (exhibitImage !== null) sq.exhibitImage = exhibitImage;
+            if (exhibitImageNew !== null) sq.exhibitImageNew = exhibitImageNew;
             if (originalSourceImage !== null) sq.originalSourceImage = originalSourceImage;
             if (body.options) sq.options = body.options;
             if (body.correctOption !== undefined) {
@@ -2068,6 +2074,7 @@ app.put('/api/admin/questions/:id', adminAuthMiddleware, async (req, res) => {
       points,
       cliSnippet,
       exhibitImage,
+      exhibitImageNew,
       originalSourceImage,
       dragDropData: body.dragDropData || null,
       type,

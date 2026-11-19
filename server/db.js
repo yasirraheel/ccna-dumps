@@ -67,6 +67,7 @@ async function initDB() {
         points INT DEFAULT 10,
         cli_snippet TEXT,
         exhibit_image VARCHAR(255),
+        exhibit_image_new VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
@@ -113,6 +114,9 @@ async function initDB() {
     } catch {}
     try {
       await pool.query(`ALTER TABLE questions ADD COLUMN original_source_image VARCHAR(255);`);
+    } catch {}
+    try {
+      await pool.query(`ALTER TABLE questions ADD COLUMN exhibit_image_new VARCHAR(255);`);
     } catch {}
 
     // 4. Active / In-Progress Saved Sessions table (tied to user_id/email)
@@ -194,8 +198,8 @@ async function initDB() {
 
       for (const q of ccnaQuestions) {
         await pool.query(
-          `INSERT INTO questions (id, type, question_no, question, options, correct_option, drag_drop_data, points, cli_snippet, exhibit_image)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO questions (id, type, question_no, question, options, correct_option, drag_drop_data, points, cli_snippet, exhibit_image, exhibit_image_new)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             q.id,
             q.type || (q.dragDropData ? 'drag_drop' : 'multiple_choice'),
@@ -207,12 +211,31 @@ async function initDB() {
             q.points || 10,
             q.cliSnippet || null,
             q.exhibitImage || null,
+            q.exhibitImageNew || null,
           ]
         );
       }
       console.log(`Successfully populated all ${ccnaQuestions.length} questions in MySQL database.`);
     } else {
       console.log(`Questions table already populated (${qRows[0].count} questions found in MySQL).`);
+    }
+
+    // Backfill exhibit_image_new for already-seeded rows (Bank A, 19 questions).
+    // The seed above only runs when the table is empty, so without this an
+    // existing server DB would keep NULL here and the new exhibits would
+    // never reach /api/questions. Idempotent: safe to run on every restart.
+    try {
+      const { ccnaQuestions: allQs } = require('../src/data/ccnaQuestions');
+      for (const q of allQs) {
+        if (q.exhibitImageNew) {
+          await pool.query(
+            'UPDATE questions SET exhibit_image_new = ? WHERE question_no = ?',
+            [q.exhibitImageNew, q.questionNo]
+          );
+        }
+      }
+    } catch (backfillErr) {
+      console.warn('exhibit_image_new backfill skipped:', backfillErr.message);
     }
 
     // Ensure default verified test candidate exists and map orphan records
