@@ -249,10 +249,22 @@ function QuestionView({
   }, []);
 
   const activeBankTitle = cleanBankTitle(selectedBankName || question?.bankName || "CCNA Exam");
-  const hasExhibitImage = Boolean(question?.exhibitImage);
+  const hasExhibitImage = Boolean(question?.exhibitImage || question?.exhibitImageNew);
 
   const [exhibitZoom, setExhibitZoom] = useState(1);
   const [exhibitPan, setExhibitPan] = useState({ x: 0, y: 0 });
+
+  // Bank A: the new (clean) exhibit is the default; admins may switch to the original.
+  const [exhibitVersion, setExhibitVersion] = useState("new");
+  const exhibitImageShown =
+    exhibitVersion === "original"
+      ? question?.exhibitImage || question?.exhibitImageNew
+      : question?.exhibitImageNew || question?.exhibitImage;
+
+  // Reset the exhibit switch to New whenever the question changes.
+  useEffect(() => {
+    setExhibitVersion("new");
+  }, [question?.id, question?.questionNo]);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const pinchStartRef = useRef(null);
@@ -846,7 +858,7 @@ function QuestionView({
     return publicUrl ? `${publicUrl}/${clean}` : `/${clean}`;
   };
 
-  const exhibitSrc = getExhibitUrl(question.exhibitImage);
+  const exhibitSrc = getExhibitUrl(exhibitImageShown);
   const resolvedOriginalSource =
     question.originalSourceImage || resolveOriginalSourceImage(question);
   const originalSourceSrc = getExhibitUrl(resolvedOriginalSource);
@@ -1672,7 +1684,7 @@ function QuestionView({
         )}
 
         {/* EXHIBIT IMAGE WITH INLINE ZOOM & PAN */}
-        {question.exhibitImage && (
+        {hasExhibitImage && (
           <div className="boson-exhibit-card">
             <div className="exhibit-header">
               <div className="exhibit-header-left">
@@ -1683,6 +1695,43 @@ function QuestionView({
                   </span>
                 )}
               </div>
+
+              {/* NEW | ORIGINAL SWITCH (admins only) */}
+              {isUserAdmin && question?.exhibitImageNew && question?.exhibitImage && (
+                <div
+                  className="exhibit-version-switch"
+                  role="group"
+                  aria-label="Exhibit version"
+                  style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}
+                >
+                  <button
+                    type="button"
+                    className={`exhibit-ctrl-btn reset ${exhibitVersion === "new" ? "active" : ""}`}
+                    onClick={() => {
+                      setExhibitVersion("new");
+                      setImgError(false);
+                      setIsExhibitImageLoading(true);
+                    }}
+                    aria-pressed={exhibitVersion === "new"}
+                    title="Show the new clean exhibit"
+                  >
+                    New
+                  </button>
+                  <button
+                    type="button"
+                    className={`exhibit-ctrl-btn reset ${exhibitVersion === "original" ? "active" : ""}`}
+                    onClick={() => {
+                      setExhibitVersion("original");
+                      setImgError(false);
+                      setIsExhibitImageLoading(true);
+                    }}
+                    aria-pressed={exhibitVersion === "original"}
+                    title="Show the original exhibit"
+                  >
+                    Original
+                  </button>
+                </div>
+              )}
 
               {/* + / - / RESET ZOOM CONTROLS */}
               <div className="exhibit-zoom-controls">
@@ -1760,7 +1809,7 @@ function QuestionView({
                   }}
                   onLoad={() => setIsExhibitImageLoading(false)}
                   onError={(e) => {
-                    const clean = (question.exhibitImage || "").replace(/^\/+/, "");
+                    const clean = (exhibitImageShown || "").replace(/^\/+/, "");
                     if (e.target.src.includes(clean)) {
                       if (!e.target.dataset.triedFallback1) {
                         e.target.dataset.triedFallback1 = "true";
@@ -1777,7 +1826,7 @@ function QuestionView({
                 />
               ) : (
                 <div className="exhibit-error-wrap">
-                  <p>Exhibit diagram: {question.exhibitImage}</p>
+                  <p>Exhibit diagram: {exhibitImageShown}</p>
                 </div>
               )}
             </div>
