@@ -287,6 +287,9 @@ function reducer(state, action) {
           return {
             ...q,
             ...found,
+            exhibitImage: found.exhibitImage || q.exhibitImage,
+            exhibitImageNew: found.exhibitImageNew || q.exhibitImageNew,
+            originalSourceImage: found.originalSourceImage || q.originalSourceImage,
             options: found.options,
             correctOption: found.correctOption,
             correctOptions: found.correctOptions,
@@ -923,14 +926,28 @@ function reducer(state, action) {
         );
       const isRandomized = Boolean(state.settings?.randomizeAnswers);
       const updatedAll = (state.allQuestions || []).map((q) =>
-        isMatch(q) ? { ...q, ...updatedQ } : q
+        isMatch(q)
+          ? {
+              ...q,
+              ...updatedQ,
+              exhibitImage: updatedQ.exhibitImage || q.exhibitImage,
+              exhibitImageNew: updatedQ.exhibitImageNew || q.exhibitImageNew,
+              originalSourceImage: updatedQ.originalSourceImage || q.originalSourceImage,
+            }
+          : q
       );
       const updatedCur = (state.questions || []).map((q) => {
         if (!isMatch(q)) return q;
         if (isRandomized) {
           return randomizeQuestionOptions(updatedQ);
         }
-        return { ...q, ...updatedQ };
+        return {
+          ...q,
+          ...updatedQ,
+          exhibitImage: updatedQ.exhibitImage || q.exhibitImage,
+          exhibitImageNew: updatedQ.exhibitImageNew || q.exhibitImageNew,
+          originalSourceImage: updatedQ.originalSourceImage || q.originalSourceImage,
+        };
       });
       const updatedPoints = calculateTotalPoints(updatedCur, state.answers);
 
