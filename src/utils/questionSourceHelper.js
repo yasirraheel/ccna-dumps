@@ -5,6 +5,24 @@ const explanationById = new Map();
 const explanationByQuestionNo = new Map();
 const explanationByPrompt = new Map();
 
+// Bank A's cleaned exhibits are shipped with the frontend. The API may still
+// return null for exhibitImageNew until the database row is backfilled, so
+// resolve the bundled asset by question number as a safe frontend fallback.
+const bundledNewExhibitNumbers = new Set([
+  2, 6, 9, 16, 20, 21, 23, 27, 28, 29, 31, 34, 35, 39, 41, 43, 44, 46, 50,
+]);
+
+export function resolveNewExhibitImage(q) {
+  if (q?.exhibitImageNew && typeof q.exhibitImageNew === "string") {
+    return q.exhibitImageNew;
+  }
+  const match = String(q?.questionNo || "").match(/question\s*#(\d+)/i);
+  const questionNumber = match ? Number(match[1]) : null;
+  return questionNumber && bundledNewExhibitNumbers.has(questionNumber)
+    ? `exhibits/new/${questionNumber}.png`
+    : null;
+}
+
 // Question-specific corrections take precedence over stale explanations that
 // may still be attached to a question returned by the live API.
 const explanationOverridesByQuestionNo = new Map([
@@ -186,6 +204,7 @@ export function resolveExplanation(q) {
 export function enrichQuestion(q) {
   if (!q || typeof q !== "object") return q;
   const src = resolveOriginalSourceImage(q);
+  const newExhibit = resolveNewExhibitImage(q);
   const exp = resolveExplanation(q);
   let updated = q;
   if (src && q.originalSourceImage !== src) {
@@ -193,6 +212,9 @@ export function enrichQuestion(q) {
   }
   if (exp && (!updated.explanation || updated.explanation.trim() === "")) {
     updated = { ...updated, explanation: exp };
+  }
+  if (newExhibit && updated.exhibitImageNew !== newExhibit) {
+    updated = { ...updated, exhibitImageNew: newExhibit };
   }
   return updated;
 }
