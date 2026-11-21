@@ -5,11 +5,12 @@ const explanationById = new Map();
 const explanationByQuestionNo = new Map();
 const explanationByPrompt = new Map();
 
-// Bank A's cleaned exhibits are shipped with the frontend. The API may still
+// Bank A and Bank B cleaned exhibits are shipped with the frontend. The API may still
 // return null for exhibitImageNew until the database row is backfilled, so
 // resolve the bundled asset by question number as a safe frontend fallback.
 const bundledNewExhibitNumbers = new Set([
   2, 6, 9, 16, 20, 21, 23, 27, 28, 29, 31, 34, 35, 39, 41, 43, 44, 46, 50,
+  54, 56, 57, 59, 61, 63, 72, 77, 79, 85, 97,
 ]);
 
 export function resolveNewExhibitImage(q) {
