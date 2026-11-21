@@ -1547,6 +1547,7 @@ export default function App() {
   });
 
   const [flaggedQuestions, setFlaggedQuestions] = useState([]);
+  const [isRetakeLoading, setIsRetakeLoading] = useState(false);
   const hasSavedRef = useRef(false);
   const lastFinishedRecordRef = useRef(null);
   const latestRetakeOriginalRecordRef = useRef(null);
@@ -2801,6 +2802,8 @@ export default function App() {
       return null;
     }
 
+    setIsRetakeLoading(true);
+
     const storedUser = (() => {
       try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "{}"); } catch { return {}; }
     })();
@@ -2846,6 +2849,8 @@ export default function App() {
       });
       console.warn("Fresh server history load failed before retake:", error);
       return null;
+    } finally {
+      setIsRetakeLoading(false);
     }
   };
 
@@ -3114,6 +3119,15 @@ export default function App() {
 
   return (
     <div className="cisco-simulator-root">
+      {isRetakeLoading && (
+        <div className="retake-loading-overlay" role="status" aria-live="polite">
+          <div className="retake-loading-card">
+            <div className="loader" aria-hidden="true"></div>
+            <strong>Loading retake exam...</strong>
+            <span>Fetching the latest exam data from the server.</span>
+          </div>
+        </div>
+      )}
       {serverConnectionError && (
         <div className="server-connection-error-banner" role="alert">
           <div className="connection-error-content">
