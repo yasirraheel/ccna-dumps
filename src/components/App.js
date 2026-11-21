@@ -365,6 +365,8 @@ function reducer(state, action) {
         timerSeconds = finalQuestions.length * 30;
       else if (settings?.timerMode === "60s_per_q")
         timerSeconds = finalQuestions.length * 60;
+      else if (settings?.timerMode === "90s_per_q")
+        timerSeconds = finalQuestions.length * 90;
 
       const startTime = Date.now();
       const newSessionId = `session_${startTime}`;
@@ -2854,6 +2856,12 @@ export default function App() {
     }
   };
 
+  const getRetakeSettings = (sourceRecord) => ({
+    ...(sourceRecord?.settings || settings || {}),
+    timerMode: "90s_per_q",
+    isTimed: true,
+  });
+
   const handleRetakeAllQuestions = async (examRecord) => {
     if (!requireAuth()) return;
     const sourceRecord = await fetchFreshHistoryRecord(examRecord);
@@ -2862,7 +2870,7 @@ export default function App() {
     let qList = enrichQuestionsList(rawList);
     const bank = sourceRecord.bankName || selectedBankName;
     const mode = sourceRecord.examMode || examMode;
-    const stngs = sourceRecord.settings || settings;
+    const stngs = getRetakeSettings(sourceRecord);
 
     if (stngs?.randomizeQuestions) {
       qList = aggressiveShuffle(qList);
@@ -2908,7 +2916,7 @@ export default function App() {
       .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged)[^)]*\)/gi, "")
       .trim();
     const mode = sourceRecord.examMode || examMode;
-    const stngs = sourceRecord.settings || settings;
+    const stngs = getRetakeSettings(sourceRecord);
 
     if (stngs?.randomizeQuestions) {
       flaggedList = aggressiveShuffle(flaggedList);
@@ -2957,7 +2965,7 @@ export default function App() {
       .replace(/\s*\((?:Incorrect|Missed|Retake|Flagged)[^)]*\)/gi, "")
       .trim();
     const mode = sourceRecord.examMode || examMode;
-    const stngs = sourceRecord.settings || settings;
+    const stngs = getRetakeSettings(sourceRecord);
 
     if (stngs?.randomizeQuestions) {
       retakeList = aggressiveShuffle(retakeList);
