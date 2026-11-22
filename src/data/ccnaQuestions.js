@@ -4087,6 +4087,7 @@ export const ccnaQuestions = [
         "question": "Refer to the exhibit. Drag and drop the subnet masks from the left onto the corresponding subnets on the right. Not all subnet masks are used.",
         "points": 10,
         "exhibitImage": "exhibits/2-drag-drop.png",
+        "exhibitImageNew": "exhibits/new/2-drag-drop.png",
         "cliSnippet": null,
         "dragDropData": {
             "items": [
@@ -4207,6 +4208,7 @@ export const ccnaQuestions = [
         "question": "Refer to the exhibit. A packet is destined for 192.168.20.100. Drag and drop the parameters of the destination route from the left onto the routing components on the right. Not all parameters are used.",
         "points": 10,
         "exhibitImage": "exhibits/6-drag-drop.png",
+        "exhibitImageNew": "exhibits/new/6-drag-drop.png",
         "cliSnippet": null,
         "dragDropData": {
             "items": [
