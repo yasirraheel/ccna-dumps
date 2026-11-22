@@ -1136,7 +1136,7 @@
 }
 
 .admin-plan-features li::before {
-  content: 'âœ“';
+  content: '✓';
   color: #22c55e;
   font-weight: 800;
 }

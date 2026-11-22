@@ -29,10 +29,34 @@ const ALL_ALLOWED_PERMS = {
   bank_d: { enabled: true, max_questions: 57 },
   bank_dragdrop: { enabled: true, max_questions: 21 },
   bank_all: { enabled: true, max_questions: 228 },
-  bank_labs: { enabled: true, max_questions: 5 },
+  bank_labs: { enabled: true, max_questions: 27 },
   allow_simulation: true,
   allow_custom_exam: true
 };
+
+const EMPTY_BANK_PERMS = {
+  bank_a: { enabled: false, max_questions: 0 },
+  bank_b: { enabled: false, max_questions: 0 },
+  bank_c: { enabled: false, max_questions: 0 },
+  bank_d: { enabled: false, max_questions: 0 },
+  bank_dragdrop: { enabled: false, max_questions: 0 },
+  bank_all: { enabled: false, max_questions: 0 },
+  bank_labs: { enabled: false, max_questions: 0 },
+  bank_anki_nf: { enabled: false, max_questions: 0 },
+  bank_anki_na: { enabled: false, max_questions: 0 },
+  bank_anki_ipc: { enabled: false, max_questions: 0 },
+  bank_anki_ips: { enabled: false, max_questions: 0 },
+  bank_anki_sec: { enabled: false, max_questions: 0 },
+  bank_anki_auto: { enabled: false, max_questions: 0 },
+  bank_anki_all: { enabled: false, max_questions: 0 },
+  allow_simulation: false,
+  allow_custom_exam: false
+};
+
+const normalizeFeatureText = (value) => String(value ?? '')
+  .replace(/âœ“|âœ”|âœ…/g, '✓')
+  .replace(/âœ—|âœ˜/g, '✕')
+  .replace(/âš /g, '⚠');
 
 function AdminPlans() {
   const [plans, setPlans] = useState([]);
@@ -223,7 +247,7 @@ function AdminPlans() {
   };
 
   const openEditModal = (p) => {
-    const basePerms = p.id === 'plan_free' ? DEFAULT_BANK_PERMS : ALL_ALLOWED_PERMS;
+    const basePerms = p.id === 'plan_free' ? DEFAULT_BANK_PERMS : EMPTY_BANK_PERMS;
     const existingPerms = p.bank_permissions && typeof p.bank_permissions === 'object'
       ? { ...basePerms, ...p.bank_permissions }
       : { ...basePerms };
@@ -295,7 +319,7 @@ function AdminPlans() {
         <div className="admin-plans-grid">
           {plans.map((p) => {
             const isFree = p.price === 0;
-            const defaultPerms = p.id === 'plan_free' ? DEFAULT_BANK_PERMS : ALL_ALLOWED_PERMS;
+            const defaultPerms = p.id === 'plan_free' ? DEFAULT_BANK_PERMS : EMPTY_BANK_PERMS;
             const perms = { ...defaultPerms, ...(p.bank_permissions || {}) };
             return (
               <div key={p.id} className={`admin-plan-card ${!isFree ? 'featured' : ''}`}>
@@ -341,7 +365,7 @@ function AdminPlans() {
 
                 <ul className="admin-plan-features">
                   {p.features && p.features.map((f, i) => (
-                    <li key={i}>{f}</li>
+                    <li key={i}>{normalizeFeatureText(f)}</li>
                   ))}
                 </ul>
 

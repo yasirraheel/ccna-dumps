@@ -8,7 +8,7 @@ export const EXAM_BANKS = [
   { key: 'bank_d', name: 'Exam Bank D (151-207)', totalQuestions: 57, defaultMax: 57 },
   { key: 'bank_dragdrop', name: 'Drag & Drop Special Bank', totalQuestions: 21, defaultMax: 21 },
   { key: 'bank_all', name: 'All Questions Bank', totalQuestions: 228, defaultMax: 228 },
-  { key: 'bank_labs', name: 'Labs', totalQuestions: 5, defaultMax: 5 },
+  { key: 'bank_labs', name: 'Labs', totalQuestions: 27, defaultMax: 27 },
   // Anki Flashcards banks (separate from the original 228-question exam)
   { key: 'bank_anki_nf', name: 'Anki: Network Fundamentals', totalQuestions: 581, defaultMax: 581 },
   { key: 'bank_anki_na', name: 'Anki: Network Access', totalQuestions: 589, defaultMax: 589 },
@@ -53,8 +53,10 @@ export const isPlanAllowedForBank = (user, bankKey, plans = []) => {
   if (isUserAdmin(user)) return true;
 
   const planConfig = resolveUserPlanConfig(user, plans);
-  if (planConfig && planConfig[bankKey]) {
-    return Boolean(planConfig[bankKey].enabled);
+  if (planConfig && typeof planConfig === 'object') {
+    // A loaded plan configuration is authoritative. Missing bank entries are
+    // locked instead of falling back to a broad plan-name rule.
+    return Boolean(planConfig[bankKey]?.enabled);
   }
 
   // Fallback for offline / unseeded states:
@@ -69,8 +71,8 @@ export const isPlanAllowedForBank = (user, bankKey, plans = []) => {
 export const isPlanAllowedForCustomExam = (user, plans = []) => {
   if (isUserAdmin(user)) return true;
   const planConfig = resolveUserPlanConfig(user, plans);
-  if (planConfig && typeof planConfig.allow_custom_exam !== 'undefined') {
-    return Boolean(planConfig.allow_custom_exam);
+  if (planConfig && typeof planConfig === 'object') {
+    return planConfig.allow_custom_exam === true;
   }
   return normalizePlan(user?.plan) === 'pro' || normalizePlan(user?.plan) === 'unlimited';
 };
@@ -79,12 +81,12 @@ export const getBankAllowedQuestionCount = (user, bankKey, totalQuestions, plans
   if (isUserAdmin(user)) return totalQuestions;
 
   const planConfig = resolveUserPlanConfig(user, plans);
-  if (planConfig && planConfig[bankKey]) {
-    const maxQ = parseInt(planConfig[bankKey].max_questions, 10);
+  if (planConfig && typeof planConfig === 'object') {
+    const maxQ = parseInt(planConfig[bankKey]?.max_questions, 10);
     if (!isNaN(maxQ) && maxQ > 0) {
       return Math.min(maxQ, totalQuestions);
     }
-    return totalQuestions;
+    return 0;
   }
 
   return totalQuestions;
@@ -101,8 +103,8 @@ export const isPlanAllowedForMode = (user, mode, plans = []) => {
   // Official 90-minute timed Simulation Mode
   if (mode === 'simulation') {
     const planConfig = resolveUserPlanConfig(user, plans);
-    if (planConfig && typeof planConfig.allow_simulation !== 'undefined') {
-      return Boolean(planConfig.allow_simulation);
+    if (planConfig && typeof planConfig === 'object') {
+      return planConfig.allow_simulation === true;
     }
     const plan = normalizePlan(user?.plan);
     return plan === 'pro' || plan === 'unlimited';

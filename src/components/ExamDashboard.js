@@ -911,7 +911,7 @@ function ExamDashboard({
                       Study Mode
                     </button>
                     {(() => {
-                      const isSimLocked = !isPlanAllowedForMode(currentUser, "simulation");
+                      const isSimLocked = !isPlanAllowedForMode(currentUser, "simulation", availablePlans);
                       return (
                         <button
                           type="button"

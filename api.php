@@ -47,6 +47,15 @@ function getLabDisplayLabel($labNumber, $fallback = '') {
     return trim((string)$fallback) ?: 'Lab No';
 }
 
+function getLabsTotalCount($pdo) {
+    try {
+        return max(0, (int)$pdo->query("SELECT COUNT(*) FROM labs")->fetchColumn());
+    } catch (Exception $e) {
+        // Keep plan APIs usable during the first database bootstrap.
+        return 27;
+    }
+}
+
 function retakeAnswerHasValue($answer) {
     if ($answer === null || $answer === '') return false;
     if (is_array($answer)) {
@@ -301,6 +310,7 @@ try {
         }
     } catch (Exception $e) {}
 
+    $labTotalCount = getLabsTotalCount($pdo);
     $defaultFreePerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
         'bank_b' => ['enabled' => true, 'max_questions' => 50],
@@ -319,7 +329,7 @@ try {
         'bank_d' => ['enabled' => true, 'max_questions' => 57],
         'bank_dragdrop' => ['enabled' => true, 'max_questions' => 21],
         'bank_all' => ['enabled' => true, 'max_questions' => 228],
-        'bank_labs' => ['enabled' => true, 'max_questions' => 5],
+        'bank_labs' => ['enabled' => true, 'max_questions' => $labTotalCount],
         'allow_simulation' => true,
         'allow_custom_exam' => true
     ]);
@@ -344,6 +354,26 @@ try {
             $pdo->prepare("UPDATE plans SET bank_permissions = ? WHERE id != 'plan_free' AND (bank_permissions IS NULL OR bank_permissions = '' OR bank_permissions = 'null')")->execute([$defaultPaidPerms]);
         } catch (Exception $e) {}
     }
+
+    // One-time migration for plans created while Labs was incorrectly capped
+    // at five questions. A later admin choice of five remains respected.
+    try {
+        $migrationKey = 'labs_plan_limit_v2';
+        $migrationCheck = $pdo->prepare("SELECT meta_key FROM lab_meta WHERE meta_key = ? LIMIT 1");
+        $migrationCheck->execute([$migrationKey]);
+        if (!$migrationCheck->fetchColumn() && $labTotalCount > 5) {
+            $planRows = $pdo->query("SELECT id, bank_permissions FROM plans")->fetchAll();
+            $updatePlanPerms = $pdo->prepare("UPDATE plans SET bank_permissions = ? WHERE id = ?");
+            foreach ($planRows as $planRow) {
+                $planPerms = json_decode($planRow['bank_permissions'] ?? '{}', true);
+                if (!is_array($planPerms) || !isset($planPerms['bank_labs']) || !is_array($planPerms['bank_labs'])) continue;
+                if ((int)($planPerms['bank_labs']['max_questions'] ?? 0) !== 5) continue;
+                $planPerms['bank_labs']['max_questions'] = $labTotalCount;
+                $updatePlanPerms->execute([json_encode($planPerms), $planRow['id']]);
+            }
+            $pdo->prepare("INSERT INTO lab_meta (meta_key, meta_value) VALUES (?, ?)")->execute([$migrationKey, date('c')]);
+        }
+    } catch (Exception $e) {}
 
     $checkCandidate = $pdo->query("SELECT id FROM users WHERE email = 'candidate@ccna.com'")->fetch();
     $candidateHash = password_hash('Password123!', PASSWORD_BCRYPT);
@@ -453,7 +483,7 @@ function userCanViewOriginalSource($user) {
     return (int)($user['can_view_original_source'] ?? 1) === 1;
 }
 
-function getDefaultPlanPermissions($planId) {
+function getDefaultPlanPermissions($planId, $labCount = 27) {
     $normalized = strtolower((string)($planId ?: 'plan_free'));
     if ($normalized === 'free') $normalized = 'plan_free';
     if ($normalized === 'pro') $normalized = 'plan_pro';
@@ -466,7 +496,14 @@ function getDefaultPlanPermissions($planId) {
         'bank_d' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 57],
         'bank_dragdrop' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 21],
         'bank_all' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 228],
-        'bank_labs' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 5],
+        'bank_labs' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : max(0, (int)$labCount)],
+        'bank_anki_nf' => ['enabled' => false, 'max_questions' => 0],
+        'bank_anki_na' => ['enabled' => false, 'max_questions' => 0],
+        'bank_anki_ipc' => ['enabled' => false, 'max_questions' => 0],
+        'bank_anki_ips' => ['enabled' => false, 'max_questions' => 0],
+        'bank_anki_sec' => ['enabled' => false, 'max_questions' => 0],
+        'bank_anki_auto' => ['enabled' => false, 'max_questions' => 0],
+        'bank_anki_all' => ['enabled' => false, 'max_questions' => 0],
         'allow_simulation' => !$isFree,
         'allow_custom_exam' => !$isFree
     ];
@@ -514,7 +551,14 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
             'bank_d' => ['enabled' => true, 'max_questions' => 57],
             'bank_dragdrop' => ['enabled' => true, 'max_questions' => 21],
             'bank_all' => ['enabled' => true, 'max_questions' => 228],
-            'bank_labs' => ['enabled' => true, 'max_questions' => 5],
+            'bank_labs' => ['enabled' => true, 'max_questions' => getLabsTotalCount($pdo)],
+            'bank_anki_nf' => ['enabled' => false, 'max_questions' => 0],
+            'bank_anki_na' => ['enabled' => false, 'max_questions' => 0],
+            'bank_anki_ipc' => ['enabled' => false, 'max_questions' => 0],
+            'bank_anki_ips' => ['enabled' => false, 'max_questions' => 0],
+            'bank_anki_sec' => ['enabled' => false, 'max_questions' => 0],
+            'bank_anki_auto' => ['enabled' => false, 'max_questions' => 0],
+            'bank_anki_all' => ['enabled' => false, 'max_questions' => 0],
             'allow_simulation' => true,
             'allow_custom_exam' => true
         ];
@@ -524,7 +568,7 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
     else if ($pId === 'pro') $pId = 'plan_pro';
     else if ($pId === 'unlimited') $pId = 'plan_unlimited';
 
-    $defaults = getDefaultPlanPermissions($pId);
+    $defaults = getDefaultPlanPermissions($pId, getLabsTotalCount($pdo));
 
     try {
         $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE id = ?");
@@ -2535,10 +2579,11 @@ if (preg_match('#^/api/notes#', $basePath)) {
 // 12.5 Public Plans & User Upgrade API
 if (preg_match('#^/api/plans$#', $basePath) && $method === 'GET') {
     $plans = $pdo->query("SELECT id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active FROM plans WHERE is_active = 1 ORDER BY price ASC")->fetchAll();
-    $formatted = array_map(function($p) {
+    $labTotalCount = getLabsTotalCount($pdo);
+    $formatted = array_map(function($p) use ($labTotalCount) {
         $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
         $p['bank_permissions'] = array_replace(
-            getDefaultPlanPermissions($p['id'] ?? 'plan_free'),
+            getDefaultPlanPermissions($p['id'] ?? 'plan_free', $labTotalCount),
             json_decode($p['bank_permissions'] ?? '{}', true) ?? []
         );
         $p['price'] = (float)$p['price'];
@@ -3077,10 +3122,11 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $plans = $pdo->query("SELECT p.*,
             (SELECT COUNT(*) FROM users u WHERE (u.plan COLLATE utf8mb4_general_ci = p.id COLLATE utf8mb4_general_ci) OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL)) OR (u.plan COLLATE utf8mb4_general_ci = REPLACE(p.id, 'plan_', '') COLLATE utf8mb4_general_ci)) as subscribers_count
             FROM plans p ORDER BY p.price ASC")->fetchAll();
-        $formatted = array_map(function($p) {
+        $labTotalCount = getLabsTotalCount($pdo);
+        $formatted = array_map(function($p) use ($labTotalCount) {
             $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
             $p['bank_permissions'] = array_replace(
-                getDefaultPlanPermissions($p['id'] ?? 'plan_free'),
+                getDefaultPlanPermissions($p['id'] ?? 'plan_free', $labTotalCount),
                 json_decode($p['bank_permissions'] ?? '{}', true) ?? []
             );
             $p['price'] = (float)$p['price'];
