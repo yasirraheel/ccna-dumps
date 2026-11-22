@@ -143,6 +143,9 @@ export async function syncActiveSessionToServer(sessionData) {
         "Content-Type": "application/json",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
+        ...(localStorage.getItem("ccna_auth_token")
+          ? { Authorization: `Bearer ${localStorage.getItem("ccna_auth_token")}` }
+          : {}),
       },
       body: JSON.stringify(cleanPayload),
       signal: controller.signal,
@@ -1056,6 +1059,16 @@ export default function App() {
     dispatch,
   ] = useReducer(reducer, initialState);
 
+  // User Authentication State
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem("ccna_auth_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const getViewFromUrl = () => {
     const path = window.location.pathname.toLowerCase().replace(/\/+$/, "");
     const search = new URLSearchParams(window.location.search);
@@ -1267,7 +1280,15 @@ export default function App() {
   // frontend fallback, so create/edit/delete operations in Admin are the
   // single source of truth.
   useEffect(() => {
-    fetch(`${API_BASE_URL}/labs?_t=${Date.now()}`, { cache: "no-store" })
+    if (!currentUser) {
+      setLabQuestions([]);
+      return undefined;
+    }
+    const token = localStorage.getItem("ccna_auth_token");
+    fetch(`${API_BASE_URL}/labs?_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((res) => res.json())
       .then((data) => {
         const labs = Array.isArray(data?.labs) ? data.labs : [];
@@ -1278,7 +1299,7 @@ export default function App() {
         })));
       })
       .catch(() => {});
-  }, []);
+  }, [currentUser, currentUser?.id, currentUser?.email]);
 
   // A Lab session must always reflect the current database record. This
   // refresh also replaces stale task commands/screenshots from an older saved
@@ -1286,9 +1307,14 @@ export default function App() {
   useEffect(() => {
     if (status !== "active" || selectedBankKey !== "bank_labs") return undefined;
     let cancelled = false;
+    const token = localStorage.getItem("ccna_auth_token");
     fetch(`${API_BASE_URL}/labs?_t=${Date.now()}`, {
       cache: "no-store",
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     })
       .then((res) => res.json())
       .then((data) => {
@@ -1306,7 +1332,7 @@ export default function App() {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [status, selectedBankKey]);
+  }, [status, selectedBankKey, currentUser?.id, currentUser?.email]);
 
   // Listen to live question update events across the application and cross-tab storage
   useEffect(() => {
@@ -1346,16 +1372,6 @@ export default function App() {
       window.removeEventListener("ccna_server_score_synced", handleServerScore);
     };
   }, []);
-
-  // User Authentication State
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem("ccna_auth_user");
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
 
   const [authModal, setAuthModal] = useState({
     isOpen: false,

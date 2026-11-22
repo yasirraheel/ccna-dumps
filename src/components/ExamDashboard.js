@@ -9,7 +9,8 @@ import {
   isPlanAllowedForMode,
   getBankAllowedQuestionCount,
   getPlanDisplayInfo,
-  EXAM_BANKS
+  EXAM_BANKS,
+  isPlanAllowedForCustomExam
 } from "../utils/planPermissions";
 import { getExamQuestionStats } from "../utils/examScoring";
 import { getAllBanksAnalysis } from "../utils/bankStrengthAlgorithm";
@@ -352,6 +353,7 @@ function ExamDashboard({
 
   const isSimulation = examMode === "simulation";
   const isLabBank = selectedBank === "bank_labs";
+  const canConfigureExam = isPlanAllowedForCustomExam(currentUser, availablePlans);
 
   const handleBankSelect = (bankKey, bankLabel) => {
     if (!isPlanAllowedForBank(currentUser, bankKey, availablePlans)) {
@@ -570,11 +572,22 @@ function ExamDashboard({
       onOpenAuth?.("login");
       return;
     }
+    if (!canConfigureExam) {
+      onOpenUpgrade?.({
+        title: "🔒 Configure Exam is Locked",
+        reason: `Custom practice exam configuration is not included in your ${getPlanDisplayInfo(currentUser, availablePlans).name}. Upgrade your plan to unlock it.`
+      });
+      return;
+    }
     setCustomSources({ incorrect: true, marked: false, keyword: "", excludeKeyword: "" });
     setIsCustomBuilderOpen(true);
   };
 
   const createCustomExam = () => {
+    if (!canConfigureExam) {
+      setIsCustomBuilderOpen(false);
+      return;
+    }
     if (customSelectedQuestions.length === 0) return;
     setIsCustomBuilderOpen(false);
     onStartCustomExam?.({
@@ -877,9 +890,9 @@ function ExamDashboard({
                       className="btn-all-banks-incorrect"
                       onClick={openCustomBuilder}
                       disabled={!currentUser}
-                      title={!currentUser ? "Sign in to create a custom practice exam" : "Choose questions for a custom practice exam"}
+                      title={!currentUser ? "Sign in to create a custom practice exam" : canConfigureExam ? "Choose questions for a custom practice exam" : "Configure Exam is locked on your current plan"}
                     >
-                      Configure Exam
+                      {canConfigureExam ? "Configure Exam" : "🔒 Configure Exam"}
                     </button>
                   </div>
                 </div>

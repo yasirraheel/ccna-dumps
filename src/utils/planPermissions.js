@@ -52,10 +52,6 @@ const resolveUserPlanConfig = (user, plans = []) => {
 export const isPlanAllowedForBank = (user, bankKey, plans = []) => {
   if (isUserAdmin(user)) return true;
 
-  // Guided Labs are a separate study experience and are intentionally
-  // available without changing access rules for the scored exam banks.
-  if (bankKey === 'bank_labs') return true;
-
   const planConfig = resolveUserPlanConfig(user, plans);
   if (planConfig && planConfig[bankKey]) {
     return Boolean(planConfig[bankKey].enabled);
@@ -68,6 +64,15 @@ export const isPlanAllowedForBank = (user, bankKey, plans = []) => {
 
   const plan = normalizePlan(user?.plan);
   return plan === 'pro' || plan === 'unlimited';
+};
+
+export const isPlanAllowedForCustomExam = (user, plans = []) => {
+  if (isUserAdmin(user)) return true;
+  const planConfig = resolveUserPlanConfig(user, plans);
+  if (planConfig && typeof planConfig.allow_custom_exam !== 'undefined') {
+    return Boolean(planConfig.allow_custom_exam);
+  }
+  return normalizePlan(user?.plan) === 'pro' || normalizePlan(user?.plan) === 'unlimited';
 };
 
 export const getBankAllowedQuestionCount = (user, bankKey, totalQuestions, plans = []) => {

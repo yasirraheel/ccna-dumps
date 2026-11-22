@@ -308,7 +308,9 @@ try {
         'bank_d' => ['enabled' => false, 'max_questions' => 0],
         'bank_dragdrop' => ['enabled' => false, 'max_questions' => 0],
         'bank_all' => ['enabled' => false, 'max_questions' => 0],
-        'allow_simulation' => false
+        'bank_labs' => ['enabled' => false, 'max_questions' => 0],
+        'allow_simulation' => false,
+        'allow_custom_exam' => false
     ]);
     $defaultPaidPerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
@@ -317,7 +319,9 @@ try {
         'bank_d' => ['enabled' => true, 'max_questions' => 57],
         'bank_dragdrop' => ['enabled' => true, 'max_questions' => 21],
         'bank_all' => ['enabled' => true, 'max_questions' => 228],
-        'allow_simulation' => true
+        'bank_labs' => ['enabled' => true, 'max_questions' => 5],
+        'allow_simulation' => true,
+        'allow_custom_exam' => true
     ]);
 
     $planCount = (int)$pdo->query("SELECT COUNT(*) FROM plans")->fetchColumn();
@@ -449,6 +453,25 @@ function userCanViewOriginalSource($user) {
     return (int)($user['can_view_original_source'] ?? 1) === 1;
 }
 
+function getDefaultPlanPermissions($planId) {
+    $normalized = strtolower((string)($planId ?: 'plan_free'));
+    if ($normalized === 'free') $normalized = 'plan_free';
+    if ($normalized === 'pro') $normalized = 'plan_pro';
+    if ($normalized === 'unlimited') $normalized = 'plan_unlimited';
+    $isFree = $normalized === 'plan_free';
+    return [
+        'bank_a' => ['enabled' => true, 'max_questions' => 50],
+        'bank_b' => ['enabled' => true, 'max_questions' => 50],
+        'bank_c' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 50],
+        'bank_d' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 57],
+        'bank_dragdrop' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 21],
+        'bank_all' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 228],
+        'bank_labs' => ['enabled' => !$isFree, 'max_questions' => $isFree ? 0 : 5],
+        'allow_simulation' => !$isFree,
+        'allow_custom_exam' => !$isFree
+    ];
+}
+
 function stripOriginalSourceFromQuestions(&$questions) {
     if (!is_array($questions)) return;
     foreach ($questions as &$question) {
@@ -491,7 +514,9 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
             'bank_d' => ['enabled' => true, 'max_questions' => 57],
             'bank_dragdrop' => ['enabled' => true, 'max_questions' => 21],
             'bank_all' => ['enabled' => true, 'max_questions' => 228],
-            'allow_simulation' => true
+            'bank_labs' => ['enabled' => true, 'max_questions' => 5],
+            'allow_simulation' => true,
+            'allow_custom_exam' => true
         ];
     }
     $pId = $planId ?: 'plan_free';
@@ -499,25 +524,19 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
     else if ($pId === 'pro') $pId = 'plan_pro';
     else if ($pId === 'unlimited') $pId = 'plan_unlimited';
 
+    $defaults = getDefaultPlanPermissions($pId);
+
     try {
         $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE id = ?");
         $stmt->execute([$pId]);
         $perms = $stmt->fetchColumn();
         if ($perms) {
             $decoded = json_decode($perms, true);
-            if (is_array($decoded) && !empty($decoded)) return $decoded;
+            if (is_array($decoded) && !empty($decoded)) return array_replace($defaults, $decoded);
         }
     } catch (Exception $e) {}
 
-    return [
-        'bank_a' => ['enabled' => true, 'max_questions' => 50],
-        'bank_b' => ['enabled' => true, 'max_questions' => 50],
-        'bank_c' => ['enabled' => false, 'max_questions' => 0],
-        'bank_d' => ['enabled' => false, 'max_questions' => 0],
-        'bank_dragdrop' => ['enabled' => false, 'max_questions' => 0],
-        'bank_all' => ['enabled' => false, 'max_questions' => 0],
-        'allow_simulation' => false
-    ];
+    return $defaults;
 }
 
 function getUserPlanOriginalName($pdo, $planId) {
@@ -1076,6 +1095,18 @@ if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
 // questions so the Labs experience can reveal tasks and command solutions in
 // sequence without affecting exam grading.
 if (preg_match('#^/api/labs(?:/([^/]+))?#', $basePath, $lm) && $method === 'GET') {
+    $labUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+    if (!$labUser) {
+        http_response_code(401);
+        echo json_encode(["error" => "Authentication required to access Labs."]);
+        exit;
+    }
+    $labPermissions = getUserPlanPermissions($pdo, $labUser['plan'] ?? 'plan_free', $labUser['role'] ?? 'user', $labUser['email'] ?? '');
+    if (($labUser['role'] ?? 'user') !== 'admin' && empty($labPermissions['bank_labs']['enabled'])) {
+        http_response_code(403);
+        echo json_encode(["error" => "Labs are locked on this plan."]);
+        exit;
+    }
     $labId = !empty($lm[1]) ? urldecode($lm[1]) : null;
     if ($labId) {
         $stmt = $pdo->prepare("SELECT * FROM labs WHERE id = ? LIMIT 1");
@@ -1697,15 +1728,23 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         // Enforce user plan restriction on saving session
         $userEmail = isset($s['userEmail']) ? strtolower($s['userEmail']) : null;
         if ($userEmail) {
-            $uStmt = $pdo->prepare("SELECT role, plan FROM users WHERE email = ?");
+            $uStmt = $pdo->prepare("SELECT role, plan, id, name, email FROM users WHERE email = ?");
             $uStmt->execute([$userEmail]);
             $uData = $uStmt->fetch();
             $uRole = $uData['role'] ?? 'user';
             $uPlan = strtolower($uData['plan'] ?? 'free');
+            $sessionAuthUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+            if ($sessionAuthUser) {
+                $uData = $sessionAuthUser;
+                $uRole = $uData['role'] ?? 'user';
+                $uPlan = strtolower($uData['plan'] ?? 'free');
+            }
 
-            if ($uRole !== 'admin' && ($uPlan === 'free' || $uPlan === 'plan_free')) {
+            if ($uRole !== 'admin' && strtolower($uData['email'] ?? '') !== 'candidate@ccna.com') {
                 $bankName = strtolower($s['bankName'] ?? '');
+                $bankKey = strtolower(trim((string)($s['bankKey'] ?? $s['selectedBankKey'] ?? '')));
                 $examMode = strtolower($s['examMode'] ?? 'study');
+                $planPermissions = getUserPlanPermissions($pdo, $uPlan, $uRole, $uData['email'] ?? '');
 
                 $isRestrictedBank = (
                     strpos($bankName, 'exam c') !== false ||
@@ -1715,8 +1754,14 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                     strpos($bankName, 'full question') !== false
                 );
                 $isRestrictedMode = ($examMode === 'simulation');
+                $isLabSession = $bankKey === 'bank_labs' || $bankName === 'labs';
+                $isCustomSession = $bankKey === 'custom_practice' || strpos($bankName, 'custom practice') !== false;
+                $isPlanLockedBank = $bankKey !== '' && isset($planPermissions[$bankKey]) && empty($planPermissions[$bankKey]['enabled']);
+                $isLockedLab = $isLabSession && empty($planPermissions['bank_labs']['enabled']);
+                $isLockedCustom = $isCustomSession && empty($planPermissions['allow_custom_exam']);
+                $isPlanSimulationLocked = $examMode === 'simulation' && empty($planPermissions['allow_simulation']);
 
-                if ($isRestrictedBank || $isRestrictedMode) {
+                if ($isRestrictedBank || $isRestrictedMode || $isPlanLockedBank || $isLockedLab || $isLockedCustom || $isPlanSimulationLocked) {
                     http_response_code(403);
                     echo json_encode([
                         "error" => "Plan restriction: Cannot save session for locked bank/mode."
@@ -3065,7 +3110,9 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 'bank_d' => ['enabled' => false, 'max_questions' => 0],
                 'bank_dragdrop' => ['enabled' => false, 'max_questions' => 0],
                 'bank_all' => ['enabled' => false, 'max_questions' => 0],
-                'allow_simulation' => false
+                'bank_labs' => ['enabled' => false, 'max_questions' => 0],
+                'allow_simulation' => false,
+                'allow_custom_exam' => false
             ]);
         }
 

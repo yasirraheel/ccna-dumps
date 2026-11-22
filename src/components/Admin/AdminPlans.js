@@ -10,6 +10,7 @@ const DEFAULT_BANK_PERMS = {
   bank_d: { enabled: false, max_questions: 0 },
   bank_dragdrop: { enabled: false, max_questions: 0 },
   bank_all: { enabled: false, max_questions: 0 },
+  bank_labs: { enabled: false, max_questions: 0 },
   bank_anki_nf: { enabled: false, max_questions: 0 },
   bank_anki_na: { enabled: false, max_questions: 0 },
   bank_anki_ipc: { enabled: false, max_questions: 0 },
@@ -17,7 +18,8 @@ const DEFAULT_BANK_PERMS = {
   bank_anki_sec: { enabled: false, max_questions: 0 },
   bank_anki_auto: { enabled: false, max_questions: 0 },
   bank_anki_all: { enabled: false, max_questions: 0 },
-  allow_simulation: false
+  allow_simulation: false,
+  allow_custom_exam: false
 };
 
 const ALL_ALLOWED_PERMS = {
@@ -27,7 +29,9 @@ const ALL_ALLOWED_PERMS = {
   bank_d: { enabled: true, max_questions: 57 },
   bank_dragdrop: { enabled: true, max_questions: 21 },
   bank_all: { enabled: true, max_questions: 228 },
-  allow_simulation: true
+  bank_labs: { enabled: true, max_questions: 5 },
+  allow_simulation: true,
+  allow_custom_exam: true
 };
 
 function AdminPlans() {
@@ -192,6 +196,17 @@ function AdminPlans() {
     });
   };
 
+  const handleCustomExamToggle = (allow) => {
+    const currentPerms = editingPlan.bankPermissions || {};
+    setEditingPlan({
+      ...editingPlan,
+      bankPermissions: {
+        ...currentPerms,
+        allow_custom_exam: allow
+      }
+    });
+  };
+
   const openCreateModal = () => {
     setEditingPlan({
       id: 'plan_' + Date.now(),
@@ -208,9 +223,10 @@ function AdminPlans() {
   };
 
   const openEditModal = (p) => {
-    const existingPerms = p.bank_permissions && typeof p.bank_permissions === 'object' && Object.keys(p.bank_permissions).length > 0
-      ? p.bank_permissions
-      : (p.id === 'plan_free' ? { ...DEFAULT_BANK_PERMS } : { ...ALL_ALLOWED_PERMS });
+    const basePerms = p.id === 'plan_free' ? DEFAULT_BANK_PERMS : ALL_ALLOWED_PERMS;
+    const existingPerms = p.bank_permissions && typeof p.bank_permissions === 'object'
+      ? { ...basePerms, ...p.bank_permissions }
+      : { ...basePerms };
 
     setEditingPlan({
       ...p,
@@ -279,7 +295,8 @@ function AdminPlans() {
         <div className="admin-plans-grid">
           {plans.map((p) => {
             const isFree = p.price === 0;
-            const perms = p.bank_permissions || {};
+            const defaultPerms = p.id === 'plan_free' ? DEFAULT_BANK_PERMS : ALL_ALLOWED_PERMS;
+            const perms = { ...defaultPerms, ...(p.bank_permissions || {}) };
             return (
               <div key={p.id} className={`admin-plan-card ${!isFree ? 'featured' : ''}`}>
                 <div className="admin-plan-badge">
@@ -316,6 +333,9 @@ function AdminPlans() {
                   })}
                   <span className={`admin-perm-tag ${perms.allow_simulation !== false ? 'tag-allowed' : 'tag-locked'}`}>
                     ⏱️ Simulation: {perms.allow_simulation !== false ? 'Allowed' : 'Locked'}
+                  </span>
+                  <span className={`admin-perm-tag ${perms.allow_custom_exam ? 'tag-allowed' : 'tag-locked'}`}>
+                    🛠️ Configure Exam: {perms.allow_custom_exam ? 'Allowed' : 'Locked'}
                   </span>
                 </div>
 
@@ -513,6 +533,23 @@ function AdminPlans() {
                       </div>
                       <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                         {editingPlan.bankPermissions?.allow_simulation !== false ? 'Enabled' : 'Restricted (Locked)'}
+                      </span>
+                    </div>
+                    <div className="admin-sim-perm-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          id="perm_allow_custom_exam"
+                          className="admin-bank-perm-checkbox"
+                          checked={editingPlan.bankPermissions?.allow_custom_exam === true}
+                          onChange={(e) => handleCustomExamToggle(e.target.checked)}
+                        />
+                        <label htmlFor="perm_allow_custom_exam" style={{ cursor: 'pointer', margin: 0, color: '#f8fafc', fontWeight: 700, fontSize: '13px' }}>
+                          🛠️ Allow Configure Exam (Custom Practice)
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {editingPlan.bankPermissions?.allow_custom_exam === true ? 'Enabled' : 'Restricted (Locked)'}
                       </span>
                     </div>
                   </div>

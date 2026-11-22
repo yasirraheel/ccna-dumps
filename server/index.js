@@ -57,6 +57,7 @@ async function getUserPlanPermissions(pool, planId, userRole = 'user', userEmail
       bank_d: { enabled: true, max_questions: 57 },
       bank_dragdrop: { enabled: true, max_questions: 21 },
       bank_all: { enabled: true, max_questions: 228 },
+      bank_labs: { enabled: true, max_questions: 5 },
       bank_anki_nf: { enabled: true, max_questions: 581 },
       bank_anki_na: { enabled: true, max_questions: 589 },
       bank_anki_ipc: { enabled: true, max_questions: 280 },
@@ -65,6 +66,7 @@ async function getUserPlanPermissions(pool, planId, userRole = 'user', userEmail
       bank_anki_auto: { enabled: true, max_questions: 132 },
       bank_anki_all: { enabled: true, max_questions: 2107 },
       allow_simulation: true,
+      allow_custom_exam: true,
     };
   }
   let pId = planId || 'plan_free';
@@ -87,6 +89,7 @@ async function getUserPlanPermissions(pool, planId, userRole = 'user', userEmail
     bank_d: { enabled: false, max_questions: 0 },
     bank_dragdrop: { enabled: false, max_questions: 0 },
     bank_all: { enabled: false, max_questions: 0 },
+    bank_labs: { enabled: false, max_questions: 0 },
     bank_anki_nf: { enabled: false, max_questions: 0 },
     bank_anki_na: { enabled: false, max_questions: 0 },
     bank_anki_ipc: { enabled: false, max_questions: 0 },
@@ -95,6 +98,7 @@ async function getUserPlanPermissions(pool, planId, userRole = 'user', userEmail
     bank_anki_auto: { enabled: false, max_questions: 0 },
     bank_anki_all: { enabled: false, max_questions: 0 },
     allow_simulation: false,
+    allow_custom_exam: false,
   };
 }
 
