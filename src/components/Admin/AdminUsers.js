@@ -518,6 +518,21 @@ function AdminUsers({ currentUser, isCreateOpen, onCloseCreate }) {
                     Mark email address as Verified
                   </label>
                 </div>
+
+                <div className="admin-form-group" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: '10px' }}>
+                  <input
+                    type="checkbox"
+                    id="editCanViewOriginalSource"
+                    checked={editingUser.can_view_original_source !== 0 && editingUser.can_view_original_source !== false}
+                    onChange={(e) => setEditingUser({ ...editingUser, can_view_original_source: e.target.checked ? 1 : 0 })}
+                  />
+                  <label htmlFor="editCanViewOriginalSource" className="admin-form-label" style={{ margin: 0, cursor: 'pointer' }}>
+                    Allow Original Source access
+                    <small style={{ display: 'block', marginTop: '4px', color: '#94a3b8', fontWeight: 400 }}>
+                      Disable to hide the Original Source button and block original-source files for this user.
+                    </small>
+                  </label>
+                </div>
               </div>
 
               <div className="admin-modal-footer">

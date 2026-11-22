@@ -1844,11 +1844,15 @@ export default function App() {
 
   // 1.1 Initial question load from server
   useEffect(() => {
+    const questionHeaders = {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+    };
+    const authToken = localStorage.getItem("ccna_auth_token") || "";
+    if (authToken) questionHeaders.Authorization = `Bearer ${authToken}`;
+
     fetch(`${API_BASE_URL}/questions?_t=${Date.now()}`, {
-      headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-      },
+      headers: questionHeaders,
     })
       .then((res) => res.json())
       .then((data) => {
@@ -1892,8 +1896,15 @@ export default function App() {
     const qId = currentQ.id || currentQ.questionNo;
     if (!qId) return;
 
+    const questionHeaders = {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+    };
+    const authToken = localStorage.getItem("ccna_auth_token") || "";
+    if (authToken) questionHeaders.Authorization = `Bearer ${authToken}`;
+
     fetch(`${API_BASE_URL}/questions/${encodeURIComponent(qId)}?_t=${Date.now()}`, {
-      headers: { "Cache-Control": "no-cache, no-store, must-revalidate", Pragma: "no-cache" },
+      headers: questionHeaders,
     })
       .then((res) => res.json())
       .then((data) => {
@@ -3248,6 +3259,7 @@ export default function App() {
             numQuestions={numQuestions}
             selectedBankName={selectedBankName}
             candidateName={currentUser?.name || candidateName}
+            canViewOriginalSource={Boolean(currentUser && (currentUser.role === "admin" || currentUser.email === "candidate@ccna.com" || currentUser.canViewOriginalSource === true))}
             userId={currentUser?.id || null}
             userEmail={currentUser?.email || ""}
             activeSessionId={activeSessionId}
@@ -3423,6 +3435,7 @@ export default function App() {
             maxPossiblePoints={maxPossiblePoints}
             candidateName={currentUser?.name || candidateName}
             currentUser={currentUser}
+            canViewOriginalSource={Boolean(currentUser && (currentUser.role === "admin" || currentUser.email === "candidate@ccna.com" || currentUser.canViewOriginalSource === true))}
             secondsRemaining={secondsRemaining}
           />
           )

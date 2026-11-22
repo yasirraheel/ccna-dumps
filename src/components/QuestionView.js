@@ -130,6 +130,7 @@ function QuestionView({
   maxPossiblePoints,
   candidateName,
   currentUser,
+  canViewOriginalSource = false,
   isAdmin,
   secondsRemaining,
   isPaused = false,
@@ -272,6 +273,7 @@ function QuestionView({
   const [showOriginalSource, setShowOriginalSource] = useState(false);
 
   const handleToggleOriginalSource = () => {
+    if (!canViewOriginalSource) return;
     setShowOriginalSource((prev) => {
       const shouldShow = !prev;
       if (shouldShow) {
@@ -294,6 +296,7 @@ function QuestionView({
   const pinchSourceStartRef = useRef(null);
   const [sourceImgError, setSourceImgError] = useState(false);
   const [isSourceImageLoading, setIsSourceImageLoading] = useState(false);
+  const [sourceBlobUrl, setSourceBlobUrl] = useState("");
 
   const [imgError, setImgError] = useState(false);
   const [isExhibitImageLoading, setIsExhibitImageLoading] = useState(hasExhibitImage);
@@ -308,6 +311,7 @@ function QuestionView({
     setSourcePan({ x: 0, y: 0 });
     setSourceImgError(false);
     setIsSourceImageLoading(false);
+    setSourceBlobUrl("");
 
     // 2. Reset exhibit zoom/pan and image errors
     setExhibitZoom(1);
@@ -861,7 +865,48 @@ function QuestionView({
   const exhibitSrc = getExhibitUrl(exhibitImageShown);
   const resolvedOriginalSource =
     question.originalSourceImage || resolveOriginalSourceImage(question);
-  const originalSourceSrc = getExhibitUrl(resolvedOriginalSource);
+  const originalSourceSrc = sourceBlobUrl;
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = "";
+
+    if (!showOriginalSource || !canViewOriginalSource || !resolvedOriginalSource) {
+      setIsSourceImageLoading(false);
+      return () => {};
+    }
+
+    const filename = String(resolvedOriginalSource).split("/").pop();
+    const token = localStorage.getItem("ccna_auth_token") || "";
+    const headers = { Accept: "image/*", "Cache-Control": "no-store" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    setSourceImgError(false);
+    setSourceBlobUrl("");
+    setIsSourceImageLoading(true);
+
+    fetch(`/api/original-sources/${encodeURIComponent(filename)}`, { headers, cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Original source request failed: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSourceBlobUrl(objectUrl);
+        setIsSourceImageLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSourceImgError(true);
+        setIsSourceImageLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [showOriginalSource, canViewOriginalSource, resolvedOriginalSource]);
 
   const isRevealed = Boolean(revealedQuestions?.includes(seqNumber - 1));
   const isCommitted = Boolean(committedQuestions?.includes(seqNumber - 1));
@@ -1274,7 +1319,7 @@ function QuestionView({
 
           <div className="boson-sub-right-actions">
             {/* VIEW ORIGINAL SOURCE BUTTON */}
-            {resolvedOriginalSource && (
+            {canViewOriginalSource && resolvedOriginalSource && (
               <button
                 type="button"
                 className={`btn-boson-source-toggle ${showOriginalSource ? "is-active" : ""}`}
@@ -1565,7 +1610,7 @@ function QuestionView({
         )}
 
         {/* ORIGINAL SOURCE DUMP VIEWER WITH INLINE ZOOM & PAN */}
-        {showOriginalSource && resolvedOriginalSource && (
+        {canViewOriginalSource && showOriginalSource && resolvedOriginalSource && (
           <div className="boson-original-source-card">
             <div className="original-source-header">
               <div className="original-source-header-left">
@@ -1644,7 +1689,7 @@ function QuestionView({
                   <span>Loading source image</span>
                 </div>
               )}
-              {!sourceImgError ? (
+              {originalSourceSrc && !sourceImgError ? (
                 <img
                   src={originalSourceSrc}
                   alt={`Original Dump Question for ${question.questionNo || "question"}`}
@@ -1664,11 +1709,11 @@ function QuestionView({
                     setSourceImgError(true);
                   }}
                 />
-              ) : (
+              ) : sourceImgError ? (
                 <div className="source-error-wrap">
-                  <p>Original source image: {resolvedOriginalSource}</p>
+                  <p>Original source image could not be loaded.</p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         )}

@@ -49,6 +49,7 @@ async function initDB() {
         verification_expires_at BIGINT,
         reset_token VARCHAR(100),
         reset_expires_at BIGINT,
+        can_view_original_source BOOLEAN NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -117,6 +118,9 @@ async function initDB() {
     } catch {}
     try {
       await pool.query(`ALTER TABLE questions ADD COLUMN exhibit_image_new VARCHAR(255);`);
+    } catch {}
+    try {
+      await pool.query(`ALTER TABLE users ADD COLUMN can_view_original_source BOOLEAN NOT NULL DEFAULT 1 AFTER plan;`);
     } catch {}
 
     // 4. Active / In-Progress Saved Sessions table (tied to user_id/email)

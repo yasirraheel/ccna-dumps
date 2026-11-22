@@ -114,6 +114,59 @@ async function getUserPlanOriginalName(pool, planId) {
   return 'Free';
 }
 
+async function getAuthenticatedUser(req, pool = getPool()) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+
+  let decoded;
+  try {
+    decoded = jwt.verify(authHeader.slice(7), JWT_SECRET);
+  } catch {
+    return null;
+  }
+
+  if (!decoded?.id && !decoded?.email) return null;
+  const [rows] = decoded.id
+    ? await pool.query('SELECT id, name, email, role, can_view_original_source FROM users WHERE id = ? LIMIT 1', [decoded.id])
+    : await pool.query('SELECT id, name, email, role, can_view_original_source FROM users WHERE email = ? LIMIT 1', [decoded.email]);
+  return rows[0] || null;
+}
+
+function canViewOriginalSource(user) {
+  if (!user) return false;
+  if (user.role === 'admin' || String(user.email).toLowerCase() === 'candidate@ccna.com') return true;
+  return user.can_view_original_source !== 0 && user.can_view_original_source !== false;
+}
+
+// Original-source files are never public static assets. They are served only
+// through the authenticated permission-checked endpoint below.
+app.use('/original_sources', (req, res) => {
+  res.status(404).json({ error: 'Original source is not publicly available.' });
+});
+
+app.get('/api/original-sources/:filename', async (req, res) => {
+  try {
+    const pool = getPool();
+    const user = await getAuthenticatedUser(req, pool);
+    if (!user) return res.status(401).json({ error: 'Authentication required.' });
+    if (!canViewOriginalSource(user)) {
+      return res.status(403).json({ error: 'Original source access is disabled for this user.' });
+    }
+
+    const filename = decodeURIComponent(String(req.params.filename || ''));
+    if (path.basename(filename) !== filename || !/^[a-zA-Z0-9_.-]+\.(?:webp|png|jpe?g)$/i.test(filename)) {
+      return res.status(400).json({ error: 'Invalid original source filename.' });
+    }
+
+    return res.sendFile(path.join(__dirname, '../public/original_sources', filename), (err) => {
+      if (err && !res.headersSent) res.status(err.statusCode || 404).json({ error: 'Original source not found.' });
+    });
+  } catch (error) {
+    console.error('Original source access error:', error);
+    res.status(500).json({ error: 'Failed to serve original source.' });
+  }
+});
+
 // Serve exhibit images and static assets
 app.use('/exhibits', express.static(path.join(__dirname, '../public/exhibits')));
 app.use(express.static(path.join(__dirname, '../public')));
@@ -257,7 +310,15 @@ app.post('/api/auth/verify-email', async (req, res) => {
         success: true,
         message: 'Account is already verified.',
         token,
-        user: { id: user.id, name: user.name, email: user.email, isVerified: true },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role || 'user',
+          plan: user.plan || 'plan_free',
+          isVerified: true,
+          canViewOriginalSource: canViewOriginalSource(user),
+        },
       });
     }
 
@@ -296,6 +357,7 @@ app.post('/api/auth/verify-email', async (req, res) => {
         plan: user.plan || 'plan_free',
         planName,
         isVerified: true,
+        canViewOriginalSource: canViewOriginalSource(user),
         planPermissions,
       },
     });
@@ -434,6 +496,7 @@ app.post('/api/auth/login', async (req, res) => {
         plan: user.plan || 'plan_free',
         planName,
         isVerified: Boolean(user.is_verified),
+        canViewOriginalSource: canViewOriginalSource(user),
         planPermissions,
       },
     });
@@ -477,10 +540,10 @@ app.get('/api/auth/me', async (req, res) => {
     const pool = getPool();
     let rows = [];
     if (userId) {
-      [rows] = await pool.query('SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE id = ?', [userId]);
+      [rows] = await pool.query('SELECT id, name, email, role, plan, is_verified, can_view_original_source, created_at FROM users WHERE id = ?', [userId]);
     }
     if (rows.length === 0 && userEmail) {
-      [rows] = await pool.query('SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE email = ?', [userEmail]);
+      [rows] = await pool.query('SELECT id, name, email, role, plan, is_verified, can_view_original_source, created_at FROM users WHERE email = ?', [userEmail]);
     }
 
     if (rows.length === 0) {
@@ -501,6 +564,7 @@ app.get('/api/auth/me', async (req, res) => {
         planName,
         isVerified: Boolean(user.is_verified),
         createdAt: user.created_at,
+        canViewOriginalSource: canViewOriginalSource(user),
         planPermissions,
       },
     });
@@ -613,7 +677,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', database: 'connected', time: new Date().toISOString() });
 });
 
-function formatQuestionRow(r) {
+function formatQuestionRow(r, includeOriginalSource = false) {
   let parsedOptions = [];
   let parsedCorrect = [];
   let parsedDragDrop = null;
@@ -646,7 +710,9 @@ function formatQuestionRow(r) {
     cliSnippet: r.cli_snippet,
     exhibitImage: r.exhibit_image || null,
     exhibitImageNew: r.exhibit_image_new || null,
-    originalSourceImage: r.original_source_image || null,
+    ...(includeOriginalSource && r.original_source_image
+      ? { originalSourceImage: r.original_source_image }
+      : {}),
     explanation: r.explanation || null,
   };
 }
@@ -657,9 +723,10 @@ app.get('/api/questions/:id', async (req, res) => {
     const qId = Number(req.params.id);
     if (!qId) return res.status(400).json({ error: 'Valid question ID required' });
     const pool = getPool();
+    const requestUser = await getAuthenticatedUser(req, pool);
     const [rows] = await pool.query('SELECT * FROM questions WHERE id = ?', [qId]);
     if (rows.length === 0) return res.status(404).json({ error: 'Question not found' });
-    res.json({ question: formatQuestionRow(rows[0]) });
+    res.json({ question: formatQuestionRow(rows[0], canViewOriginalSource(requestUser)) });
   } catch (error) {
     console.error('Fetch single question error:', error);
     res.status(500).json({ error: 'Database error', details: error.message });
@@ -670,11 +737,13 @@ app.get('/api/questions/:id', async (req, res) => {
 app.get('/api/questions', async (req, res) => {
   try {
     const pool = getPool();
+    const requestUser = await getAuthenticatedUser(req, pool);
+    const includeOriginalSource = canViewOriginalSource(requestUser);
     if (req.query.id) {
       const qId = Number(req.query.id);
       const [rows] = await pool.query('SELECT * FROM questions WHERE id = ?', [qId]);
       if (rows.length === 0) return res.status(404).json({ error: 'Question not found' });
-      return res.json({ question: formatQuestionRow(rows[0]) });
+      return res.json({ question: formatQuestionRow(rows[0], includeOriginalSource) });
     }
 
     const [rows] = await pool.query(`
@@ -687,7 +756,7 @@ app.get('/api/questions', async (req, res) => {
         CAST(SUBSTRING_INDEX(question_no, '#', -1) AS UNSIGNED) ASC,
         id ASC
     `);
-    const formatted = rows.map(formatQuestionRow);
+    const formatted = rows.map((row) => formatQuestionRow(row, includeOriginalSource));
     res.json({ questions: formatted });
   } catch (error) {
     console.error('Failed to fetch questions:', error);
@@ -925,7 +994,7 @@ async function getMasterQuestionsLookup(pool) {
   return { masterById, masterByQno };
 }
 
-function mergeMasterQuestion(qItem, masterById, masterByQno) {
+function mergeMasterQuestion(qItem, masterById, masterByQno, includeOriginalSource = false) {
   if (!qItem) return qItem;
   let m = null;
   if (qItem.id && masterById.has(Number(qItem.id))) {
@@ -949,7 +1018,7 @@ function mergeMasterQuestion(qItem, masterById, masterByQno) {
     }
     const mCorrArr = Array.isArray(mCorr) ? mCorr : [mCorr];
 
-    return {
+    const merged = {
       ...qItem,
       question: m.question,
       options: mOpts.length > 0 ? mOpts : qItem.options,
@@ -959,8 +1028,18 @@ function mergeMasterQuestion(qItem, masterById, masterByQno) {
       cliSnippet: m.cli_snippet,
       exhibitImage: m.exhibit_image || null,
       exhibitImageNew: m.exhibit_image_new || qItem.exhibitImageNew || null,
-      originalSourceImage: m.original_source_image || qItem.originalSourceImage || null,
     };
+    if (includeOriginalSource && (m.original_source_image || qItem.originalSourceImage)) {
+      merged.originalSourceImage = m.original_source_image || qItem.originalSourceImage;
+    } else {
+      delete merged.originalSourceImage;
+    }
+    return merged;
+  }
+  if (!includeOriginalSource && qItem.originalSourceImage) {
+    const sanitized = { ...qItem };
+    delete sanitized.originalSourceImage;
+    return sanitized;
   }
   return qItem;
 }
@@ -970,6 +1049,8 @@ app.get('/api/history', async (req, res) => {
   try {
     const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
+    const requestUser = await getAuthenticatedUser(req, pool);
+    const includeOriginalSource = canViewOriginalSource(requestUser);
 
     // If no authenticated user is supplied, return empty history (guests have no history access)
     if (!userId && !userEmail && !candidateName) {
@@ -1029,7 +1110,7 @@ app.get('/api/history', async (req, res) => {
       }
 
       // Always merge master questions live from MySQL database
-      const enrichedQuestions = parsedQuestions.map((q) => mergeMasterQuestion(q, masterById, masterByQno));
+      const enrichedQuestions = parsedQuestions.map((q) => mergeMasterQuestion(q, masterById, masterByQno, includeOriginalSource));
 
       return {
         id: r.id,
@@ -1103,6 +1184,8 @@ app.get('/api/sessions', async (req, res) => {
   try {
     const { userId, userEmail, candidateName } = req.query;
     const pool = getPool();
+    const requestUser = await getAuthenticatedUser(req, pool);
+    const includeOriginalSource = canViewOriginalSource(requestUser);
 
     // If no authenticated user is supplied, return empty sessions (guests have no session access)
     if (!userId && !userEmail && !candidateName) {
@@ -1168,7 +1251,7 @@ app.get('/api/sessions', async (req, res) => {
       }
 
       // Always merge master questions live from MySQL database
-      const enrichedQuestions = parsedQuestions.map((q) => mergeMasterQuestion(q, masterById, masterByQno));
+      const enrichedQuestions = parsedQuestions.map((q) => mergeMasterQuestion(q, masterById, masterByQno, includeOriginalSource));
 
       return {
         id: r.id,
@@ -1530,7 +1613,7 @@ app.post('/api/user/upgrade-plan', async (req, res) => {
     }
 
     await pool.query('UPDATE users SET plan = ? WHERE id = ?', [targetPlan, decoded.id]);
-    const [userRows] = await pool.query('SELECT id, name, email, role, plan, is_verified FROM users WHERE id = ?', [decoded.id]);
+    const [userRows] = await pool.query('SELECT id, name, email, role, plan, is_verified, can_view_original_source FROM users WHERE id = ?', [decoded.id]);
     const updatedUser = userRows[0];
 
     const planName = await getUserPlanOriginalName(pool, updatedUser.plan);
@@ -1547,6 +1630,7 @@ app.post('/api/user/upgrade-plan', async (req, res) => {
         plan: updatedUser.plan || 'plan_free',
         planName,
         isVerified: Boolean(updatedUser.is_verified),
+        canViewOriginalSource: canViewOriginalSource(updatedUser),
         planPermissions,
       },
     });
@@ -1779,7 +1863,7 @@ app.get('/api/admin/users', adminAuthMiddleware, async (req, res) => {
     const pool = getPool();
 
     let sql = `
-      SELECT u.id, u.name, u.email, u.role, u.plan, u.is_verified, u.created_at,
+      SELECT u.id, u.name, u.email, u.role, u.plan, u.is_verified, u.can_view_original_source, u.created_at,
       (SELECT COUNT(*) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as attempts_count,
       (SELECT MAX(ea.created_at) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as last_exam_at
       FROM users u WHERE 1=1
@@ -1819,6 +1903,7 @@ app.get('/api/admin/users', adminAuthMiddleware, async (req, res) => {
 app.post('/api/admin/users', adminAuthMiddleware, async (req, res) => {
   try {
     const { name, email, password, role = 'user', plan = 'plan_free', isVerified = 1 } = req.body;
+    const canViewOriginalSource = req.body.canViewOriginalSource ?? req.body.can_view_original_source ?? 1;
     if (!name || !email) {
       return res.status(400).json({ error: 'Name and email are required.' });
     }
@@ -1833,8 +1918,8 @@ app.post('/api/admin/users', adminAuthMiddleware, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password || 'Password123!', salt);
     await pool.query(
-      'INSERT INTO users (id, name, email, password_hash, is_verified, role, plan) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, name.trim(), cleanEmail, hash, isVerified ? 1 : 0, role, plan]
+      'INSERT INTO users (id, name, email, password_hash, is_verified, role, plan, can_view_original_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [userId, name.trim(), cleanEmail, hash, isVerified ? 1 : 0, role, plan, canViewOriginalSource ? 1 : 0]
     );
 
     res.json({ success: true, message: 'Candidate created successfully.', id: userId });
@@ -1849,10 +1934,11 @@ app.put('/api/admin/users/:id', adminAuthMiddleware, async (req, res) => {
   try {
     const userId = req.params.id;
     const { name, email, role = 'user', plan = 'plan_free', isVerified = 1, password } = req.body;
+    const canViewOriginalSource = req.body.canViewOriginalSource ?? req.body.can_view_original_source ?? 1;
     const pool = getPool();
 
-    const updates = ['name = ?', 'email = ?', 'role = ?', 'plan = ?', 'is_verified = ?'];
-    const params = [name.trim(), email.trim().toLowerCase(), role, plan, isVerified ? 1 : 0];
+    const updates = ['name = ?', 'email = ?', 'role = ?', 'plan = ?', 'is_verified = ?', 'can_view_original_source = ?'];
+    const params = [name.trim(), email.trim().toLowerCase(), role, plan, isVerified ? 1 : 0, canViewOriginalSource ? 1 : 0];
 
     if (password && password.trim().length > 0) {
       const salt = await bcrypt.genSalt(10);
