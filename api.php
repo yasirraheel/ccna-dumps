@@ -2537,7 +2537,10 @@ if (preg_match('#^/api/plans$#', $basePath) && $method === 'GET') {
     $plans = $pdo->query("SELECT id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active FROM plans WHERE is_active = 1 ORDER BY price ASC")->fetchAll();
     $formatted = array_map(function($p) {
         $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
-        $p['bank_permissions'] = json_decode($p['bank_permissions'] ?? '{}', true) ?? [];
+        $p['bank_permissions'] = array_replace(
+            getDefaultPlanPermissions($p['id'] ?? 'plan_free'),
+            json_decode($p['bank_permissions'] ?? '{}', true) ?? []
+        );
         $p['price'] = (float)$p['price'];
         $p['duration_days'] = (int)$p['duration_days'];
         return $p;
@@ -3076,7 +3079,10 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             FROM plans p ORDER BY p.price ASC")->fetchAll();
         $formatted = array_map(function($p) {
             $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
-            $p['bank_permissions'] = json_decode($p['bank_permissions'] ?? '{}', true) ?? [];
+            $p['bank_permissions'] = array_replace(
+                getDefaultPlanPermissions($p['id'] ?? 'plan_free'),
+                json_decode($p['bank_permissions'] ?? '{}', true) ?? []
+            );
             $p['price'] = (float)$p['price'];
             $p['duration_days'] = (int)$p['duration_days'];
             $p['is_active'] = (bool)$p['is_active'];
