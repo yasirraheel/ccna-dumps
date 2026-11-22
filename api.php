@@ -205,6 +205,7 @@ try {
         id VARCHAR(50) PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         price DECIMAL(10,2) DEFAULT 0.00,
+        sort_order INT NOT NULL DEFAULT 0,
         billing_cycle VARCHAR(50) DEFAULT 'monthly',
         duration_days INT DEFAULT 30,
         description TEXT,
@@ -215,6 +216,7 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     try { $pdo->exec("ALTER TABLE plans CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE plans ADD COLUMN bank_permissions JSON"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE plans ADD COLUMN sort_order INT NOT NULL DEFAULT 0 AFTER price"); } catch (Exception $e) {}
 
     // Ensure user_exam_settings table exists
     $pdo->exec("CREATE TABLE IF NOT EXISTS user_exam_settings (
@@ -336,12 +338,24 @@ try {
         'allow_modify_exam' => true
     ]);
 
+    // Preserve the requested default order on existing installations once,
+    // while leaving later admin-defined ordering untouched.
+    try {
+        $orderMigrationKey = 'plan_order_v1';
+        $orderMigrationCheck = $pdo->prepare("SELECT meta_key FROM lab_meta WHERE meta_key = ? LIMIT 1");
+        $orderMigrationCheck->execute([$orderMigrationKey]);
+        if (!$orderMigrationCheck->fetchColumn()) {
+            $pdo->exec("UPDATE plans SET sort_order = CASE id WHEN 'plan_free' THEN 1 WHEN 'plan_pro' THEN 2 WHEN 'plan_unlimited' THEN 3 ELSE 100 END WHERE sort_order = 0 OR sort_order IS NULL");
+            $pdo->prepare("INSERT INTO lab_meta (meta_key, meta_value) VALUES (?, ?)")->execute([$orderMigrationKey, date('c')]);
+        }
+    } catch (Exception $e) {}
+
     $planCount = (int)$pdo->query("SELECT COUNT(*) FROM plans")->fetchColumn();
     if ($planCount === 0) {
-        $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active) VALUES
-            ('plan_free', 'Free Study Pass', 0.00, 'lifetime', 3650, 'Standard access to practice questions and basic review.', ?, ?, 1),
-            ('plan_pro', 'CCNA Pro Pass', 19.99, 'monthly', 30, 'Full access to all 228 questions, timed simulations, and AI review report.', ?, ?, 1),
-            ('plan_unlimited', 'CCNA Unlimited Pass', 49.99, 'lifetime', 3650, 'Unlimited lifetime access to all banks, instant feedback, and notes sync.', ?, ?, 1)
+        $pdo->prepare("INSERT INTO plans (id, name, price, sort_order, billing_cycle, duration_days, description, features, bank_permissions, is_active) VALUES
+            ('plan_free', 'Free Study Pass', 0.00, 1, 'lifetime', 3650, 'Standard access to practice questions and basic review.', ?, ?, 1),
+            ('plan_pro', 'CCNA Pro Pass', 19.99, 2, 'monthly', 30, 'Full access to all 228 questions, timed simulations, and AI review report.', ?, ?, 1),
+            ('plan_unlimited', 'CCNA Unlimited Pass', 49.99, 3, 'lifetime', 3650, 'Unlimited lifetime access to all banks, instant feedback, and notes sync.', ?, ?, 1)
         ")->execute([
             json_encode(['Exam A (1-50)', 'Exam B (51-100)', 'Basic Question Review', 'Score History']),
             $defaultFreePerms,
@@ -2582,7 +2596,7 @@ if (preg_match('#^/api/notes#', $basePath)) {
 
 // 12.5 Public Plans & User Upgrade API
 if (preg_match('#^/api/plans$#', $basePath) && $method === 'GET') {
-    $plans = $pdo->query("SELECT id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active FROM plans WHERE is_active = 1 ORDER BY price ASC")->fetchAll();
+    $plans = $pdo->query("SELECT id, name, price, sort_order, billing_cycle, duration_days, description, features, bank_permissions, is_active FROM plans WHERE is_active = 1 ORDER BY sort_order ASC, price ASC, name ASC")->fetchAll();
     $labTotalCount = getLabsTotalCount($pdo);
     $formatted = array_map(function($p) use ($labTotalCount) {
         $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
@@ -2591,6 +2605,7 @@ if (preg_match('#^/api/plans$#', $basePath) && $method === 'GET') {
             json_decode($p['bank_permissions'] ?? '{}', true) ?? []
         );
         $p['price'] = (float)$p['price'];
+        $p['sort_order'] = (int)($p['sort_order'] ?? 0);
         $p['duration_days'] = (int)$p['duration_days'];
         return $p;
     }, $plans);
@@ -3125,7 +3140,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
     if (preg_match('#^/api/admin/plans$#', $basePath) && $method === 'GET') {
         $plans = $pdo->query("SELECT p.*,
             (SELECT COUNT(*) FROM users u WHERE (u.plan COLLATE utf8mb4_general_ci = p.id COLLATE utf8mb4_general_ci) OR (p.id = 'plan_free' AND (u.plan = 'free' OR u.plan IS NULL)) OR (u.plan COLLATE utf8mb4_general_ci = REPLACE(p.id, 'plan_', '') COLLATE utf8mb4_general_ci)) as subscribers_count
-            FROM plans p ORDER BY p.price ASC")->fetchAll();
+            FROM plans p ORDER BY p.sort_order ASC, p.price ASC, p.name ASC")->fetchAll();
         $labTotalCount = getLabsTotalCount($pdo);
         $formatted = array_map(function($p) use ($labTotalCount) {
             $p['features'] = json_decode($p['features'] ?? '[]', true) ?? [];
@@ -3134,6 +3149,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 json_decode($p['bank_permissions'] ?? '{}', true) ?? []
             );
             $p['price'] = (float)$p['price'];
+            $p['sort_order'] = (int)($p['sort_order'] ?? 0);
             $p['duration_days'] = (int)$p['duration_days'];
             $p['is_active'] = (bool)$p['is_active'];
             $p['subscribers_count'] = (int)$p['subscribers_count'];
@@ -3148,6 +3164,10 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $id = trim($body['id'] ?? ('plan_' . time()));
         $name = trim($body['name'] ?? '');
         $price = (float)($body['price'] ?? 0);
+        $sortOrder = isset($body['sortOrder']) ? (int)$body['sortOrder'] : (int)($body['sort_order'] ?? 0);
+        if ($sortOrder <= 0) {
+            $sortOrder = ((int)$pdo->query("SELECT COALESCE(MAX(sort_order), 0) FROM plans")->fetchColumn()) + 1;
+        }
         $billingCycle = $body['billingCycle'] ?? $body['billing_cycle'] ?? 'monthly';
         $durationDays = (int)($body['durationDays'] ?? $body['duration_days'] ?? 30);
         $description = trim($body['description'] ?? '');
@@ -3181,10 +3201,10 @@ if (preg_match('#^/api/admin/#', $basePath)) {
             exit;
         }
 
-        $stmt = $pdo->prepare("INSERT INTO plans (id, name, price, billing_cycle, duration_days, description, features, bank_permissions, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), billing_cycle=VALUES(billing_cycle), duration_days=VALUES(duration_days), description=VALUES(description), features=VALUES(features), bank_permissions=VALUES(bank_permissions), is_active=VALUES(is_active)");
-        $stmt->execute([$id, $name, $price, $billingCycle, $durationDays, $description, $features, $bankPermissions, $isActive]);
+        $stmt = $pdo->prepare("INSERT INTO plans (id, name, price, sort_order, billing_cycle, duration_days, description, features, bank_permissions, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE name=VALUES(name), price=VALUES(price), sort_order=VALUES(sort_order), billing_cycle=VALUES(billing_cycle), duration_days=VALUES(duration_days), description=VALUES(description), features=VALUES(features), bank_permissions=VALUES(bank_permissions), is_active=VALUES(is_active)");
+        $stmt->execute([$id, $name, $price, $sortOrder, $billingCycle, $durationDays, $description, $features, $bankPermissions, $isActive]);
 
         echo json_encode(["success" => true, "message" => "Plan saved successfully."]);
         exit;

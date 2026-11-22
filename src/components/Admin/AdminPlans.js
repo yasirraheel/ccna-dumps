@@ -249,16 +249,39 @@ function AdminPlans() {
   };
 
   const openCreateModal = () => {
+    const nextOrder = Math.max(0, ...plans.map((plan) => Number(plan.sort_order ?? plan.sortOrder) || 0)) + 1;
     setEditingPlan({
       id: 'plan_' + Date.now(),
       name: '',
       price: 9.99,
       billingCycle: 'monthly',
       durationDays: 30,
+      sortOrder: nextOrder,
       description: '',
       features: ['Access to practice exams'],
       bankPermissions: { ...ALL_ALLOWED_PERMS },
       isActive: true
+    });
+    setIsCreateOpen(true);
+  };
+
+  const openCloneModal = (plan) => {
+    const nextOrder = Math.max(0, ...plans.map((item) => Number(item.sort_order ?? item.sortOrder) || 0)) + 1;
+    const sourcePermissions = plan.bank_permissions && typeof plan.bank_permissions === 'object'
+      ? JSON.parse(JSON.stringify(plan.bank_permissions))
+      : { ...ALL_ALLOWED_PERMS };
+
+    setEditingPlan({
+      id: `plan_${Date.now()}_clone`,
+      name: `${plan.name} Copy`,
+      price: Number(plan.price) || 0,
+      billingCycle: plan.billing_cycle || 'monthly',
+      durationDays: plan.duration_days || 30,
+      sortOrder: nextOrder,
+      description: plan.description || '',
+      features: [...(plan.features || [])],
+      bankPermissions: sourcePermissions,
+      isActive: plan.is_active !== false
     });
     setIsCreateOpen(true);
   };
@@ -273,6 +296,7 @@ function AdminPlans() {
       ...p,
       billingCycle: p.billing_cycle || 'monthly',
       durationDays: p.duration_days || 30,
+      sortOrder: p.sort_order ?? p.sortOrder ?? 1,
       bankPermissions: { ...existingPerms }
     });
     setIsCreateOpen(true);
@@ -389,14 +413,22 @@ function AdminPlans() {
                   ))}
                 </ul>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: 'auto' }}>
                   <button
                     type="button"
                     className="btn-admin-secondary"
-                    style={{ flex: 1 }}
+                    style={{ flex: '1 1 130px' }}
                     onClick={() => openEditModal(p)}
                   >
                     ✏️ Edit Plan
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-admin-secondary"
+                    style={{ flex: '1 1 130px' }}
+                    onClick={() => openCloneModal(p)}
+                  >
+                    📋 Clone Plan
                   </button>
                   {p.id !== 'plan_free' && p.id !== 'plan_pro' && (
                     <button
@@ -468,6 +500,25 @@ function AdminPlans() {
                       <option value="lifetime">Lifetime Access</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Display Order</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="admin-form-input"
+                    value={editingPlan.sortOrder ?? ''}
+                    onChange={(e) => setEditingPlan({
+                      ...editingPlan,
+                      sortOrder: e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value, 10) || 1)
+                    })}
+                    placeholder="1"
+                    title="Lower numbers appear first"
+                  />
+                  <span style={{ display: 'block', marginTop: '5px', fontSize: '11px', color: '#94a3b8' }}>
+                    Lower number appears first. Leave blank to place this plan at the end.
+                  </span>
                 </div>
 
                 <div className="admin-form-group">
