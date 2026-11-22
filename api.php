@@ -180,6 +180,7 @@ try {
     // Ensure candidate@ccna.com exists with Password123!
     try { $pdo->exec("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'user'"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN plan VARCHAR(50) DEFAULT 'free'"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN can_view_original_source TINYINT(1) NOT NULL DEFAULT 1 AFTER plan"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN started_at BIGINT NULL"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN lab_progress LONGTEXT NULL"); } catch (Exception $e) {}
     try { $pdo->exec("ALTER TABLE saved_sessions ADD COLUMN history_record_id VARCHAR(100) NULL"); } catch (Exception $e) {}
@@ -427,6 +428,34 @@ function verifyToken($token, $secret) {
     return $data;
 }
 
+function getAuthenticatedDbUser($pdo, $secret) {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+    if (!$auth && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $auth = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
+    }
+    if (!preg_match('/Bearer\s+(\S+)/i', $auth, $matches)) return null;
+    $decoded = verifyToken($matches[1], $secret);
+    if (!$decoded || empty($decoded['id'])) return null;
+
+    $stmt = $pdo->prepare("SELECT id, name, email, role, plan, can_view_original_source FROM users WHERE id = ? LIMIT 1");
+    $stmt->execute([$decoded['id']]);
+    return $stmt->fetch() ?: null;
+}
+
+function userCanViewOriginalSource($user) {
+    if (!$user) return false;
+    if (($user['role'] ?? 'user') === 'admin' || strtolower($user['email'] ?? '') === 'candidate@ccna.com') return true;
+    return (int)($user['can_view_original_source'] ?? 1) === 1;
+}
+
+function stripOriginalSourceFromQuestions(&$questions) {
+    if (!is_array($questions)) return;
+    foreach ($questions as &$question) {
+        if (is_array($question)) unset($question['originalSourceImage'], $question['original_source_image']);
+    }
+}
+
 function cleanBankName($name) {
     if (!$name) return '';
     $cleaned = preg_replace('/spoto-?/i', '', $name);
@@ -435,10 +464,14 @@ function cleanBankName($name) {
     return trim($cleaned);
 }
 
-function enrichQuestionArray(&$questions) {
+function enrichQuestionArray(&$questions, $includeOriginalSource = false) {
     if (!is_array($questions)) return;
     foreach ($questions as &$q) {
         if (!is_array($q)) continue;
+        if (!$includeOriginalSource) {
+            unset($q['originalSourceImage'], $q['original_source_image']);
+            continue;
+        }
         if (!empty($q['originalSourceImage'])) continue;
         if (!empty($q['questionNo']) && preg_match('/Question\s*#(\d+)/i', $q['questionNo'], $m)) {
             $num = (int)$m[1];
@@ -725,7 +758,7 @@ if (preg_match('#^/api/auth/verify-email#', $basePath) && $method === 'POST') {
             "success" => true,
             "message" => "Email verified successfully!",
             "token" => $token,
-            "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "planName" => getUserPlanOriginalName($pdo, $user['plan'] ?? 'free'), "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
+            "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'free', "planName" => getUserPlanOriginalName($pdo, $user['plan'] ?? 'free'), "isVerified" => true, "canViewOriginalSource" => userCanViewOriginalSource($user), "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'free', $user['role'] ?? 'user', $user['email'] ?? '')]
         ]);
         exit;
     }
@@ -822,7 +855,7 @@ if (preg_match('#^/api/auth/login#', $basePath) && $method === 'POST') {
         "success" => true,
         "message" => "Login successful!",
         "token" => $token,
-        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'plan_free', "planName" => getUserPlanOriginalName($pdo, $user['plan'] ?? 'plan_free'), "isVerified" => true, "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'plan_free', $user['role'] ?? 'user', $user['email'] ?? '')]
+        "user" => ["id" => $user['id'], "name" => $user['name'], "email" => $user['email'], "role" => $user['role'] ?? 'user', "plan" => $user['plan'] ?? 'plan_free', "planName" => getUserPlanOriginalName($pdo, $user['plan'] ?? 'plan_free'), "isVerified" => true, "canViewOriginalSource" => userCanViewOriginalSource($user), "planPermissions" => getUserPlanPermissions($pdo, $user['plan'] ?? 'plan_free', $user['role'] ?? 'user', $user['email'] ?? '')]
     ]);
     exit;
 }
@@ -838,24 +871,24 @@ if (preg_match('#^/api/auth/me#', $basePath)) {
     if (preg_match('/Bearer\s+(.*)$/i', $auth, $matches)) {
         $decoded = verifyToken($matches[1], $jwtSecret);
         if ($decoded && !empty($decoded['id'])) {
-            $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE id = ? OR email = ?");
+            $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, can_view_original_source, created_at FROM users WHERE id = ? OR email = ?");
             $stmt->execute([$decoded['id'], $decoded['email'] ?? '']);
             $u = $stmt->fetch();
         }
     }
 
     if (!$u && !empty($_GET['userEmail'])) {
-        $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE email = ?");
+        $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, can_view_original_source, created_at FROM users WHERE email = ?");
         $stmt->execute([trim($_GET['userEmail'])]);
         $u = $stmt->fetch();
     }
     if (!$u && !empty($_GET['email'])) {
-        $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE email = ?");
+        $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, can_view_original_source, created_at FROM users WHERE email = ?");
         $stmt->execute([trim($_GET['email'])]);
         $u = $stmt->fetch();
     }
     if (!$u && !empty($_GET['userId'])) {
-        $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, created_at FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, name, email, role, plan, is_verified, can_view_original_source, created_at FROM users WHERE id = ?");
         $stmt->execute([trim($_GET['userId'])]);
         $u = $stmt->fetch();
     }
@@ -877,6 +910,7 @@ if (preg_match('#^/api/auth/me#', $basePath)) {
                 "planName" => $planName,
                 "isVerified" => (bool)$u['is_verified'],
                 "createdAt" => $u['created_at'],
+                "canViewOriginalSource" => userCanViewOriginalSource($u),
                 "planPermissions" => $planPermissions
             ]
         ]);
@@ -936,8 +970,45 @@ if (preg_match('#^/api/auth/reset-password#', $basePath) && $method === 'POST') 
     exit;
 }
 
+// 8.5 Original source image API: permission-checked and never publicly static
+if (preg_match('#^/api/original-sources/([^/]+)$#', $basePath, $osm) && $method === 'GET') {
+    $sourceUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+    if (!$sourceUser) {
+        http_response_code(401);
+        echo json_encode(["error" => "Authentication required."]);
+        exit;
+    }
+    if (!userCanViewOriginalSource($sourceUser)) {
+        http_response_code(403);
+        echo json_encode(["error" => "Original source access is disabled for this user."]);
+        exit;
+    }
+
+    $filename = basename(urldecode($osm[1]));
+    if ($filename !== $osm[1] || !preg_match('/^[a-zA-Z0-9_.-]+\.(webp|png|jpe?g)$/i', $filename)) {
+        http_response_code(400);
+        echo json_encode(["error" => "Invalid original source filename."]);
+        exit;
+    }
+
+    $sourcePath = __DIR__ . '/original_sources/' . $filename;
+    if (!is_file($sourcePath)) {
+        http_response_code(404);
+        echo json_encode(["error" => "Original source not found."]);
+        exit;
+    }
+
+    $mime = function_exists('mime_content_type') ? mime_content_type($sourcePath) : 'image/webp';
+    header('Content-Type: ' . ($mime ?: 'image/webp'));
+    header('Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0');
+    readfile($sourcePath);
+    exit;
+}
+
 // 9. Questions API
 if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
+    $questionUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+    $includeOriginalSource = userCanViewOriginalSource($questionUser);
     $singleId = !empty($qm[1]) ? (int)$qm[1] : (!empty($_GET['id']) ? (int)$_GET['id'] : null);
     if ($singleId) {
         $stmt = $pdo->prepare("SELECT * FROM questions WHERE id = ?");
@@ -963,7 +1034,7 @@ if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
                 'points' => (int)($r['points'] ?? 10),
                 'cliSnippet' => $r['cli_snippet'],
                 'exhibitImage' => $r['exhibit_image'],
-                'originalSourceImage' => $r['original_source_image'] ?? null,
+                ...($includeOriginalSource && !empty($r['original_source_image']) ? ['originalSourceImage' => $r['original_source_image']] : []),
                 'explanation' => $r['explanation'] ?? null
             ]
         ]);
@@ -978,7 +1049,7 @@ if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
         END, 
         CAST(SUBSTRING_INDEX(question_no, '#', -1) AS UNSIGNED) ASC,
         id ASC")->fetchAll();
-    $formatted = array_map(function($r) {
+    $formatted = array_map(function($r) use ($includeOriginalSource) {
         $opts = json_decode($r['options'] ?? '[]', true) ?? [];
         $correct = json_decode($r['correct_option'] ?? '[]', true) ?? [];
         $dragDrop = json_decode($r['drag_drop_data'] ?? 'null', true);
@@ -993,7 +1064,7 @@ if (preg_match('#^/api/questions(?:/(\d+))?#', $basePath, $qm)) {
             'points' => (int)($r['points'] ?? 10),
             'cliSnippet' => $r['cli_snippet'],
             'exhibitImage' => $r['exhibit_image'],
-            'originalSourceImage' => $r['original_source_image'] ?? null,
+            ...($includeOriginalSource && !empty($r['original_source_image']) ? ['originalSourceImage' => $r['original_source_image']] : []),
             'explanation' => $r['explanation'] ?? null
         ];
     }, $rows);
@@ -1450,6 +1521,8 @@ if (preg_match('#^/api/history#', $basePath)) {
         if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $tm)) {
             $tokenUser = verifyToken($tm[1], $jwtSecret);
         }
+        $historyUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+        $includeOriginalSource = userCanViewOriginalSource($historyUser);
 
         $userId = $_GET['userId'] ?? ($tokenUser['id'] ?? null);
         $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : (isset($tokenUser['email']) ? strtolower($tokenUser['email']) : null);
@@ -1487,7 +1560,7 @@ if (preg_match('#^/api/history#', $basePath)) {
             }
         }
 
-        $formatted = array_map(function($r) use ($masterById, $masterByQno) {
+        $formatted = array_map(function($r) use ($masterById, $masterByQno, $includeOriginalSource) {
             return [
                 'id' => $r['id'],
                 'userId' => $r['user_id'],
@@ -1530,8 +1603,10 @@ if (preg_match('#^/api/history#', $basePath)) {
                                 $qItem['explanation'] = $m['explanation'];
                                 $qItem['cliSnippet'] = $m['cli_snippet'];
                                 $qItem['exhibitImage'] = $m['exhibit_image'];
-                                if (!empty($m['original_source_image'])) {
+                                if ($includeOriginalSource && !empty($m['original_source_image'])) {
                                     $qItem['originalSourceImage'] = $m['original_source_image'];
+                                } else {
+                                    unset($qItem['originalSourceImage'], $qItem['original_source_image']);
                                 }
 
                                 $hasExistingOptions = !empty($qItem['options']) && is_array($qItem['options']);
@@ -1565,7 +1640,7 @@ if (preg_match('#^/api/history#', $basePath)) {
                             }
                         }
                     }
-                    enrichQuestionArray($qs);
+                    enrichQuestionArray($qs, $includeOriginalSource);
                     return $qs;
                 })($r['questions']),
                 'answers' => json_decode($r['answers'] ?? '[]', true),
@@ -1923,6 +1998,8 @@ if (preg_match('#^/api/sessions#', $basePath)) {
         $sessionId = $_GET['sessionId'] ?? $_GET['id'] ?? null;
         $userId = $_GET['userId'] ?? null;
         $userEmail = isset($_GET['userEmail']) ? strtolower($_GET['userEmail']) : null;
+        $sessionUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+        $includeOriginalSource = userCanViewOriginalSource($sessionUser);
 
         if ($sessionId) {
             $query = "SELECT s.* FROM saved_sessions s 
@@ -1972,7 +2049,7 @@ if (preg_match('#^/api/sessions#', $basePath)) {
             $sessionSettings = json_decode($r['settings'] ?? '{}', true);
             $isRandomized = !empty($sessionSettings['randomizeAnswers']);
 
-            $qs = (function($json) use ($masterById, $masterByQno, $isRandomized) {
+            $qs = (function($json) use ($masterById, $masterByQno, $isRandomized, $includeOriginalSource) {
                 $decoded = json_decode($json ?? '[]', true);
                 if (is_array($decoded)) {
                     foreach ($decoded as &$qItem) {
@@ -2026,14 +2103,18 @@ if (preg_match('#^/api/sessions#', $basePath)) {
                             }
                             $qItem['points'] = (int)($m['points'] ?? 10);
                             if (!empty($m['exhibit_image'])) $qItem['exhibitImage'] = $m['exhibit_image'];
-                            if (!empty($m['original_source_image'])) $qItem['originalSourceImage'] = $m['original_source_image'];
+                            if ($includeOriginalSource && !empty($m['original_source_image'])) {
+                                $qItem['originalSourceImage'] = $m['original_source_image'];
+                            } else {
+                                unset($qItem['originalSourceImage'], $qItem['original_source_image']);
+                            }
                             if (!empty($m['cli_snippet'])) $qItem['cliSnippet'] = $m['cli_snippet'];
                             if (!empty($m['drag_drop_data'])) $qItem['dragDropData'] = json_decode($m['drag_drop_data'], true);
                             if (!empty($m['explanation'])) $qItem['explanation'] = $m['explanation'];
                         }
                     }
                 }
-                enrichQuestionArray($decoded);
+                enrichQuestionArray($decoded, $includeOriginalSource);
                 return $decoded;
             })($r['questions']);
             $ans = json_decode($r['answers'] ?? '[]', true);
@@ -2818,7 +2899,7 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $role = trim($_GET['role'] ?? '');
         $status = trim($_GET['status'] ?? '');
 
-        $sql = "SELECT u.id, u.name, u.email, u.role, u.plan, u.is_verified, u.created_at,
+        $sql = "SELECT u.id, u.name, u.email, u.role, u.plan, u.is_verified, u.can_view_original_source, u.created_at,
                 (SELECT COUNT(*) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as attempts_count,
                 (SELECT MAX(ea.created_at) FROM exam_attempts ea WHERE ea.user_id = u.id OR ea.user_email = u.email) as last_exam_at
                 FROM users u WHERE 1=1";
@@ -2864,6 +2945,9 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $role = $body['role'] ?? 'user';
         $plan = $body['plan'] ?? 'free';
         $isVerified = !empty($body['isVerified']) ? 1 : 1;
+        $canViewOriginalSource = array_key_exists('canViewOriginalSource', $body)
+            ? (int)(bool)$body['canViewOriginalSource']
+            : (array_key_exists('can_view_original_source', $body) ? (int)(bool)$body['can_view_original_source'] : 1);
 
         if (!$name || !$email) {
             http_response_code(400);
@@ -2881,8 +2965,8 @@ if (preg_match('#^/api/admin/#', $basePath)) {
 
         $userId = 'usr_' . time() . '_' . substr(md5(rand()), 0, 6);
         $hash = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $pdo->prepare("INSERT INTO users (id, name, email, password_hash, is_verified, role, plan) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$userId, $name, $email, $hash, $isVerified, $role, $plan]);
+        $stmt = $pdo->prepare("INSERT INTO users (id, name, email, password_hash, is_verified, role, plan, can_view_original_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$userId, $name, $email, $hash, $isVerified, $role, $plan, $canViewOriginalSource]);
 
         echo json_encode(["success" => true, "message" => "Candidate created successfully.", "id" => $userId]);
         exit;
@@ -2896,9 +2980,12 @@ if (preg_match('#^/api/admin/#', $basePath)) {
         $role = $body['role'] ?? 'user';
         $plan = $body['plan'] ?? 'free';
         $isVerified = isset($body['isVerified']) ? (int)$body['isVerified'] : 1;
+        $canViewOriginalSource = array_key_exists('canViewOriginalSource', $body)
+            ? (int)(bool)$body['canViewOriginalSource']
+            : (array_key_exists('can_view_original_source', $body) ? (int)(bool)$body['can_view_original_source'] : 1);
 
-        $updates = ["name = ?", "email = ?", "role = ?", "plan = ?", "is_verified = ?"];
-        $params = [$name, $email, $role, $plan, $isVerified];
+        $updates = ["name = ?", "email = ?", "role = ?", "plan = ?", "is_verified = ?", "can_view_original_source = ?"];
+        $params = [$name, $email, $role, $plan, $isVerified, $canViewOriginalSource];
 
         if (!empty($body['password'])) {
             $updates[] = "password_hash = ?";

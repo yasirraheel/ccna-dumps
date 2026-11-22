@@ -6,6 +6,9 @@
   SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
+  # Original-source images are private and must go through the permission-checked API.
+  RewriteRule ^original_sources(?:/|$) - [R=404,L]
+
   # API requests route to PHP API router
   RewriteCond %{REQUEST_URI} ^/api/(.*)$
   RewriteRule ^api/(.*)$ api.php [QSA,L]
