@@ -320,7 +320,8 @@ try {
         'bank_all' => ['enabled' => false, 'max_questions' => 0],
         'bank_labs' => ['enabled' => false, 'max_questions' => 0],
         'allow_simulation' => false,
-        'allow_custom_exam' => false
+        'allow_custom_exam' => false,
+        'allow_modify_exam' => false
     ]);
     $defaultPaidPerms = json_encode([
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
@@ -331,7 +332,8 @@ try {
         'bank_all' => ['enabled' => true, 'max_questions' => 228],
         'bank_labs' => ['enabled' => true, 'max_questions' => $labTotalCount],
         'allow_simulation' => true,
-        'allow_custom_exam' => true
+        'allow_custom_exam' => true,
+        'allow_modify_exam' => true
     ]);
 
     $planCount = (int)$pdo->query("SELECT COUNT(*) FROM plans")->fetchColumn();
@@ -505,7 +507,8 @@ function getDefaultPlanPermissions($planId, $labCount = 27) {
         'bank_anki_auto' => ['enabled' => false, 'max_questions' => 0],
         'bank_anki_all' => ['enabled' => false, 'max_questions' => 0],
         'allow_simulation' => !$isFree,
-        'allow_custom_exam' => !$isFree
+        'allow_custom_exam' => !$isFree,
+        'allow_modify_exam' => !$isFree
     ];
 }
 
@@ -560,7 +563,8 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
             'bank_anki_auto' => ['enabled' => false, 'max_questions' => 0],
             'bank_anki_all' => ['enabled' => false, 'max_questions' => 0],
             'allow_simulation' => true,
-            'allow_custom_exam' => true
+            'allow_custom_exam' => true,
+            'allow_modify_exam' => true
         ];
     }
     $pId = $planId ?: 'plan_free';
@@ -3164,7 +3168,8 @@ if (preg_match('#^/api/admin/#', $basePath)) {
                 'bank_all' => ['enabled' => false, 'max_questions' => 0],
                 'bank_labs' => ['enabled' => false, 'max_questions' => 0],
                 'allow_simulation' => false,
-                'allow_custom_exam' => false
+                'allow_custom_exam' => false,
+                'allow_modify_exam' => false
             ]);
         }
 

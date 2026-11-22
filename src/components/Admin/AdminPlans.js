@@ -19,7 +19,8 @@ const DEFAULT_BANK_PERMS = {
   bank_anki_auto: { enabled: false, max_questions: 0 },
   bank_anki_all: { enabled: false, max_questions: 0 },
   allow_simulation: false,
-  allow_custom_exam: false
+  allow_custom_exam: false,
+  allow_modify_exam: false
 };
 
 const ALL_ALLOWED_PERMS = {
@@ -31,7 +32,8 @@ const ALL_ALLOWED_PERMS = {
   bank_all: { enabled: true, max_questions: 228 },
   bank_labs: { enabled: true, max_questions: 27 },
   allow_simulation: true,
-  allow_custom_exam: true
+  allow_custom_exam: true,
+  allow_modify_exam: true
 };
 
 const EMPTY_BANK_PERMS = {
@@ -50,7 +52,8 @@ const EMPTY_BANK_PERMS = {
   bank_anki_auto: { enabled: false, max_questions: 0 },
   bank_anki_all: { enabled: false, max_questions: 0 },
   allow_simulation: false,
-  allow_custom_exam: false
+  allow_custom_exam: false,
+  allow_modify_exam: false
 };
 
 const normalizeFeatureText = (value) => String(value ?? '')
@@ -194,8 +197,11 @@ function AdminPlans() {
   const handleBankLimitChange = (bankKey, limit) => {
     const currentPerms = editingPlan.bankPermissions || {};
     const existingBank = currentPerms[bankKey] || { enabled: true, max_questions: 50 };
-    const num = parseInt(limit, 10);
-    const val = isNaN(num) ? 0 : Math.max(0, num);
+    const rawLimit = String(limit ?? '');
+    const num = parseInt(rawLimit, 10);
+    // Keep an intentionally empty field empty while the admin is editing it.
+    // Do not convert it to zero and then render the total back into the input.
+    const val = rawLimit === '' ? '' : (isNaN(num) ? '' : Math.max(0, num));
 
     setEditingPlan({
       ...editingPlan,
@@ -227,6 +233,17 @@ function AdminPlans() {
       bankPermissions: {
         ...currentPerms,
         allow_custom_exam: allow
+      }
+    });
+  };
+
+  const handleModifyExamToggle = (allow) => {
+    const currentPerms = editingPlan.bankPermissions || {};
+    setEditingPlan({
+      ...editingPlan,
+      bankPermissions: {
+        ...currentPerms,
+        allow_modify_exam: allow
       }
     });
   };
@@ -361,6 +378,9 @@ function AdminPlans() {
                   <span className={`admin-perm-tag ${perms.allow_custom_exam ? 'tag-allowed' : 'tag-locked'}`}>
                     🛠️ Configure Exam: {perms.allow_custom_exam ? 'Allowed' : 'Locked'}
                   </span>
+                  <span className={`admin-perm-tag ${perms.allow_modify_exam ? 'tag-allowed' : 'tag-locked'}`}>
+                    ⚙️ Modify Exam: {perms.allow_modify_exam ? 'Allowed' : 'Locked'}
+                  </span>
                 </div>
 
                 <ul className="admin-plan-features">
@@ -478,7 +498,7 @@ function AdminPlans() {
                         max_questions: 0
                       };
                       const isEnabled = Boolean(bankConf.enabled);
-                      const currentMax = bankConf.max_questions || 0;
+                      const currentMax = bankConf.max_questions ?? '';
 
                       return (
                         <div key={b.key} className={`admin-bank-perm-row ${!isEnabled ? 'disabled' : ''}`}>
@@ -505,7 +525,7 @@ function AdminPlans() {
                                   min="0"
                                   max={b.totalQuestions}
                                   className="admin-bank-limit-input"
-                                  value={currentMax === 0 ? b.totalQuestions : currentMax}
+                                  value={currentMax}
                                   onChange={(e) => handleBankLimitChange(b.key, e.target.value)}
                                   title="Number of questions candidates can attempt from this bank (0 or total = all)"
                                 />
@@ -574,6 +594,23 @@ function AdminPlans() {
                       </div>
                       <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                         {editingPlan.bankPermissions?.allow_custom_exam === true ? 'Enabled' : 'Restricted (Locked)'}
+                      </span>
+                    </div>
+                    <div className="admin-sim-perm-box">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="checkbox"
+                          id="perm_allow_modify_exam"
+                          className="admin-bank-perm-checkbox"
+                          checked={editingPlan.bankPermissions?.allow_modify_exam === true}
+                          onChange={(e) => handleModifyExamToggle(e.target.checked)}
+                        />
+                        <label htmlFor="perm_allow_modify_exam" style={{ cursor: 'pointer', margin: 0, color: '#f8fafc', fontWeight: 700, fontSize: '13px' }}>
+                          ⚙️ Allow Modify Exam Settings
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        {editingPlan.bankPermissions?.allow_modify_exam === true ? 'Enabled' : 'Restricted (Locked)'}
                       </span>
                     </div>
                   </div>

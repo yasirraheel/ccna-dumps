@@ -77,6 +77,15 @@ export const isPlanAllowedForCustomExam = (user, plans = []) => {
   return normalizePlan(user?.plan) === 'pro' || normalizePlan(user?.plan) === 'unlimited';
 };
 
+export const isPlanAllowedToModifyExam = (user, plans = []) => {
+  if (isUserAdmin(user)) return true;
+  const planConfig = resolveUserPlanConfig(user, plans);
+  if (planConfig && typeof planConfig === 'object') {
+    return planConfig.allow_modify_exam === true;
+  }
+  return normalizePlan(user?.plan) === 'pro' || normalizePlan(user?.plan) === 'unlimited';
+};
+
 export const getBankAllowedQuestionCount = (user, bankKey, totalQuestions, plans = []) => {
   if (isUserAdmin(user)) return totalQuestions;
 
@@ -86,7 +95,9 @@ export const getBankAllowedQuestionCount = (user, bankKey, totalQuestions, plans
     if (!isNaN(maxQ) && maxQ > 0) {
       return Math.min(maxQ, totalQuestions);
     }
-    return 0;
+    // An enabled bank with a blank/zero limit remains usable as an unlimited
+    // bank; the blank value is kept only so admins can type a replacement.
+    return totalQuestions;
   }
 
   return totalQuestions;

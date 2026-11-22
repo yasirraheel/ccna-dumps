@@ -10,7 +10,8 @@ import {
   getBankAllowedQuestionCount,
   getPlanDisplayInfo,
   EXAM_BANKS,
-  isPlanAllowedForCustomExam
+  isPlanAllowedForCustomExam,
+  isPlanAllowedToModifyExam
 } from "../utils/planPermissions";
 import { getExamQuestionStats } from "../utils/examScoring";
 import { getAllBanksAnalysis } from "../utils/bankStrengthAlgorithm";
@@ -354,6 +355,7 @@ function ExamDashboard({
   const isSimulation = examMode === "simulation";
   const isLabBank = selectedBank === "bank_labs";
   const canConfigureExam = isPlanAllowedForCustomExam(currentUser, availablePlans);
+  const canModifyExam = isPlanAllowedToModifyExam(currentUser, availablePlans);
 
   const handleBankSelect = (bankKey, bankLabel) => {
     if (!isPlanAllowedForBank(currentUser, bankKey, availablePlans)) {
@@ -941,10 +943,10 @@ function ExamDashboard({
                     type="button"
                     className="btn-modify-settings"
                     onClick={() => setIsSettingsOpen(true)}
-                    disabled={isSimulation}
-                    title={isSimulation ? "Settings are auto-enforced in Simulation Mode" : "Customize exam settings"}
+                    disabled={isSimulation || !canModifyExam}
+                    title={isSimulation ? "Settings are auto-enforced in Simulation Mode" : !canModifyExam ? "Modify Exam Settings is locked on your current plan" : "Customize exam settings"}
                   >
-                    {isSimulation ? (
+                    {isSimulation || !canModifyExam ? (
                       <>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
