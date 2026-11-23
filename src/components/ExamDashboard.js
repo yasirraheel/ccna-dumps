@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ExamSettingsModal from "./ExamSettingsModal";
 import NavigationMenu from "./NavigationMenu";
+import { SiteFooter } from "./PublicSite";
 import CustomConfirmModal from "./CustomConfirmModal";
 import FinishScreen from "./FinishScreen";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
@@ -58,6 +59,7 @@ function ExamDashboard({
   onLogout,
   onOpenUpgrade,
   labQuestions = [],
+  siteContent,
 }) {
   // Synchronously load cached user exam preferences to prevent default flash on refresh
   const getInitialPrefs = () => {
@@ -1440,6 +1442,7 @@ function ExamDashboard({
           </div>
         </div>
       )}
+      <SiteFooter content={siteContent} />
     </div>
   );
 }

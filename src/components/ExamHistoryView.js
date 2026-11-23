@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import NavigationMenu from "./NavigationMenu";
+import { SiteFooter } from "./PublicSite";
 import CustomConfirmModal from "./CustomConfirmModal";
 import FinishScreen from "./FinishScreen";
 import { getExamQuestionStats } from "../utils/examScoring";
@@ -19,6 +20,7 @@ function ExamHistoryView({
   currentUser,
   onOpenAuth,
   onLogout,
+  siteContent,
 }) {
   const [selectedReportExam, setSelectedReportExam] = useState(null);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
@@ -436,6 +438,7 @@ function ExamHistoryView({
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
       />
+      <SiteFooter content={siteContent} />
     </div>
   );
 }

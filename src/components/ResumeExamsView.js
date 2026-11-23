@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import NavigationMenu from "./NavigationMenu";
+import { SiteFooter } from "./PublicSite";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { cleanBankTitle } from "../utils/bankTitle";
 
@@ -12,6 +13,7 @@ function ResumeExamsView({
   currentUser,
   onOpenAuth,
   onLogout,
+  siteContent,
 }) {
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
@@ -194,6 +196,7 @@ function ResumeExamsView({
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
       />
+      <SiteFooter content={siteContent} />
     </div>
   );
 }

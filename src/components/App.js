@@ -3259,6 +3259,7 @@ export default function App() {
               onLogout={handleLogout}
               onOpenUpgrade={handleOpenUpgrade}
               labQuestions={labQuestions}
+              siteContent={siteContent}
             />
           )
         )}
@@ -3273,6 +3274,7 @@ export default function App() {
             currentUser={effectiveUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
+            siteContent={siteContent}
           />
         )}
 
@@ -3291,6 +3293,7 @@ export default function App() {
             currentUser={effectiveUser}
             onOpenAuth={handleOpenAuth}
             onLogout={handleLogout}
+            siteContent={siteContent}
           />
         )}
 
