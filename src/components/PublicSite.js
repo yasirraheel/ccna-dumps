@@ -111,6 +111,16 @@ function SiteFooter({ content }) {
 function PublicLandingPage({ content, onOpenAuth }) {
   const site = mergeSiteContent(content);
   const home = site.home;
+  useEffect(() => {
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    return () => {
+      window.history.scrollRestoration = previousRestoration || "auto";
+    };
+  }, []);
   return (
     <div className="public-site-shell">
       <SiteMeta content={site} pageKey="home" />
