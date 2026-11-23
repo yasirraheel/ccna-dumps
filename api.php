@@ -279,15 +279,15 @@ try {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     $siteContentDefaults = [
-        'siteName' => 'DumpStart Cloud',
-        'shortName' => 'DumpStart',
+        'siteName' => 'Dump Cloud',
+        'shortName' => 'Dump',
         'tagline' => 'Practice smarter. Pass with confidence.',
         'description' => 'Online CCNA and networking exam practice with realistic questions, interactive CLI labs, drag-and-drop exercises, explanations, and progress tracking.',
         'canonicalBaseUrl' => 'https://dumps.cloud',
         'ogImageUrl' => '/og-image.svg',
         'faviconUrl' => '/favicon-32x32.png',
         'seo' => [
-            'title' => 'CCNA Practice Exam & Networking Labs | DumpStart Cloud',
+            'title' => 'CCNA Practice Exam & Networking Labs | Dump Cloud',
             'description' => 'Prepare for Cisco CCNA 200-301 with realistic practice exams, interactive IOS CLI labs, drag-and-drop questions, explanations, and progress tracking.',
             'keywords' => 'CCNA practice exam, CCNA 200-301 practice test, Cisco networking practice questions, CCNA CLI labs, networking exam simulator, CCNA study tool'
         ],
@@ -310,7 +310,7 @@ try {
                 ['title' => 'Return stronger', 'text' => 'Use your history and weak areas to target the next session.']
             ],
             'faq' => [
-                ['question' => 'Is DumpStart Cloud an official Cisco exam?', 'answer' => 'No. It is an independent learning and practice platform. Cisco and CCNA are trademarks of Cisco Systems, Inc.'],
+                ['question' => 'Is Dump Cloud an official Cisco exam?', 'answer' => 'No. It is an independent learning and practice platform. Cisco and CCNA are trademarks of Cisco Systems, Inc.'],
                 ['question' => 'Can I practice CLI configuration in the browser?', 'answer' => 'Yes. Guided labs include IOS-style browser consoles for common switching and routing practice.'],
                 ['question' => 'Will more networking certifications be added?', 'answer' => 'The platform is designed to grow beyond CCNA with additional networking certification banks and labs.']
             ],
@@ -326,31 +326,39 @@ try {
             ]
         ],
         'pages' => [
-            'privacy' => ['title' => 'Privacy Policy', 'description' => 'How DumpStart Cloud collects, uses, protects, and retains account and learning data.', 'sections' => [
+            'privacy' => ['title' => 'Privacy Policy', 'description' => 'How Dump Cloud collects, uses, protects, and retains account and learning data.', 'sections' => [
                 ['heading' => 'Information we collect', 'body' => 'We collect account details you provide, learning activity needed to save your progress, and technical information required to operate and secure the service.'],
                 ['heading' => 'How we use information', 'body' => 'We use information to authenticate you, provide exams and labs, save progress, improve reliability, communicate important account messages, and prevent abuse.'],
                 ['heading' => 'Your choices', 'body' => 'You may request access, correction, or deletion of your account information by contacting support. Some records may be retained where required for security, billing, or legal compliance.']
             ]],
-            'terms' => ['title' => 'Terms of Service', 'description' => 'The terms that apply when you use DumpStart Cloud practice exams, labs, and account features.', 'sections' => [
-                ['heading' => 'Educational service', 'body' => 'DumpStart Cloud provides independent educational practice materials and simulations. It is not an official Cisco certification exam or Cisco service.'],
+            'terms' => ['title' => 'Terms of Service', 'description' => 'The terms that apply when you use Dump Cloud practice exams, labs, and account features.', 'sections' => [
+                ['heading' => 'Educational service', 'body' => 'Dump Cloud provides independent educational practice materials and simulations. It is not an official Cisco certification exam or Cisco service.'],
                 ['heading' => 'Acceptable use', 'body' => 'Do not share accounts, scrape protected content, bypass plan restrictions, abuse the service, or represent practice content as live exam questions.'],
                 ['heading' => 'Accounts and access', 'body' => 'You are responsible for keeping your login details secure. Access can be limited or suspended when these terms are violated or when needed to protect the service.']
             ]],
-            'refund' => ['title' => 'Refund Policy', 'description' => 'Refund and subscription support information for DumpStart Cloud plans.', 'sections' => [
+            'refund' => ['title' => 'Refund Policy', 'description' => 'Refund and subscription support information for Dump Cloud plans.', 'sections' => [
                 ['heading' => 'Contact support first', 'body' => 'If a plan, payment, or access issue occurs, contact support with your account email and purchase details so we can investigate promptly.'],
                 ['heading' => 'Digital access', 'body' => 'Because plans provide immediate access to digital practice content, refund eligibility may depend on usage, the plan terms shown at purchase, and applicable law.'],
                 ['heading' => 'Cancellations', 'body' => 'Cancellation requests stop future renewal where applicable. They do not automatically erase historical records or completed learning activity.']
             ]],
-            'contact' => ['title' => 'Contact DumpStart Cloud', 'description' => 'Get help with account access, plans, practice exams, labs, or content corrections.', 'sections' => [
+            'contact' => ['title' => 'Contact Dump Cloud', 'description' => 'Get help with account access, plans, practice exams, labs, or content corrections.', 'sections' => [
                 ['heading' => 'Support', 'body' => 'For account, billing, or technical support, use the support email configured by the administrator. Include your account email and a short description of the issue.'],
                 ['heading' => 'Content feedback', 'body' => 'If you find an unclear question, outdated explanation, or lab issue, send the question number and a screenshot so our team can review it.']
             ]]
         ],
-        'footer' => ['copyright' => '© 2026 DumpStart Cloud. Independent networking exam preparation platform.', 'supportEmail' => 'support@dumps.cloud']
+        'footer' => ['copyright' => '© 2026 Dump Cloud. Independent networking exam preparation platform.', 'supportEmail' => 'support@dumps.cloud']
     ];
     $siteSeedCheck = $pdo->query("SELECT id FROM site_content WHERE id = 1 LIMIT 1")->fetchColumn();
     if (!$siteSeedCheck) {
         $pdo->prepare("INSERT INTO site_content (id, payload) VALUES (1, ?)")->execute([json_encode($siteContentDefaults, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+    } else {
+        // One-time brand migration for the original seed. Respect any custom
+        // admin content while removing the old default brand everywhere.
+        $existingSitePayload = $pdo->query("SELECT payload FROM site_content WHERE id = 1 LIMIT 1")->fetchColumn();
+        if (is_string($existingSitePayload) && strpos($existingSitePayload, 'DumpStart') !== false) {
+            $migratedSitePayload = str_replace(['DumpStart Cloud', 'DumpStart'], ['Dump Cloud', 'Dump'], $existingSitePayload);
+            $pdo->prepare("UPDATE site_content SET payload = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1")->execute([$migratedSitePayload]);
+        }
     }
     $seeded = $pdo->prepare("SELECT meta_key FROM lab_meta WHERE meta_key = 'initial_seeded' LIMIT 1");
     $seeded->execute();

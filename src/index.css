@@ -2705,6 +2705,88 @@ body {
 @media (max-width: 760px) { .public-v2-hero { padding-top:72px; padding-bottom:68px; }.public-v2-hero h1 { letter-spacing:-3.2px; }.public-v2-proof-strip,.public-v2-method-grid,.public-v2-testimonial-grid,.public-v2-pricing-grid,.public-v2-roadmap-grid { grid-template-columns:1fr; }.public-v2-proof-strip > div,.public-v2-proof-strip > div + div { padding:19px 0; border-left:0; border-bottom:1px solid var(--public-line); }.public-v2-proof-strip > div:last-child { border-bottom:0; }.public-v2-feature-layout { grid-template-columns:1fr; }.public-v2-feature-art { order:-1; }.public-v2-pricing-heading,.public-v2-final-cta { align-items:flex-start; flex-direction:column; }.public-v2-pricing-heading > p { max-width:580px; }.public-v2-faq-cta { grid-template-columns:1fr; gap:38px; }.public-v2-final-cta { margin-left:20px; margin-right:20px; }.public-v2-preview-grid { grid-template-columns:1fr; }.public-v2-readiness-card,.public-v2-question-card { min-height:135px; }.public-v2-preview-footer { flex-wrap:wrap; } }
 @media (max-width: 480px) { .public-v2-hero { padding-left:18px; padding-right:18px; }.public-v2-hero h1 { font-size:43px; letter-spacing:-2.5px; }.public-v2-lede { font-size:15px; }.public-v2-product-preview { transform:none; }.public-v2-preview-body { grid-template-columns:36px 1fr; }.public-v2-preview-body aside { gap:21px; font-size:14px; }.public-v2-preview-main { padding:21px 14px 15px; }.public-v2-window-status { display:none; }.public-v2-section,.public-v2-faq-cta { padding-left:18px; padding-right:18px; }.public-v2-section-intro h2,.public-v2-pricing-heading h2,.public-v2-faq-copy h2 { letter-spacing:-2px; }.public-v2-plan-card { min-height:0; }.public-v2-final-cta { margin-left:18px; margin-right:18px; } }
 
+/* Mobile landing pass: preserve hierarchy instead of shrinking the desktop grid. */
+@media (max-width: 600px) {
+  .public-v2-shell { width:100%; overflow-x:hidden; }
+  .public-v2-shell .public-site-header { position:sticky; gap:10px; padding:12px 16px; }
+  .public-v2-shell .public-brand { gap:8px; min-width:0; }
+  .public-v2-shell .public-brand-mark { width:31px; height:31px; border-radius:8px; font-size:10px; }
+  .public-v2-shell .public-brand strong { font-size:14px; letter-spacing:-.2px; }
+  .public-v2-shell .public-header-cta { padding:9px 11px; border-radius:7px; font-size:11px; white-space:nowrap; }
+  .public-v2-hero { display:flex; flex-direction:column; align-items:stretch; gap:34px; padding:54px 16px 52px; }
+  .public-v2-kicker { font-size:9px; letter-spacing:1.35px; }
+  .public-v2-hero h1 { margin:16px 0 18px; font-size:clamp(38px,12vw,49px); line-height:.99; letter-spacing:-2.8px; }
+  .public-v2-lede { font-size:15px; line-height:1.6; }
+  .public-v2-actions { align-items:stretch; gap:14px; margin-top:27px; }
+  .public-v2-actions .public-primary-cta { width:100%; padding:13px 16px; }
+  .public-v2-text-cta { align-self:center; }
+  .public-v2-proof-row { gap:8px; margin-top:28px; font-size:10px; line-height:1.4; }
+  .public-v2-product-preview { width:100%; transform:none; border-radius:13px; }
+  .public-v2-window-bar { min-height:42px; padding:0 12px; font-size:9px; }
+  .public-v2-window-bar strong { margin-left:5px; font-size:10px; }
+  .public-v2-preview-body { grid-template-columns:31px minmax(0,1fr); min-height:0; }
+  .public-v2-preview-body aside { gap:18px; padding-top:16px; font-size:12px; }
+  .public-v2-preview-main { padding:19px 13px 14px; }
+  .public-v2-preview-heading h3 { font-size:19px; }
+  .public-v2-readiness { padding:6px 7px; font-size:9px; }
+  .public-v2-preview-grid { grid-template-columns:1fr; gap:9px; margin-top:21px; }
+  .public-v2-readiness-card,.public-v2-question-card { min-height:0; padding:14px; }
+  .public-v2-readiness-card strong { margin:13px 0 11px; font-size:30px; }
+  .public-v2-question-card { gap:18px; }
+  .public-v2-question-card strong { max-width:none; font-size:15px; }
+  .public-v2-preview-footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; padding-top:13px; font-size:9px; }
+  .public-v2-live-dot { grid-column:1/-1; }
+  .public-v2-proof-strip { display:block; padding:0 16px; }
+  .public-v2-proof-strip > div,.public-v2-proof-strip > div + div { grid-template-columns:32px 1fr; padding:18px 0; }
+  .public-v2-proof-strip strong { font-size:10px; }
+  .public-v2-proof-strip span { font-size:12px; }
+  .public-v2-proof-strip small { font-size:10px; }
+  .public-v2-section,.public-v2-faq-cta { padding:59px 16px; }
+  .public-v2-section-intro h2,.public-v2-pricing-heading h2,.public-v2-faq-copy h2 { margin:13px 0 12px; font-size:31px; line-height:1.05; letter-spacing:-1.8px; }
+  .public-v2-section-intro p,.public-v2-pricing-heading > p { font-size:14px; line-height:1.6; }
+  .public-v2-feature-section { display:block; }
+  .public-v2-feature-layout { display:flex; flex-direction:column; gap:26px; margin-top:30px; }
+  .public-v2-feature-art { width:100%; min-height:260px; padding:16px; order:-1; }
+  .public-v2-network-map { height:130px; margin:16px 0 13px; }
+  .public-v2-node { width:48px; height:48px; font-size:10px; }
+  .public-v2-node::after { top:20px; }
+  .public-v2-node.node-router { top:15px; }
+  .public-v2-node.node-switch { top:69px; }
+  .public-v2-node.node-pc { top:15px; }
+  .public-v2-link.link-one { top:59px; }
+  .public-v2-link.link-two { top:89px; }
+  .public-v2-art-command { font-size:9px; overflow-wrap:anywhere; }
+  .public-v2-feature-list { gap:0; }
+  .public-v2-feature-list article { grid-template-columns:28px 1fr; gap:10px; padding:17px 0; }
+  .public-v2-feature-list h3 { font-size:15px; }
+  .public-v2-feature-list p,.public-v2-method-grid p,.public-v2-roadmap-item p { font-size:12px; }
+  .public-v2-method-grid,.public-v2-testimonial-grid,.public-v2-pricing-grid,.public-v2-roadmap-grid { gap:11px; margin-top:29px; }
+  .public-v2-method-grid article { min-height:0; padding:18px; }
+  .public-v2-method-number { margin-bottom:25px; }
+  .public-v2-method-grid h3 { font-size:16px; }
+  .public-v2-testimonial { padding:19px; }
+  .public-v2-testimonial blockquote { margin:18px 0 22px; font-size:14px; }
+  .public-v2-pricing-heading { display:block; }
+  .public-v2-pricing-heading > p { max-width:none; padding:0; }
+  .public-v2-pricing-grid { grid-template-columns:1fr; }
+  .public-v2-plan-card { min-height:0; padding:21px; }
+  .public-v2-plan-top p { min-height:0; }
+  .public-v2-plan-price { margin:22px 0 19px; }
+  .public-v2-plan-card ul { gap:9px; margin-bottom:21px; }
+  .public-v2-roadmap-grid { grid-template-columns:1fr; }
+  .public-v2-roadmap-item { grid-template-columns:30px 1fr; gap:11px; }
+  .public-v2-roadmap-item h3 { font-size:17px; }
+  .public-v2-faq-cta { gap:25px; }
+  .public-v2-faq-list details { padding:17px 0; }
+  .public-v2-faq-list summary { font-size:13px; line-height:1.4; }
+  .public-v2-faq-list p { font-size:12px; }
+  .public-v2-final-cta { display:block; margin:0 16px 55px; padding:25px 20px; }
+  .public-v2-final-cta h2 { margin:13px 0 10px; font-size:30px; letter-spacing:-1.8px; }
+  .public-v2-final-cta p { margin-bottom:20px; font-size:13px; line-height:1.6; }
+  .public-v2-final-cta .public-primary-cta { width:100%; }
+  .public-v2-shell .public-footer-main,.public-v2-shell .public-footer-bottom { padding:27px 16px; }
+}
+
 @media (max-width: 600px) {
   .boson-exsim-view {
     padding: 1.4rem 1.2rem;
