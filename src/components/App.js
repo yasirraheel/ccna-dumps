@@ -13,6 +13,8 @@ import MobileBottomBar from "./MobileBottomBar";
 import AdminLayout from "./Admin/AdminLayout";
 import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
+import { PublicLandingPage, LegalPage } from "./PublicSite";
+import { DEFAULT_SITE_CONTENT, mergeSiteContent } from "../siteContent";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats, evaluateDragDrop } from "../utils/examScoring";
 import { matchExamToBankKey } from "../utils/bankStrengthAlgorithm";
@@ -1068,6 +1070,18 @@ export default function App() {
       return null;
     }
   });
+  const [siteContent, setSiteContent] = useState(DEFAULT_SITE_CONTENT);
+
+  // Public marketing, legal, and metadata content is server-owned so it can
+  // be changed from the admin panel without rebuilding the frontend.
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/site-content?_t=${Date.now()}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.content) setSiteContent(mergeSiteContent(data.content));
+      })
+      .catch(() => {});
+  }, []);
 
   const getViewFromUrl = () => {
     const path = window.location.pathname.toLowerCase().replace(/\/+$/, "");
@@ -1107,6 +1121,10 @@ export default function App() {
     if (path === "/reset-password" || path === "/reset" || viewParam === "reset" || hash === "reset") {
       return "auth-reset";
     }
+    if (path === "/privacy") return "legal-privacy";
+    if (path === "/terms" || path === "/terms-of-service") return "legal-terms";
+    if (path === "/refund" || path === "/refund-policy") return "legal-refund";
+    if (path === "/contact") return "legal-contact";
     return "dashboard";
   };
 
@@ -3199,9 +3217,19 @@ export default function App() {
           />
         )}
 
+        {status === "ready" && currentView.startsWith("legal-") && (
+          <LegalPage
+            content={siteContent}
+            pageKey={currentView.replace("legal-", "")}
+            onOpenAuth={handleOpenAuth}
+          />
+        )}
+
         {/* 1. DASHBOARD & NAVIGATION VIEWS (When not inside an active test) */}
         {status === "ready" && currentView === "dashboard" && (
-          isDashboardLoading ? (
+          !currentUser ? (
+            <PublicLandingPage content={siteContent} onOpenAuth={handleOpenAuth} />
+          ) : isDashboardLoading ? (
             <div className="loader-container" style={{ minHeight: "65vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               <div className="loader"></div>
               <p style={{ marginTop: "1rem", color: "#64748b", fontWeight: 600, fontSize: "1.05rem" }}>Refreshing latest exam data from server...</p>
@@ -3523,7 +3551,7 @@ export default function App() {
         />
 
         {/* 5. MOBILE NATIVE NAVIGATION BOTTOM BAR (Visible when not in active exam, auth, or admin) */}
-        {status === "ready" && !currentView.startsWith("auth-") && currentView !== "admin" && (
+        {status === "ready" && !currentView.startsWith("auth-") && !currentView.startsWith("legal-") && currentView !== "admin" && !(currentView === "dashboard" && !currentUser) && (
           <MobileBottomBar
             currentView={currentView}
             onNavigate={handleNavigate}

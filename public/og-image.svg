@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">DumpStart Cloud — CCNA Practice Exam and Networking Labs</title>
+  <desc id="desc">Practice CCNA 200-301 with browser-based exams and interactive IOS-style labs.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07101a"/><stop offset="1" stop-color="#10283a"/></linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#22c55e"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1030" cy="70" r="230" fill="#22c55e" opacity=".08"/>
+  <circle cx="1120" cy="580" r="280" fill="#38bdf8" opacity=".08"/>
+  <rect x="80" y="82" width="75" height="75" rx="20" fill="url(#line)"/>
+  <text x="117" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="800" fill="#06110b">DS</text>
+  <text x="180" y="120" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#f8fafc">DumpStart Cloud</text>
+  <text x="80" y="285" font-family="Arial, sans-serif" font-size="67" font-weight="800" fill="#f8fafc">CCNA practice.</text>
+  <text x="80" y="365" font-family="Arial, sans-serif" font-size="67" font-weight="800" fill="#22c55e">Real networking skills.</text>
+  <text x="84" y="442" font-family="Arial, sans-serif" font-size="25" fill="#9db0c7">Browser-based exams • IOS CLI labs • Clear explanations</text>
+  <rect x="80" y="520" width="1040" height="2" fill="url(#line)" opacity=".65"/>
+  <text x="80" y="565" font-family="monospace" font-size="22" fill="#38bdf8">dumps.cloud</text>
+  <g transform="translate(820 185)">
+    <rect width="280" height="220" rx="15" fill="#07101a" stroke="#29465d" stroke-width="2"/>
+    <circle cx="25" cy="25" r="6" fill="#fb7185"/><circle cx="45" cy="25" r="6" fill="#fbbf24"/><circle cx="65" cy="25" r="6" fill="#22c55e"/>
+    <text x="25" y="75" font-family="monospace" font-size="16" fill="#22c55e">R1# configure terminal</text>
+    <text x="25" y="108" font-family="monospace" font-size="16" fill="#38bdf8">R1(config)# interface g0/0</text>
+    <text x="25" y="141" font-family="monospace" font-size="16" fill="#cbd5e1">R1(config-if)# no shut</text>
+    <text x="25" y="183" font-family="monospace" font-size="16" fill="#22c55e">R1(config-if)# _</text>
+  </g>
+</svg>

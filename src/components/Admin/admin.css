@@ -1507,6 +1507,27 @@
   gap: 12px;
 }
 
+.admin-site-json-editor {
+  width: 100%;
+  min-height: 520px;
+  resize: vertical;
+  box-sizing: border-box;
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  tab-size: 2;
+}
+
+.admin-inline-error,
+.admin-inline-success {
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.admin-inline-error { color: #fecaca; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35); }
+.admin-inline-success { color: #bbf7d0; background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.35); }
+
 /* --------------------------------------------------------------------------
    MODAL HEADER & TITLE â€” ensure these are never shrunk by the 62.5% root
    -------------------------------------------------------------------------- */

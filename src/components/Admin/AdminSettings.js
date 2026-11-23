@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { adminFetch } from '../../utils/adminApi';
 
 function AdminSettings({ currentUser }) {
@@ -6,6 +6,45 @@ function AdminSettings({ currentUser }) {
   const [testSubject, setTestSubject] = useState('CCNA Exam Prep - SMTP Test Email');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailResult, setEmailResult] = useState(null);
+  const [siteJson, setSiteJson] = useState('');
+  const [siteContentState, setSiteContentState] = useState({ loading: true, saving: false, message: '', error: '' });
+
+  useEffect(() => {
+    let cancelled = false;
+    adminFetch('/api/admin/site-content')
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (cancelled) return;
+        if (!ok || !data?.content) throw new Error(data?.error || 'Website content could not be loaded.');
+        setSiteJson(JSON.stringify(data.content, null, 2));
+        setSiteContentState({ loading: false, saving: false, message: '', error: '' });
+      })
+      .catch((error) => {
+        if (!cancelled) setSiteContentState({ loading: false, saving: false, message: '', error: error.message });
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSaveSiteContent = async (event) => {
+    event.preventDefault();
+    let parsed;
+    try {
+      parsed = JSON.parse(siteJson);
+    } catch (error) {
+      setSiteContentState((previous) => ({ ...previous, error: `Invalid JSON: ${error.message}`, message: '' }));
+      return;
+    }
+    try {
+      setSiteContentState({ loading: false, saving: true, message: '', error: '' });
+      const res = await adminFetch('/api/admin/site-content', { method: 'PUT', body: JSON.stringify({ content: parsed }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Website content could not be saved.');
+      setSiteJson(JSON.stringify(data.content || parsed, null, 2));
+      setSiteContentState({ loading: false, saving: false, message: 'Website content saved. Public SEO and legal pages will use the new content on their next load.', error: '' });
+    } catch (error) {
+      setSiteContentState({ loading: false, saving: false, message: '', error: error.message });
+    }
+  };
 
   const handleSendTestEmail = async (e) => {
     e.preventDefault();
@@ -157,6 +196,42 @@ function AdminSettings({ currentUser }) {
             </button>
           </form>
         </div>
+      </div>
+
+      {/* PLATFORM CONFIGURATION SUMMARY */}
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <div>
+            <h3 className="admin-card-title"><span>🌐</span> Website SEO & Public Content</h3>
+            <p style={{ margin: '5px 0 0', color: '#94a3b8', fontSize: '14px' }}>
+              Manage the landing page, SEO title/description/keywords, social image URL, favicon URL, footer, and Privacy/Terms/Refund/Contact pages. This content is stored in the database.
+            </p>
+          </div>
+          <a className="btn-admin-secondary" href="/" target="_blank" rel="noreferrer">Open public site ↗</a>
+        </div>
+        <form onSubmit={handleSaveSiteContent}>
+          <div style={{ padding: '24px' }}>
+            {siteContentState.loading ? <p style={{ color: '#94a3b8' }}>Loading website content…</p> : (
+              <textarea
+                className="admin-form-textarea admin-site-json-editor"
+                value={siteJson}
+                onChange={(event) => setSiteJson(event.target.value)}
+                spellCheck="false"
+                aria-label="Website SEO and public content JSON"
+              />
+            )}
+            <p style={{ margin: '12px 0 0', color: '#64748b', fontSize: '13px', lineHeight: 1.5 }}>
+              Keep the JSON structure intact when editing. Use <code>home</code> for the landing page, <code>seo</code> for search metadata, and <code>pages</code> for legal content. The public app reads these values from the server.
+            </p>
+            {siteContentState.error && <div className="admin-inline-error">{siteContentState.error}</div>}
+            {siteContentState.message && <div className="admin-inline-success">{siteContentState.message}</div>}
+          </div>
+          <div className="admin-modal-footer">
+            <button type="submit" className="btn-admin-primary" disabled={siteContentState.loading || siteContentState.saving}>
+              {siteContentState.saving ? 'Saving website content…' : 'Save website content'}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* PLATFORM CONFIGURATION SUMMARY */}

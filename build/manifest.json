@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "DumpStart",
+  "name": "DumpStart Cloud — CCNA Practice Exam & Networking Labs",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#0b111d",
+  "background_color": "#0b111d",
+  "description": "Browser-based CCNA and networking exam practice with interactive IOS CLI labs."
 }
