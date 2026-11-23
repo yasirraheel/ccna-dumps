@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminFetch } from '../../utils/adminApi';
+import { mergeSiteContent } from '../../siteContent';
 
 function AdminSettings({ currentUser }) {
   const [testEmailTo, setTestEmailTo] = useState(currentUser?.email || 'saadmaqbool7861@gmail.com');
@@ -16,7 +17,7 @@ function AdminSettings({ currentUser }) {
       .then(({ ok, data }) => {
         if (cancelled) return;
         if (!ok || !data?.content) throw new Error(data?.error || 'Website content could not be loaded.');
-        setSiteJson(JSON.stringify(data.content, null, 2));
+        setSiteJson(JSON.stringify(mergeSiteContent(data.content), null, 2));
         setSiteContentState({ loading: false, saving: false, message: '', error: '' });
       })
       .catch((error) => {
@@ -204,7 +205,7 @@ function AdminSettings({ currentUser }) {
           <div>
             <h3 className="admin-card-title"><span>🌐</span> Website SEO & Public Content</h3>
             <p style={{ margin: '5px 0 0', color: '#94a3b8', fontSize: '14px' }}>
-              Manage the landing page, SEO title/description/keywords, social image URL, favicon URL, footer, and Privacy/Terms/Refund/Contact pages. This content is stored in the database.
+              Manage the landing page, SEO title/description/keywords, social image URL, favicon URL, footer, testimonials, roadmap, and Privacy/Terms/Refund/Contact pages. This content is stored in the database.
             </p>
           </div>
           <a className="btn-admin-secondary" href="/" target="_blank" rel="noreferrer">Open public site ↗</a>
@@ -221,7 +222,7 @@ function AdminSettings({ currentUser }) {
               />
             )}
             <p style={{ margin: '12px 0 0', color: '#64748b', fontSize: '13px', lineHeight: 1.5 }}>
-              Keep the JSON structure intact when editing. Use <code>home</code> for the landing page, <code>seo</code> for search metadata, and <code>pages</code> for legal content. The public app reads these values from the server.
+              Keep the JSON structure intact when editing. Use <code>home</code> for landing copy, features, steps, testimonials, roadmap, and FAQs; <code>seo</code> for search metadata; and <code>pages</code> for legal content. The public app reads these values from the server.
             </p>
             {siteContentState.error && <div className="admin-inline-error">{siteContentState.error}</div>}
             {siteContentState.message && <div className="admin-inline-success">{siteContentState.message}</div>}

@@ -38,6 +38,16 @@ export const DEFAULT_SITE_CONTENT = {
       { question: "Can I practice CLI configuration in the browser?", answer: "Yes. Guided labs include IOS-style browser consoles for common switching and routing practice." },
       { question: "Will more networking certifications be added?", answer: "The platform is designed to grow beyond CCNA with additional networking certification banks and labs." },
     ],
+    testimonials: [
+      { quote: "The mix of timed questions and CLI practice gave me a much clearer study routine.", name: "Ahsan R.", role: "CCNA learner" },
+      { quote: "I stopped guessing where to focus. The review history points me straight to the topics I need.", name: "Mariam K.", role: "Networking student" },
+      { quote: "The browser labs make switching and routing practice feel much closer to real configuration work.", name: "Bilal S.", role: "IT support engineer" },
+    ],
+    roadmap: [
+      { phase: "Now", title: "CCNA 200-301", text: "Question banks, explanations, simulations, CLI labs, and progress history." },
+      { phase: "Next", title: "More networking paths", text: "Additional certification banks and focused practice tracks beyond CCNA." },
+      { phase: "In progress", title: "Smarter review", text: "More targeted recommendations and clearer mastery signals for every topic." },
+    ],
   },
   pages: {
     privacy: {
