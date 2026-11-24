@@ -22,8 +22,8 @@ export const EXAM_BANKS = [
 export const normalizePlan = (plan) => {
   if (!plan) return 'free';
   const p = String(plan).toLowerCase();
-  if (p.includes('unlimited')) return 'unlimited';
-  if (p.includes('pro')) return 'pro';
+  if (p.includes('unlimited') || p.includes('advance')) return 'unlimited';
+  if (p.includes('pro') || p.includes('intermediate')) return 'pro';
   return 'free';
 };
 
@@ -40,7 +40,9 @@ const resolveUserPlanConfig = (user, plans = []) => {
     const found = plans.find(
       (p) =>
         String(p.id).toLowerCase() === userPlanId ||
-        String(p.id).toLowerCase() === `plan_${userPlanId}`
+        String(p.id).toLowerCase() === `plan_${userPlanId}` ||
+        String(p.name || '').toLowerCase() === userPlanId ||
+        String(p.id || '').toLowerCase().replace(/^plan_/, '') === userPlanId.replace(/^plan_/, '')
     );
     if (found?.bank_permissions && typeof found.bank_permissions === 'object') {
       return found.bank_permissions;

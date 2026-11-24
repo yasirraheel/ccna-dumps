@@ -594,7 +594,9 @@ function getDefaultPlanPermissions($planId, $labCount = 27) {
     $normalized = strtolower((string)($planId ?: 'plan_free'));
     if ($normalized === 'free') $normalized = 'plan_free';
     if ($normalized === 'pro') $normalized = 'plan_pro';
+    if ($normalized === 'intermediate') $normalized = 'plan_pro';
     if ($normalized === 'unlimited') $normalized = 'plan_unlimited';
+    if ($normalized === 'advance') $normalized = 'plan_unlimited';
     $isFree = $normalized === 'plan_free';
     return [
         'bank_a' => ['enabled' => true, 'max_questions' => 50],
@@ -672,16 +674,24 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
             'allow_modify_exam' => true
         ];
     }
-    $pId = $planId ?: 'plan_free';
-    if ($pId === 'free') $pId = 'plan_free';
-    else if ($pId === 'pro') $pId = 'plan_pro';
-    else if ($pId === 'unlimited') $pId = 'plan_unlimited';
+    $rawPlan = strtolower(trim((string)($planId ?: 'plan_free')));
+    $planAliases = [
+        'free' => 'plan_free',
+        'plan_free' => 'plan_free',
+        'pro' => 'plan_pro',
+        'intermediate' => 'plan_pro',
+        'plan_pro' => 'plan_pro',
+        'unlimited' => 'plan_unlimited',
+        'advance' => 'plan_unlimited',
+        'plan_unlimited' => 'plan_unlimited',
+    ];
+    $pId = $planAliases[$rawPlan] ?? ($planId ?: 'plan_free');
 
     $defaults = getDefaultPlanPermissions($pId, getLabsTotalCount($pdo));
 
     try {
-        $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE id = ?");
-        $stmt->execute([$pId]);
+        $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE LOWER(id) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1");
+        $stmt->execute([$pId, (string)$planId]);
         $perms = $stmt->fetchColumn();
         if ($perms) {
             $decoded = json_decode($perms, true);
@@ -692,15 +702,34 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
     return $defaults;
 }
 
+function resolveSessionBankKey($bankName) {
+    $name = strtolower(trim((string)$bankName));
+    if ($name === '') return null;
+    if ((strpos($name, 'drag') !== false && strpos($name, 'drop') !== false) || strpos($name, 'dragdrop') !== false) return 'bank_dragdrop';
+    if (strpos($name, 'all questions') !== false || strpos($name, 'all available') !== false || strpos($name, 'full question') !== false || preg_match('/\b228\b/', $name)) return 'bank_all';
+    if (strpos($name, 'lab') !== false) return 'bank_labs';
+    foreach (['a', 'b', 'c', 'd'] as $letter) {
+        if (preg_match('/(?:exam\s+)?bank\s+' . $letter . '\b/', $name) || preg_match('/\bexam\s+' . $letter . '\b/', $name)) return 'bank_' . $letter;
+    }
+    if (preg_match('/\b101\s*[-–]\s*150\b/', $name)) return 'bank_c';
+    if (preg_match('/\b151\s*[-–]\s*207\b/', $name)) return 'bank_d';
+    if (preg_match('/\b51\s*[-–]\s*100\b/', $name)) return 'bank_b';
+    if (preg_match('/\b1\s*[-–]\s*50\b/', $name)) return 'bank_a';
+    return null;
+}
+
 function getUserPlanOriginalName($pdo, $planId) {
-    $pId = $planId ?: 'plan_free';
-    if ($pId === 'free') $pId = 'plan_free';
-    else if ($pId === 'pro') $pId = 'plan_pro';
-    else if ($pId === 'unlimited') $pId = 'plan_unlimited';
+    $rawPlan = strtolower(trim((string)($planId ?: 'plan_free')));
+    $planAliases = [
+        'free' => 'plan_free', 'plan_free' => 'plan_free',
+        'pro' => 'plan_pro', 'intermediate' => 'plan_pro', 'plan_pro' => 'plan_pro',
+        'unlimited' => 'plan_unlimited', 'advance' => 'plan_unlimited', 'plan_unlimited' => 'plan_unlimited',
+    ];
+    $pId = $planAliases[$rawPlan] ?? ($planId ?: 'plan_free');
 
     try {
-        $stmt = $pdo->prepare("SELECT name FROM plans WHERE id = ?");
-        $stmt->execute([$pId]);
+        $stmt = $pdo->prepare("SELECT name FROM plans WHERE LOWER(id) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1");
+        $stmt->execute([$pId, (string)$planId]);
         $name = $stmt->fetchColumn();
         if ($name) return $name;
     } catch (Exception $e) {}
@@ -1878,50 +1907,44 @@ if (preg_match('#^/api/sessions#', $basePath)) {
     if ($method === 'POST') {
         $s = $body;
 
-        // Enforce user plan restriction on saving session
-        $userEmail = isset($s['userEmail']) ? strtolower($s['userEmail']) : null;
-        if ($userEmail) {
-            $uStmt = $pdo->prepare("SELECT role, plan, id, name, email FROM users WHERE email = ?");
-            $uStmt->execute([$userEmail]);
-            $uData = $uStmt->fetch();
-            $uRole = $uData['role'] ?? 'user';
-            $uPlan = strtolower($uData['plan'] ?? 'free');
-            $sessionAuthUser = getAuthenticatedDbUser($pdo, $jwtSecret);
-            if ($sessionAuthUser) {
-                $uData = $sessionAuthUser;
-                $uRole = $uData['role'] ?? 'user';
-                $uPlan = strtolower($uData['plan'] ?? 'free');
-            }
+        // Enforce the authenticated account's actual configured permissions.
+        $bodyEmail = strtolower(trim((string)($s['userEmail'] ?? '')));
+        $authToken = getBearerToken();
+        $tokenUser = $authToken ? verifyToken($authToken, $jwtSecret) : null;
+        $sessionAuthUser = getAuthenticatedDbUser($pdo, $jwtSecret);
+        $tokenEmail = strtolower(trim((string)($tokenUser['email'] ?? '')));
+        if ($tokenEmail !== '' && $bodyEmail !== '' && $bodyEmail !== $tokenEmail) {
+            http_response_code(403);
+            echo json_encode(["error" => "Session identity does not match the signed-in account.", "code" => "ACCOUNT_MISMATCH"]);
+            exit;
+        }
 
-            if ($uRole !== 'admin' && strtolower($uData['email'] ?? '') !== 'candidate@ccna.com') {
-                $bankName = strtolower($s['bankName'] ?? '');
-                $bankKey = strtolower(trim((string)($s['bankKey'] ?? $s['selectedBankKey'] ?? '')));
-                $examMode = strtolower($s['examMode'] ?? 'study');
-                $planPermissions = getUserPlanPermissions($pdo, $uPlan, $uRole, $uData['email'] ?? '');
+        // Persisted account data is authoritative; a valid signed token is the
+        // fallback during account migration. Never grant paid access from a
+        // client-supplied email alone.
+        $uData = $sessionAuthUser ?: $tokenUser;
+        $uRole = $uData['role'] ?? ($tokenUser['role'] ?? 'user');
+        $uPlan = $uData['plan'] ?? ($tokenUser['plan'] ?? 'free');
+        $userEmail = (string)($uData['email'] ?? ($tokenEmail !== '' ? $tokenEmail : $bodyEmail));
+        $planPermissions = getUserPlanPermissions($pdo, $uPlan, $uRole, $userEmail);
+        $bankName = $s['selectedBankName'] ?? $s['bankName'] ?? '';
+        $requestedBankKey = strtolower(trim((string)($s['selectedBankKey'] ?? $s['bankKey'] ?? '')));
+        $bankKey = isset($planPermissions[$requestedBankKey]) ? $requestedBankKey : resolveSessionBankKey($bankName);
+        $examMode = strtolower(trim((string)($s['examMode'] ?? 'study')));
+        $isRestrictedBank = $bankKey !== null && empty($planPermissions[$bankKey]['enabled']);
+        $isRestrictedMode = $examMode === 'simulation' && empty($planPermissions['allow_simulation']);
+        $isLabSession = $bankKey === 'bank_labs' || strtolower(trim((string)$bankName)) === 'labs';
+        $isCustomSession = $requestedBankKey === 'custom_practice' || strpos(strtolower((string)$bankName), 'custom practice') !== false;
+        $isLockedCustom = $isCustomSession && empty($planPermissions['allow_custom_exam']);
 
-                $isRestrictedBank = (
-                    strpos($bankName, 'exam c') !== false ||
-                    strpos($bankName, 'exam d') !== false ||
-                    strpos($bankName, 'drag & drop') !== false ||
-                    strpos($bankName, 'all available') !== false ||
-                    strpos($bankName, 'full question') !== false
-                );
-                $isRestrictedMode = ($examMode === 'simulation');
-                $isLabSession = $bankKey === 'bank_labs' || $bankName === 'labs';
-                $isCustomSession = $bankKey === 'custom_practice' || strpos($bankName, 'custom practice') !== false;
-                $isPlanLockedBank = $bankKey !== '' && isset($planPermissions[$bankKey]) && empty($planPermissions[$bankKey]['enabled']);
-                $isLockedLab = $isLabSession && empty($planPermissions['bank_labs']['enabled']);
-                $isLockedCustom = $isCustomSession && empty($planPermissions['allow_custom_exam']);
-                $isPlanSimulationLocked = $examMode === 'simulation' && empty($planPermissions['allow_simulation']);
-
-                if ($isRestrictedBank || $isRestrictedMode || $isPlanLockedBank || $isLockedLab || $isLockedCustom || $isPlanSimulationLocked) {
-                    http_response_code(403);
-                    echo json_encode([
-                        "error" => "Plan restriction: Cannot save session for locked bank/mode."
-                    ]);
-                    exit;
-                }
-            }
+        if ($isRestrictedBank || $isRestrictedMode || ($isLabSession && empty($planPermissions['bank_labs']['enabled'])) || $isLockedCustom) {
+            http_response_code(403);
+            echo json_encode([
+                "error" => "This exam is not included in the active plan.",
+                "code" => "PLAN_RESTRICTION",
+                "bankKey" => $bankKey
+            ]);
+            exit;
         }
 
         if (!empty($s['id'])) {

@@ -81,6 +81,7 @@ function SiteHeader({ content, onOpenAuth }) {
       <nav className="public-site-nav" aria-label="Public navigation">
         <a href="/#features">Features</a>
         <a href="/#how-it-works">How it works</a>
+        <a href="/#plans">Plans</a>
         <a href="/contact">Contact</a>
       </nav>
       <div className="public-header-actions">
@@ -180,4 +181,4 @@ function LegalPage({ content, pageKey, onOpenAuth }) {
   return <div className="public-site-shell"><SiteMeta content={site} pageKey={pageKey} /><SiteHeader content={site} onOpenAuth={onOpenAuth} /><main className="public-legal-main"><div className="public-legal-kicker">{site.siteName}</div><h1>{page.title}</h1><p className="public-legal-intro">{page.description}</p><div className="public-legal-card">{(page.sections || []).map((section, index) => <section key={`${section.heading}-${index}`}><h2>{section.heading}</h2><p>{section.body}</p></section>)}</div></main><SiteFooter content={site} /></div>;
 }
 
-export { PublicLandingPage, LegalPage, SiteFooter, SiteMeta };
+export { PublicLandingPage, LegalPage, SiteFooter, SiteHeader, SiteMeta };

@@ -14,6 +14,7 @@ import AdminLayout from "./Admin/AdminLayout";
 import UpgradePlanModal from "./UpgradePlanModal";
 import CustomConfirmModal from "./CustomConfirmModal";
 import { PublicLandingPage, LegalPage } from "./PublicSite";
+import ViserExamLandingPage from "./ViserExamLandingPage";
 import { DEFAULT_SITE_CONTENT, mergeSiteContent } from "../siteContent";
 import { randomizeQuestionOptions, aggressiveShuffle } from "./randomizeOptions";
 import { calculateTotalPoints, getIncorrectQuestionIndices, getExamQuestionStats, evaluateDragDrop } from "../utils/examScoring";
@@ -156,7 +157,12 @@ export async function syncActiveSessionToServer(sessionData) {
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
-      throw new Error(`Server returned HTTP ${res.status}: ${errText || res.statusText}`);
+      let errorPayload = null;
+      try { errorPayload = errText ? JSON.parse(errText) : null; } catch {}
+      const error = new Error(errorPayload?.error || `Server returned HTTP ${res.status}: ${errText || res.statusText}`);
+      error.status = res.status;
+      error.code = errorPayload?.code || null;
+      throw error;
     }
 
     const data = await res.json();
@@ -1469,7 +1475,11 @@ export default function App() {
         setServerConnectionError("Server is still unreachable. Please verify your connection.");
       }
     } catch (e) {
-      setServerConnectionError("Server is still unreachable. Please verify your internet connection.");
+      if (e?.code === "PLAN_RESTRICTION" || e?.status === 403) {
+        setServerConnectionError(`Plan access required: ${e.message || "This exam bank is not enabled for the active plan."}`);
+      } else {
+        setServerConnectionError("Server is still unreachable. Please verify your internet connection.");
+      }
     } finally {
       setIsRetryingConnection(false);
     }
@@ -2495,12 +2505,18 @@ export default function App() {
       dispatch({ type: "goToQuestion", payload: targetIdx });
     } catch (err) {
       console.error("Navigation blocked due to server connection failure:", err);
-      setServerConnectionError("Server connection failed: Unable to verify and save your response to the server. You cannot advance to the next question while disconnected.");
+      const isPlanRestriction = err?.code === "PLAN_RESTRICTION" || err?.status === 403;
+      const detail = err?.message || "The server could not save this answer.";
+      setServerConnectionError(isPlanRestriction
+        ? `Plan access required: ${detail}`
+        : `Server connection failed: ${detail}`);
       setAlertDialog({
         isOpen: true,
-        title: "⚠️ Server Connection Error",
-        message: "Unable to reach the server. Your answer could not be recorded in the database. Advancing to the next question is blocked until your connection is restored.",
-        confirmText: "Retry Connection",
+        title: isPlanRestriction ? "⚠️ Exam Access Needs Refresh" : "⚠️ Server Connection Error",
+        message: isPlanRestriction
+          ? "The server could not confirm this exam bank against the account's active plan. The answer is still on this question; retry after the account entitlement has synchronized."
+          : `The answer could not be saved, so navigation is paused. ${detail}`,
+        confirmText: isPlanRestriction ? "Retry Save" : "Retry Connection",
         cancelText: "Stay on Question",
         type: "danger",
         onConfirm: () => handleRetryConnection(),
@@ -3165,6 +3181,7 @@ export default function App() {
     );
   }
 
+  const isPlanAccessError = typeof serverConnectionError === "string" && serverConnectionError.startsWith("Plan access required:");
   const storedAuthUser = (() => {
     try { return JSON.parse(localStorage.getItem("ccna_auth_user") || "null"); } catch { return null; }
   })();
@@ -3187,7 +3204,7 @@ export default function App() {
             <div className="connection-error-left">
               <span className="connection-error-icon">⚠️</span>
               <div className="connection-error-text">
-                <span className="connection-error-title">Server Connection Failed</span>
+                <span className="connection-error-title">{isPlanAccessError ? "Exam Access Needs Refresh" : "Server Connection Failed"}</span>
                 <span className="connection-error-desc">{serverConnectionError}</span>
               </div>
             </div>
@@ -3197,7 +3214,7 @@ export default function App() {
               onClick={handleRetryConnection}
               disabled={isRetryingConnection}
             >
-              {isRetryingConnection ? "Reconnecting..." : "🔄 Retry Connection"}
+              {isRetryingConnection ? "Retrying..." : isPlanAccessError ? "🔄 Retry Save" : "🔄 Retry Connection"}
             </button>
           </div>
         </div>
@@ -3228,7 +3245,7 @@ export default function App() {
         {/* 1. DASHBOARD & NAVIGATION VIEWS (When not inside an active test) */}
         {status === "ready" && currentView === "dashboard" && (
           !currentUser ? (
-            <PublicLandingPage content={siteContent} onOpenAuth={handleOpenAuth} />
+            <ViserExamLandingPage content={siteContent} onOpenAuth={handleOpenAuth} />
           ) : isDashboardLoading ? (
             <div className="loader-container" style={{ minHeight: "65vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               <div className="loader"></div>

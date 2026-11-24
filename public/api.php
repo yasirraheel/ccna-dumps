@@ -250,14 +250,22 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
             'allow_simulation' => true
         ];
     }
-    $pId = $planId ?: 'plan_free';
-    if ($pId === 'free') $pId = 'plan_free';
-    else if ($pId === 'pro') $pId = 'plan_pro';
-    else if ($pId === 'unlimited') $pId = 'plan_unlimited';
+    $rawPlan = strtolower(trim((string) ($planId ?: 'plan_free')));
+    $planAliases = [
+        'free' => 'plan_free',
+        'plan_free' => 'plan_free',
+        'pro' => 'plan_pro',
+        'intermediate' => 'plan_pro',
+        'plan_pro' => 'plan_pro',
+        'unlimited' => 'plan_unlimited',
+        'advance' => 'plan_unlimited',
+        'plan_unlimited' => 'plan_unlimited',
+    ];
+    $pId = $planAliases[$rawPlan] ?? ($planId ?: 'plan_free');
 
     try {
-        $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE id = ?");
-        $stmt->execute([$pId]);
+        $stmt = $pdo->prepare("SELECT bank_permissions FROM plans WHERE LOWER(id) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1");
+        $stmt->execute([$pId, (string) $planId]);
         $perms = $stmt->fetchColumn();
         if ($perms) {
             $decoded = json_decode($perms, true);
@@ -274,6 +282,19 @@ function getUserPlanPermissions($pdo, $planId, $userRole = 'user', $userEmail = 
         'bank_all' => ['enabled' => false, 'max_questions' => 0],
         'allow_simulation' => false
     ];
+}
+
+function resolveSessionBankKey($bankName) {
+    $name = strtolower(trim(preg_replace('/[^a-z0-9]+/i', ' ', (string) $bankName)));
+    if (strpos($name, 'drag') !== false && strpos($name, 'drop') !== false) return 'bank_dragdrop';
+    if (strpos($name, 'lab') !== false) return 'bank_labs';
+    if (strpos($name, 'all available') !== false || strpos($name, 'full question') !== false || strpos($name, 'all questions') !== false) return 'bank_all';
+    foreach (['a', 'b', 'c', 'd'] as $letter) {
+        if (preg_match('/(?:exam\s+)?bank\s+' . $letter . '\b/', $name) || preg_match('/\bexam\s+' . $letter . '\b/', $name)) {
+            return 'bank_' . $letter;
+        }
+    }
+    return null;
 }
 
 function getUserPlanOriginalName($pdo, $planId) {
@@ -1244,36 +1265,54 @@ if (preg_match('#^/api/sessions#', $basePath)) {
     if ($method === 'POST') {
         $s = $body;
 
-        // Enforce user plan restriction on saving session
-        $userEmail = isset($s['userEmail']) ? strtolower($s['userEmail']) : null;
-        if ($userEmail) {
-            $uStmt = $pdo->prepare("SELECT role, plan FROM users WHERE email = ?");
+        // Use the signed login identity and the same plan permissions exposed to the app.
+        $userEmail = isset($s['userEmail']) ? strtolower(trim($s['userEmail'])) : '';
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+        if (!$authHeader && function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        }
+        $tokenUser = null;
+        if ($authHeader && preg_match('/Bearer\s+(.*)$/i', $authHeader, $tokenMatch)) {
+            $tokenUser = verifyToken(trim($tokenMatch[1]), $jwtSecret);
+        }
+
+        if ($tokenUser && !empty($tokenUser['email'])) {
+            $tokenEmail = strtolower(trim($tokenUser['email']));
+            if ($userEmail !== '' && $userEmail !== $tokenEmail) {
+                http_response_code(403);
+                echo json_encode(["error" => "Session identity does not match the signed-in account.", "code" => "ACCOUNT_MISMATCH"]);
+                exit;
+            }
+            $userEmail = $tokenEmail;
+        }
+
+        $uData = false;
+        if ($userEmail !== '') {
+            $uStmt = $pdo->prepare("SELECT role, plan FROM users WHERE email = ? LIMIT 1");
             $uStmt->execute([$userEmail]);
             $uData = $uStmt->fetch();
-            $uRole = $uData['role'] ?? 'user';
-            $uPlan = strtolower($uData['plan'] ?? 'free');
+        }
 
-            if ($uRole !== 'admin' && ($uPlan === 'free' || $uPlan === 'plan_free')) {
-                $bankName = strtolower($s['bankName'] ?? '');
-                $examMode = strtolower($s['examMode'] ?? 'study');
+        // A valid signed token remains authoritative if an account is being migrated
+        // and its user row has not yet arrived in this database.
+        $uRole = $uData['role'] ?? ($tokenUser['role'] ?? 'user');
+        $uPlan = $uData['plan'] ?? ($tokenUser['plan'] ?? 'free');
+        $planPermissions = getUserPlanPermissions($pdo, $uPlan, $uRole, $userEmail);
+        $bankName = $s['selectedBankName'] ?? $s['bankName'] ?? '';
+        $bankKey = resolveSessionBankKey($bankName);
+        $examMode = strtolower($s['examMode'] ?? 'study');
+        $isRestrictedBank = $bankKey !== null && empty($planPermissions[$bankKey]['enabled']);
+        $isRestrictedMode = $examMode === 'simulation' && empty($planPermissions['allow_simulation']);
 
-                $isRestrictedBank = (
-                    strpos($bankName, 'exam c') !== false ||
-                    strpos($bankName, 'exam d') !== false ||
-                    strpos($bankName, 'drag & drop') !== false ||
-                    strpos($bankName, 'all available') !== false ||
-                    strpos($bankName, 'full question') !== false
-                );
-                $isRestrictedMode = ($examMode === 'simulation');
-
-                if ($isRestrictedBank || $isRestrictedMode) {
-                    http_response_code(403);
-                    echo json_encode([
-                        "error" => "Plan restriction: Cannot save session for locked bank/mode."
-                    ]);
-                    exit;
-                }
-            }
+        if ($isRestrictedBank || $isRestrictedMode) {
+            http_response_code(403);
+            echo json_encode([
+                "error" => "This exam is not included in the active plan.",
+                "code" => "PLAN_RESTRICTION",
+                "bankKey" => $bankKey
+            ]);
+            exit;
         }
 
         if (!empty($s['id'])) {
