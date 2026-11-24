@@ -569,6 +569,16 @@ function verifyToken($token, $secret) {
     return $data;
 }
 
+function getBearerToken() {
+    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+    if (!$auth && function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        $auth = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
+    }
+    if (!preg_match('/Bearer\s+(\S+)/i', $auth, $matches)) return null;
+    return $matches[1];
+}
+
 function getAuthenticatedDbUser($pdo, $secret) {
     $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
     if (!$auth && function_exists('apache_request_headers')) {
